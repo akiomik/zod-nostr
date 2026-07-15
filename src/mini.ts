@@ -19,14 +19,32 @@ function miniCodec<A extends core.SomeType, B extends core.SomeType>(
   });
 }
 
+/**
+ * Re-wraps a flavor-agnostic core schema (field-level primitives from
+ * nip01.ts/nip05.ts/nip19.ts) through mini's own constructor, the same way
+ * miniCodec() re-wraps codecs, so the result has mini's instance methods
+ * (.check()/...) instead of being unusable outside a z.object({...}) shape
+ * or the top-level z.* functions.
+ */
+function miniSchema<T extends core.SomeType>(
+  Ctor: core.$constructor<T>,
+  coreSchema: core.SomeType,
+): T {
+  // `new` via $constructor doesn't preserve the def's type arguments, so
+  // assert the result against Ctor's own T explicitly (same treatment as
+  // makeCodec()).
+  // biome-ignore lint/suspicious/noExplicitAny: $constructor doesn't accept a typed def; the return type is asserted explicitly below.
+  return new Ctor(coreSchema._zod.def as any);
+}
+
 export const zostr = {
   // NIP-01 field-level primitives (can be embedded directly in a z.object({...}) shape)
-  pubkey: nip01.pubkey,
-  eventId: nip01.eventId,
-  signature: nip01.signature,
-  timestamp: nip01.timestamp,
-  kind: nip01.kind,
-  tags: nip01.tags,
+  pubkey: () => miniSchema(z.ZodMiniString, nip01.pubkey()),
+  eventId: () => miniSchema(z.ZodMiniString, nip01.eventId()),
+  signature: () => miniSchema(z.ZodMiniString, nip01.signature()),
+  timestamp: () => miniSchema(z.ZodMiniNumber, nip01.timestamp()),
+  kind: () => miniSchema(z.ZodMiniNumber, nip01.kind()),
+  tags: () => miniSchema(z.ZodMiniArray, nip01.tags()),
 
   // NIP-01 event schemas. Re-wrapped through mini's z.object() so .check() is available.
   eventTemplate: () => z.object(nip01.eventTemplate()._zod.def.shape),
@@ -37,11 +55,12 @@ export const zostr = {
   signatureCheck: nip01.signatureCheck,
 
   // NIP-05
-  nip05: nip05.nip05IdentifierSchema,
+  nip05: () => miniSchema(z.ZodMiniString, nip05.nip05IdentifierSchema()),
   formatNip05Identifier: nip05.formatNip05Identifier,
 
   // NIP-19 / bech32 (lightweight version that only validates the prefix)
-  bech32: nip19.bech32Schema,
+  bech32: (prefix: nip19.Bech32Prefix) =>
+    miniSchema(z.ZodMiniString, nip19.bech32Schema(prefix)),
 
   // NIP-19 codecs (decode/encode to the actual data)
   npub: () => miniCodec(nip19.npubCodec),
