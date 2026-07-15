@@ -19,14 +19,32 @@ function classicCodec<A extends core.SomeType, B extends core.SomeType>(
   });
 }
 
+/**
+ * Re-wraps a flavor-agnostic core schema (field-level primitives from
+ * nip01.ts/nip05.ts/nip19.ts) through classic's own constructor, the same
+ * way classicCodec() re-wraps codecs, so the result has classic's instance
+ * methods (.parse()/.optional()/.catch()/.safeParse()/...) instead of being
+ * unusable outside a z.object({...}) shape or the top-level z.* functions.
+ */
+function classicSchema<T extends core.SomeType>(
+  Ctor: core.$constructor<T>,
+  coreSchema: core.SomeType,
+): T {
+  // `new` via $constructor doesn't preserve the def's type arguments, so
+  // assert the result against Ctor's own T explicitly (same treatment as
+  // makeCodec()).
+  // biome-ignore lint/suspicious/noExplicitAny: $constructor doesn't accept a typed def; the return type is asserted explicitly below.
+  return new Ctor(coreSchema._zod.def as any);
+}
+
 export const zostr = {
   // NIP-01 field-level primitives (can be embedded directly in a z.object({...}) shape)
-  pubkey: nip01.pubkey,
-  eventId: nip01.eventId,
-  signature: nip01.signature,
-  timestamp: nip01.timestamp,
-  kind: nip01.kind,
-  tags: nip01.tags,
+  pubkey: () => classicSchema(z.ZodString, nip01.pubkey()),
+  eventId: () => classicSchema(z.ZodString, nip01.eventId()),
+  signature: () => classicSchema(z.ZodString, nip01.signature()),
+  timestamp: () => classicSchema(z.ZodNumber, nip01.timestamp()),
+  kind: () => classicSchema(z.ZodNumber, nip01.kind()),
+  tags: () => classicSchema(z.ZodArray, nip01.tags()),
 
   // NIP-01 event schemas. Re-wrapped through classic's z.object() so .check() is available.
   eventTemplate: () => z.object(nip01.eventTemplate()._zod.def.shape),
@@ -37,11 +55,12 @@ export const zostr = {
   signatureCheck: nip01.signatureCheck,
 
   // NIP-05
-  nip05: nip05.nip05IdentifierSchema,
+  nip05: () => classicSchema(z.ZodString, nip05.nip05IdentifierSchema()),
   formatNip05Identifier: nip05.formatNip05Identifier,
 
   // NIP-19 / bech32 (lightweight version that only validates the prefix)
-  bech32: nip19.bech32Schema,
+  bech32: (prefix: nip19.Bech32Prefix) =>
+    classicSchema(z.ZodString, nip19.bech32Schema(prefix)),
 
   // NIP-19 codecs (decode/encode to the actual data)
   npub: () => classicCodec(nip19.npubCodec),

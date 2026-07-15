@@ -156,6 +156,27 @@ describe("zostr (mini)", () => {
     }
   });
 
+  it("every field-level primitive exposes mini's native .check() and works with mini's functional z.optional()/z.catch()/z.safeParse() (regression: raw core schemas lack .check(), and even top-level z.parse() support)", () => {
+    const primitives: Array<() => { check: unknown }> = [
+      () => zostr.pubkey(),
+      () => zostr.eventId(),
+      () => zostr.signature(),
+      () => zostr.timestamp(),
+      () => zostr.kind(),
+      () => zostr.tags(),
+      () => zostr.nip05(),
+      () => zostr.bech32("npub"),
+    ];
+
+    for (const factory of primitives) {
+      expect(typeof factory().check).toBe("function");
+    }
+
+    expect(z.parse(z.catch(zostr.pubkey(), "fallback"), 123)).toBe("fallback");
+    expect(z.parse(z.optional(zostr.pubkey()), undefined)).toBeUndefined();
+    expect(z.safeParse(zostr.pubkey(), 123).success).toBe(false);
+  });
+
   // Note: unlike classic zod, zod/mini never attaches .decode()/.encode() as
   // instance methods on any schema (only the top-level z.decode()/z.encode()
   // exist) — so there's no equivalent "instance method" assertion to make

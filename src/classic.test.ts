@@ -186,6 +186,29 @@ describe("zostr (classic)", () => {
     }
   });
 
+  it("every field-level primitive exposes classic's native .optional()/.catch()/.safeParse() (regression: raw core schemas lack these, and even .parse())", () => {
+    const primitives: Array<() => { optional: unknown; safeParse: unknown }> = [
+      () => zostr.pubkey(),
+      () => zostr.eventId(),
+      () => zostr.signature(),
+      () => zostr.timestamp(),
+      () => zostr.kind(),
+      () => zostr.tags(),
+      () => zostr.nip05(),
+      () => zostr.bech32("npub"),
+    ];
+
+    for (const factory of primitives) {
+      const schema = factory();
+      expect(typeof schema.optional).toBe("function");
+      expect(typeof schema.safeParse).toBe("function");
+    }
+
+    expect(zostr.pubkey().catch("fallback").parse(123)).toBe("fallback");
+    expect(zostr.pubkey().optional().parse(undefined)).toBeUndefined();
+    expect(zostr.pubkey().safeParse(123).success).toBe(false);
+  });
+
   it("every NIP-19/metadata codec exposes native .decode()/.encode() (regression: raw core.$ZodCodec lacks these)", () => {
     const codecFactories: Array<() => { decode: unknown; encode: unknown }> = [
       () => zostr.npub(),

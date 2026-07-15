@@ -17,6 +17,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   flag was dropped (`--access public` is kept).
 - Enable dependabot for updating npm packages and GitHub Actions.
 
+### Fixed
+
+- `zostr.pubkey()`, `eventId()`, `signature()`, `timestamp()`, `kind()`,
+  `tags()`, `nip05()`, and `bech32()` now return schemas re-wrapped through
+  each flavor's own constructor, matching how event schemas and codecs were
+  already re-wrapped. Previously these returned an unwrapped
+  `core.$ZodType` with none of classic zod's instance methods — not even
+  `.parse()`, let alone `.optional()`/`.catch()`/`.safeParse()` — contrary to
+  what `docs/API.md` documented. Embedding them directly in a
+  `z.object({...})` shape (as shown in `README.md`) still works as before.
+
 ## [0.1.0] - 2026-07-15
 
 ### Added
