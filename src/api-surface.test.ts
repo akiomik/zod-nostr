@@ -34,9 +34,11 @@ const EXPECTED_TOP_LEVEL_KEYS = [
   "nevent",
   "naddr",
   "nip01",
+  "nip11",
 ].sort();
 
 const EXPECTED_NIP01_KEYS = ["metadata", "textNote"].sort();
+const EXPECTED_NIP11_KEYS = ["relayInformationDocument"].sort();
 const EXPECTED_RELAY_MESSAGE_KEYS = [
   "event",
   "ok",
@@ -51,6 +53,7 @@ const EXPECTED_CLIENT_MESSAGE_KEYS = ["event", "req", "close", "any"].sort();
 
 const NESTED_NAMESPACES: [string, string[]][] = [
   ["nip01", EXPECTED_NIP01_KEYS],
+  ["nip11", EXPECTED_NIP11_KEYS],
   ["relayMessage", EXPECTED_RELAY_MESSAGE_KEYS],
   ["clientMessage", EXPECTED_CLIENT_MESSAGE_KEYS],
 ];

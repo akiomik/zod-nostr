@@ -27,6 +27,13 @@ export function zodBoolean(): core.$ZodBoolean<boolean> {
   return new core.$ZodBoolean(def as any) as core.$ZodBoolean<boolean>;
 }
 
+/** zod core's own URL format check (accepts any scheme, not just http/https) */
+export function zodUrl(): core.$ZodURL {
+  const def = { type: "string", format: "url", check: "string_format" };
+  // biome-ignore lint/suspicious/noExplicitAny: $constructor doesn't accept a typed def; the return type is asserted explicitly below.
+  return new core.$ZodURL(def as any) as core.$ZodURL;
+}
+
 export function zodLiteral<T extends core.util.Literal>(
   value: T,
 ): core.$ZodLiteral<T> {

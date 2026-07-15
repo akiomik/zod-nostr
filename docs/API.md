@@ -217,6 +217,36 @@ zostr.formatNip05Identifier("_@example.com"); // "example.com"
 zostr.formatNip05Identifier("bob@example.com"); // "bob@example.com"
 ```
 
+## NIP-11 — relay information document
+
+### `zostr.nip11.relayInformationDocument()`
+
+The NIP-11 relay information document: `name`, `description`, `banner`,
+`icon`, `pubkey`, `self`, `contact`, `supported_nips`, `software`, `version`,
+`terms_of_service`, `payments_url`, `limitation`, `fees`. Every field is
+optional, matching the spec ("Any field may be omitted, and clients MUST
+ignore any additional fields they do not understand") — unknown keys are
+stripped rather than rejected.
+
+`pubkey`/`self` are validated as 64-character lowercase hex strings (same as
+[`zostr.pubkey()`](#zostrpubkey)); `supported_nips` as an array of numbers;
+`banner`/`icon`/`terms_of_service`/`payments_url` as URLs (any scheme, not
+just `http`/`https`); `limitation` and `fees` as nested objects with their
+own optional/required fields (`fees.*[].amount`/`.unit` are required,
+`.period`/`.kinds` are optional). `software`/`contact` are left as plain
+strings — `software` is documented as a URL but not always one in practice,
+and `contact` may be a bare email address rather than a URL.
+
+```ts
+zostr.nip11.relayInformationDocument().parse({
+  name: "relay.example",
+  pubkey: "3bf0c63f...",
+  supported_nips: [1, 11, 42],
+  limitation: { max_message_length: 16384, auth_required: false },
+  fees: { admission: [{ amount: 1000000, unit: "msats" }] },
+});
+```
+
 ## NIP-19 — bech32 entities
 
 ### `zostr.bech32(prefix)`

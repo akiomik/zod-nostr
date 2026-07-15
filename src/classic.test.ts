@@ -355,4 +355,81 @@ describe("zostr (classic)", () => {
     expect(() => checked.parse(["CLOSED", "sub1", "nope"])).toThrow();
     expect(() => checked.parse(["CLOSED", "sub1", ""])).toThrow();
   });
+
+  it("nip11.relayInformationDocument() validates a full document", () => {
+    const doc = {
+      name: "relay.example",
+      description: "an example relay",
+      banner: "https://example.com/banner.png",
+      icon: "https://example.com/icon.png",
+      pubkey: "a".repeat(64),
+      self: "b".repeat(64),
+      contact: "admin@example.com",
+      supported_nips: [1, 11, 42],
+      software: "https://example.com/software",
+      version: "1.0.0",
+      terms_of_service: "https://example.com/tos",
+      payments_url: "https://example.com/pay",
+      limitation: {
+        max_message_length: 16384,
+        max_subscriptions: 10,
+        auth_required: false,
+        payment_required: false,
+        restricted_writes: false,
+      },
+      fees: {
+        admission: [{ amount: 1000000, unit: "msats" }],
+        publication: [{ amount: 100, unit: "msats", kinds: [1] }],
+      },
+    };
+
+    expect(zostr.nip11.relayInformationDocument().parse(doc)).toEqual(doc);
+  });
+
+  it("nip11.relayInformationDocument() treats every field as optional and strips unknown keys", () => {
+    expect(zostr.nip11.relayInformationDocument().parse({})).toEqual({});
+    expect(
+      zostr.nip11.relayInformationDocument().parse({ name: "x", extra: "y" }),
+    ).toEqual({ name: "x" });
+  });
+
+  it("nip11.relayInformationDocument() validates pubkey/self as 64-char hex", () => {
+    expect(() =>
+      zostr.nip11.relayInformationDocument().parse({ pubkey: "not-hex" }),
+    ).toThrow();
+    expect(() =>
+      zostr.nip11.relayInformationDocument().parse({ self: "not-hex" }),
+    ).toThrow();
+  });
+
+  it("nip11.relayInformationDocument() validates banner/icon/terms_of_service/payments_url as URLs", () => {
+    expect(() =>
+      zostr.nip11.relayInformationDocument().parse({ banner: "not-a-url" }),
+    ).toThrow();
+    expect(() =>
+      zostr.nip11.relayInformationDocument().parse({ icon: "not-a-url" }),
+    ).toThrow();
+    expect(() =>
+      zostr.nip11
+        .relayInformationDocument()
+        .parse({ terms_of_service: "not-a-url" }),
+    ).toThrow();
+    expect(() =>
+      zostr.nip11
+        .relayInformationDocument()
+        .parse({ payments_url: "not-a-url" }),
+    ).toThrow();
+
+    // software/contact are left as plain strings, same as rust-nostr
+    expect(
+      zostr.nip11
+        .relayInformationDocument()
+        .parse({ software: "git+https://example.com/repo.git" }),
+    ).toEqual({ software: "git+https://example.com/repo.git" });
+    expect(
+      zostr.nip11
+        .relayInformationDocument()
+        .parse({ contact: "admin@example.com" }),
+    ).toEqual({ contact: "admin@example.com" });
+  });
 });

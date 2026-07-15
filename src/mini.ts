@@ -2,6 +2,7 @@ import * as z from "zod/mini";
 import type * as core from "zod/v4/core";
 import * as nip01 from "./nip01.js";
 import * as nip05 from "./nip05.js";
+import * as nip11 from "./nip11.js";
 import * as nip19 from "./nip19.js";
 
 /**
@@ -99,5 +100,11 @@ export const zostr = {
   nip01: {
     metadata: () => miniCodec(nip01.nip01.metadata()),
     textNote: () => z.object(nip01.nip01.textNote()._zod.def.shape),
+  },
+
+  // NIP-11 relay information document
+  nip11: {
+    relayInformationDocument: () =>
+      miniSchema(z.ZodMiniObject, nip11.nip11.relayInformationDocument()),
   },
 };
