@@ -31,6 +31,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `npm run check:write`).
 - GitHub Actions CI (`.github/workflows/ci.yml`) running typecheck, lint/format
   check, tests, and build on every push and pull request to `main`.
+- GitHub Actions publish workflow (`.github/workflows/publish.yml`), triggered
+  by GitHub Releases, that verifies the release tag matches `package.json`'s
+  version, runs the full check suite, and publishes to npm with provenance
+  using an `NPM_TOKEN` repository secret (trusted publishing isn't set up
+  yet). A matching `prepublishOnly` script provides the same safety net for
+  local `npm publish`.
 
 ### Fixed
 

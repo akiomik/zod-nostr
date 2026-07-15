@@ -25,7 +25,8 @@
 		"lint": "biome lint .",
 		"format": "biome format --write .",
 		"check": "biome check .",
-		"check:write": "biome check --write ."
+		"check:write": "biome check --write .",
+		"prepublishOnly": "npm run typecheck && npm run check && npm test && npm run build"
 	},
 	"keywords": [
 		"nostr",

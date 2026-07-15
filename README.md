@@ -131,6 +131,25 @@ npm run build          # emit dist/ (classic.js + mini.js)
 CI (`.github/workflows/ci.yml`) runs all of the above on every push and pull
 request to `main`.
 
+## Release process
+
+1. Bump `version` in `package.json` and add a dated section to
+   `CHANGELOG.md` (move the relevant `[Unreleased]` entries under it).
+2. Merge that to `main`.
+3. Create a GitHub Release with tag `vX.Y.Z` (matching `package.json`'s
+   version) targeting `main`.
+
+Publishing a release triggers `.github/workflows/publish.yml`, which
+type-checks, lints, tests, builds, verifies the tag matches
+`package.json`'s version, and runs `npm publish --provenance`.
+
+Authentication currently uses an `NPM_TOKEN` repository secret (classic
+token), since npm [trusted publishing](https://docs.npmjs.com/trusted-publishers)
+(OIDC, no token needed) isn't set up yet — the workflow still requests
+`id-token: write` so npm provenance attestation works either way. Once
+trusted publishing is configured for this package, the `NODE_AUTH_TOKEN`
+step can be dropped in favor of OIDC.
+
 ## License
 
 [MIT](LICENSE)
