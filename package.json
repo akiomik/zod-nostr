@@ -1,0 +1,38 @@
+{
+  "name": "zod-nostr",
+  "version": "0.0.0",
+  "description": "Zod schemas for Nostr (NIP-01, NIP-05, NIP-19, ...)",
+  "type": "module",
+  "files": ["dist"],
+  "main": "./dist/classic.js",
+  "types": "./dist/classic.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/classic.d.ts",
+      "import": "./dist/classic.js"
+    },
+    "./mini": {
+      "types": "./dist/mini.d.ts",
+      "import": "./dist/mini.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "keywords": ["nostr", "zod"],
+  "license": "MIT",
+  "peerDependencies": {
+    "zod": "^4.4.3"
+  },
+  "dependencies": {
+    "nostr-tools": "^2.23.12"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10",
+    "zod": "^4.4.3"
+  }
+}
