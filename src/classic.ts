@@ -81,8 +81,12 @@ export const zostr = {
   },
 
   // NIP-05
-  nip05: () => classicSchema(z.ZodString, nip05.nip05IdentifierSchema()),
-  formatNip05Identifier: nip05.formatNip05Identifier,
+  nip05: {
+    identifier: () => classicSchema(z.ZodString, nip05.nip05.identifier()),
+    nostrJsonDocument: () =>
+      classicSchema(z.ZodObject, nip05.nip05.nostrJsonDocument()),
+    formatIdentifier: nip05.nip05.formatIdentifier,
+  },
 
   // NIP-19 / bech32 (lightweight version that only validates the prefix)
   bech32: (prefix: nip19.Bech32Prefix) =>

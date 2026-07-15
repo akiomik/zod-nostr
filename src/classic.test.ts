@@ -194,7 +194,7 @@ describe("zostr (classic)", () => {
       () => zostr.timestamp(),
       () => zostr.kind(),
       () => zostr.tags(),
-      () => zostr.nip05(),
+      () => zostr.nip05.identifier(),
       () => zostr.bech32("npub"),
     ];
 
@@ -354,6 +354,57 @@ describe("zostr (classic)", () => {
     ).toBeTruthy();
     expect(() => checked.parse(["CLOSED", "sub1", "nope"])).toThrow();
     expect(() => checked.parse(["CLOSED", "sub1", ""])).toThrow();
+  });
+
+  it("nip05.nostrJsonDocument() validates a full document", () => {
+    const pubkey = getPublicKey(generateSecretKey());
+    const doc = {
+      names: { bob: pubkey },
+      relays: {
+        [pubkey]: ["wss://relay.example.com", "wss://relay2.example.com"],
+      },
+    };
+
+    expect(zostr.nip05.nostrJsonDocument().parse(doc)).toEqual(doc);
+  });
+
+  it("nip05.nostrJsonDocument() requires names but treats relays as optional", () => {
+    const pubkey = getPublicKey(generateSecretKey());
+    expect(
+      zostr.nip05.nostrJsonDocument().parse({ names: { bob: pubkey } }),
+    ).toEqual({ names: { bob: pubkey } });
+    expect(() => zostr.nip05.nostrJsonDocument().parse({})).toThrow();
+  });
+
+  it("nip05.nostrJsonDocument() validates names/relays pubkeys as 64-char lowercase hex", () => {
+    const pubkey = getPublicKey(generateSecretKey());
+    expect(() =>
+      zostr.nip05.nostrJsonDocument().parse({ names: { bob: "not-hex" } }),
+    ).toThrow();
+    expect(() =>
+      zostr.nip05.nostrJsonDocument().parse({
+        names: { bob: pubkey.toUpperCase() },
+      }),
+    ).toThrow();
+    expect(() =>
+      zostr.nip05.nostrJsonDocument().parse({
+        names: { bob: pubkey },
+        relays: { "not-hex": ["wss://relay.example.com"] },
+      }),
+    ).toThrow();
+  });
+
+  it("nip05.nostrJsonDocument() validates names keys as local-part characters and strips unknown top-level keys", () => {
+    const pubkey = getPublicKey(generateSecretKey());
+    expect(() =>
+      zostr.nip05.nostrJsonDocument().parse({ names: { "bob!": pubkey } }),
+    ).toThrow();
+
+    expect(
+      zostr.nip05
+        .nostrJsonDocument()
+        .parse({ names: { bob: pubkey }, extra: "y" }),
+    ).toEqual({ names: { bob: pubkey } });
   });
 
   it("nip11.relayInformationDocument() validates a full document", () => {

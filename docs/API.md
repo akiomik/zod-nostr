@@ -86,7 +86,7 @@ verifiedEvent.parse(event); // throws if id/sig don't match
 A **codec** between a kind:0 `content` string (JSON) and a parsed, validated
 profile object `{ name, display_name, picture, nip05 }`. All four fields are
 required strings; `nip05` is additionally validated as a NIP-05 identifier
-(see [`zostr.nip05()`](#zostrnip05)).
+(see [`zostr.nip05.identifier()`](#zostrnip05identifier)).
 
 ```ts
 const profile = zostr.nip01.metadata().decode(event.content);
@@ -193,7 +193,7 @@ zostr.clientMessage.close().parse(["CLOSE", "sub1"]);
 
 ## NIP-05 — identifiers
 
-### `zostr.nip05()`
+### `zostr.nip05.identifier()`
 
 Validates a NIP-05 identifier string (`<local-part>@<domain>`):
 
@@ -202,19 +202,46 @@ Validates a NIP-05 identifier string (`<local-part>@<domain>`):
 - domain is a syntactically valid host (no path, query, or fragment)
 
 ```ts
-zostr.nip05().parse("bob@example.com");   // ok
-zostr.nip05().parse("_@example.com");     // ok (root identifier)
-zostr.nip05().parse("bob@example.com/x"); // throws
+zostr.nip05.identifier().parse("bob@example.com");   // ok
+zostr.nip05.identifier().parse("_@example.com");     // ok (root identifier)
+zostr.nip05.identifier().parse("bob@example.com/x"); // throws
 ```
 
-### `zostr.formatNip05Identifier(identifier)`
+### `zostr.nip05.nostrJsonDocument()`
+
+The `.well-known/nostr.json` document a NIP-05 domain serves in response to
+`GET /.well-known/nostr.json?name=<local-part>`: `names` (required — a
+mapping of local-part to lowercase 64-character hex pubkey) and `relays`
+(the spec's "recommended" optional attribute — a mapping of pubkey to an
+array of relay URLs). Unknown top-level keys are stripped rather than
+rejected, matching NIP-11's treatment of forward-compatible fields.
+
+`names` keys use the same local-part character check as
+[`zostr.nip05.identifier()`](#zostrnip05identifier); `names` values and
+`relays` keys are validated as 64-character lowercase hex strings (same as
+[`zostr.pubkey()`](#zostrpubkey)). Relay URLs in `relays` are left as plain
+strings, matching how relay URLs are handled elsewhere in this library (e.g.
+`zostr.nprofile()`'s `relays` field).
+
+```ts
+zostr.nip05.nostrJsonDocument().parse({
+  names: { bob: "3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459" },
+  relays: {
+    "3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459": [
+      "wss://relay.example.com",
+    ],
+  },
+});
+```
+
+### `zostr.nip05.formatIdentifier(identifier)`
 
 Plain utility (not a schema) for display purposes: strips a leading `_@`
 root-identifier prefix, per [NIP-05](https://github.com/nostr-protocol/nips/blob/master/05.md#showing-just-the-domain-as-an-identifier).
 
 ```ts
-zostr.formatNip05Identifier("_@example.com"); // "example.com"
-zostr.formatNip05Identifier("bob@example.com"); // "bob@example.com"
+zostr.nip05.formatIdentifier("_@example.com"); // "example.com"
+zostr.nip05.formatIdentifier("bob@example.com"); // "bob@example.com"
 ```
 
 ## NIP-11 — relay information document

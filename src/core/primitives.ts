@@ -67,6 +67,18 @@ export function zodUnion<T extends core.SomeType[]>(
   return new core.$ZodUnion(def as any) as unknown as core.$ZodUnion<T>;
 }
 
+export function zodRecord<
+  Key extends core.$ZodRecordKey,
+  Value extends core.SomeType,
+>(keyType: Key, valueType: Value): core.$ZodRecord<Key, Value> {
+  const def = { type: "record", keyType, valueType };
+  // biome-ignore lint/suspicious/noExplicitAny: $constructor doesn't accept a typed def; the return type is asserted explicitly below.
+  return new core.$ZodRecord(def as any) as unknown as core.$ZodRecord<
+    Key,
+    Value
+  >;
+}
+
 export function zodObject<Shape extends core.$ZodShape>(
   shape: Shape,
   options: {
