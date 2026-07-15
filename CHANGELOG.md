@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `npm publish` no longer needs `NODE_AUTH_TOKEN`; provenance is generated
   automatically as part of trusted publishing, so the explicit `--provenance`
   flag was dropped (`--access public` is kept).
+- Enable dependabot for updating npm packages and GitHub Actions.
 
 ## [0.1.0] - 2026-07-15
 
