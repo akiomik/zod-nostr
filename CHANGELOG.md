@@ -22,6 +22,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `zostr.nip05()` → `zostr.nip05.identifier()`
   - `zostr.formatNip05Identifier()` → `zostr.nip05.formatIdentifier()`
 
+### Fixed
+
+- **Breaking (type-only):** `zostr.tags()`, `zostr.filter()`, and all
+  `zostr.relayMessage.*`/`zostr.clientMessage.*` schemas now infer their
+  precise structural output type from `.parse()` (e.g.
+  `zostr.filter().parse(f).ids` is `string[] | undefined`, not `unknown`;
+  `zostr.relayMessage.ok().parse(m)[3]` is `string`, not `unknown`).
+  Previously `classic.ts`/`mini.ts` re-wrapped these through a generic
+  helper that inferred its type parameter from a bare schema-class
+  reference rather than the actual schema, so the output type fell back to
+  each class's loose default. Runtime validation behavior is unchanged.
+
 ## [0.1.2] - 2026-07-15
 
 ### Added
