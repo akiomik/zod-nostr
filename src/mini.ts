@@ -66,6 +66,11 @@ export const zostr = {
     closed: () => miniSchema(z.ZodMiniTuple, nip01.relayMessage.closed()),
     notice: () => miniSchema(z.ZodMiniTuple, nip01.relayMessage.notice()),
     any: () => miniSchema(z.ZodMiniUnion, nip01.relayMessage.any()),
+
+    // Opt-in checks for NIP-01's OK/CLOSED "<prefix>: <message>" convention:
+    // zostr.relayMessage.ok().check(zostr.relayMessage.okMessagePrefixCheck())
+    okMessagePrefixCheck: nip01.relayMessage.okMessagePrefixCheck,
+    closedMessagePrefixCheck: nip01.relayMessage.closedMessagePrefixCheck,
   },
   clientMessage: {
     event: () => miniSchema(z.ZodMiniTuple, nip01.clientMessage.event()),

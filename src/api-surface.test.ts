@@ -44,6 +44,8 @@ const EXPECTED_RELAY_MESSAGE_KEYS = [
   "closed",
   "notice",
   "any",
+  "okMessagePrefixCheck",
+  "closedMessagePrefixCheck",
 ].sort();
 const EXPECTED_CLIENT_MESSAGE_KEYS = ["event", "req", "close", "any"].sort();
 

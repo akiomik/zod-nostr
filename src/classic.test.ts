@@ -311,4 +311,48 @@ describe("zostr (classic)", () => {
     expect(any.parse(["CLOSE", "sub1"])).toBeTruthy();
     expect(() => any.parse(["EOSE", "sub1"])).toThrow();
   });
+
+  it("relayMessage.okMessagePrefixCheck() is opt-in and only enforced when the event is rejected", () => {
+    const eventId = "a".repeat(64);
+    const checked = zostr.relayMessage
+      .ok()
+      .check(zostr.relayMessage.okMessagePrefixCheck());
+
+    // Not composed by default: an unprefixed rejection message parses fine.
+    expect(
+      zostr.relayMessage.ok().parse(["OK", eventId, false, "nope"]),
+    ).toBeTruthy();
+
+    // Accepted (true): message MAY be empty/unprefixed per NIP-01.
+    expect(checked.parse(["OK", eventId, true, ""])).toBeTruthy();
+    expect(checked.parse(["OK", eventId, true, "anything"])).toBeTruthy();
+
+    // Rejected (false): message MUST follow "<prefix>: <message>".
+    expect(
+      checked.parse(["OK", eventId, false, "duplicate: already have this"]),
+    ).toBeTruthy();
+    expect(() => checked.parse(["OK", eventId, false, "nope"])).toThrow();
+    expect(() => checked.parse(["OK", eventId, false, ""])).toThrow();
+  });
+
+  it("relayMessage.closedMessagePrefixCheck() enforces the '<prefix>: <message>' format, prefix isn't restricted to NIP-01's standardized list", () => {
+    const checked = zostr.relayMessage
+      .closed()
+      .check(zostr.relayMessage.closedMessagePrefixCheck());
+
+    // Not composed by default: an unprefixed reason parses fine.
+    expect(
+      zostr.relayMessage.closed().parse(["CLOSED", "sub1", "nope"]),
+    ).toBeTruthy();
+
+    expect(
+      checked.parse(["CLOSED", "sub1", "error: could not connect"]),
+    ).toBeTruthy();
+    // NIP-01's own CLOSED example uses a prefix outside the "standardized" list.
+    expect(
+      checked.parse(["CLOSED", "sub1", "unsupported: unknown filter field"]),
+    ).toBeTruthy();
+    expect(() => checked.parse(["CLOSED", "sub1", "nope"])).toThrow();
+    expect(() => checked.parse(["CLOSED", "sub1", ""])).toThrow();
+  });
 });
