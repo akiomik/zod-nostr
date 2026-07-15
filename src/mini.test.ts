@@ -258,4 +258,48 @@ describe("zostr (mini)", () => {
     expect(z.parse(any, ["CLOSE", "sub1"])).toBeTruthy();
     expect(() => z.parse(any, ["EOSE", "sub1"])).toThrow();
   });
+
+  it("relayMessage.okMessagePrefixCheck() is opt-in and only enforced when the event is rejected", () => {
+    const eventId = "a".repeat(64);
+    const checked = zostr.relayMessage
+      .ok()
+      .check(zostr.relayMessage.okMessagePrefixCheck());
+
+    // Not composed by default: an unprefixed rejection message parses fine.
+    expect(
+      z.parse(zostr.relayMessage.ok(), ["OK", eventId, false, "nope"]),
+    ).toBeTruthy();
+
+    // Accepted (true): message MAY be empty/unprefixed per NIP-01.
+    expect(z.parse(checked, ["OK", eventId, true, ""])).toBeTruthy();
+    expect(z.parse(checked, ["OK", eventId, true, "anything"])).toBeTruthy();
+
+    // Rejected (false): message MUST follow "<prefix>: <message>".
+    expect(
+      z.parse(checked, ["OK", eventId, false, "duplicate: already have this"]),
+    ).toBeTruthy();
+    expect(() => z.parse(checked, ["OK", eventId, false, "nope"])).toThrow();
+    expect(() => z.parse(checked, ["OK", eventId, false, ""])).toThrow();
+  });
+
+  it("relayMessage.closedMessagePrefixCheck() enforces the '<prefix>: <message>' format, prefix isn't restricted to NIP-01's standardized list", () => {
+    const checked = zostr.relayMessage
+      .closed()
+      .check(zostr.relayMessage.closedMessagePrefixCheck());
+
+    // Not composed by default: an unprefixed reason parses fine.
+    expect(
+      z.parse(zostr.relayMessage.closed(), ["CLOSED", "sub1", "nope"]),
+    ).toBeTruthy();
+
+    expect(
+      z.parse(checked, ["CLOSED", "sub1", "error: could not connect"]),
+    ).toBeTruthy();
+    // NIP-01's own CLOSED example uses a prefix outside the "standardized" list.
+    expect(
+      z.parse(checked, ["CLOSED", "sub1", "unsupported: unknown filter field"]),
+    ).toBeTruthy();
+    expect(() => z.parse(checked, ["CLOSED", "sub1", "nope"])).toThrow();
+    expect(() => z.parse(checked, ["CLOSED", "sub1", ""])).toThrow();
+  });
 });

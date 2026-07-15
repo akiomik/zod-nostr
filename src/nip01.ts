@@ -192,6 +192,65 @@ function noticeMessage() {
   return zodTuple([zodLiteral("NOTICE"), zodString()]);
 }
 
+/**
+ * NIP-01 requires OK/CLOSED messages to follow a "<prefix>: <message>" shape
+ * (single-word machine-readable prefix, ": ", then human-readable text), but
+ * doesn't restrict the prefix to a closed set — NIP-01's own CLOSED example
+ * uses "unsupported:", which isn't among the "standardized" ones it lists
+ * (duplicate/pow/blocked/rate-limited/invalid/restricted/mute/error). So
+ * this checks the shape, not membership in that list.
+ */
+const MESSAGE_PREFIX_FORMAT = /^[a-z][a-z-]*: \S/;
+
+function hasPrefixedMessageFormat(message: string): boolean {
+  return MESSAGE_PREFIX_FORMAT.test(message);
+}
+
+/**
+ * Typed `unknown[]` (rather than the precise OK/CLOSED tuple shape) because
+ * classic.ts/mini.ts re-wrap tuple schemas through the generic
+ * classicSchema()/miniSchema() helper, which doesn't preserve item types —
+ * so the schema `.check()` is composed onto only accepts checks typed this
+ * loosely. Safe in practice: these checks only ever run after ZodTuple's own
+ * structural validation has already confirmed the shape.
+ */
+
+/**
+ * Checks that OK's message follows NIP-01's "<prefix>: <message>" convention.
+ * Only enforced when the event was rejected (3rd element `false`) — NIP-01
+ * allows the message to be an empty string when accepted.
+ */
+function okMessagePrefixCheck(): core.$ZodCheck<unknown[]> {
+  return makeCheck<unknown[]>((payload) => {
+    const accepted = payload.value[2] as boolean;
+    const message = payload.value[3] as string;
+    if (accepted) return;
+    if (!hasPrefixedMessageFormat(message)) {
+      payload.issues.push({
+        code: "custom",
+        input: payload.value,
+        message:
+          'Invalid OK message (a rejected event MUST use "<prefix>: <message>" format)',
+      });
+    }
+  });
+}
+
+/** Checks that CLOSED's message follows NIP-01's "<prefix>: <message>" convention */
+function closedMessagePrefixCheck(): core.$ZodCheck<unknown[]> {
+  return makeCheck<unknown[]>((payload) => {
+    const message = payload.value[2] as string;
+    if (!hasPrefixedMessageFormat(message)) {
+      payload.issues.push({
+        code: "custom",
+        input: payload.value,
+        message:
+          'Invalid CLOSED message (expected "<prefix>: <message>" format)',
+      });
+    }
+  });
+}
+
 /** NIP-01 relay-to-client messages (structure only; EVENT does not verify the signature) */
 export const relayMessage = {
   event: relayEventMessage,
@@ -207,6 +266,11 @@ export const relayMessage = {
       closedMessage(),
       noticeMessage(),
     ]),
+  // Opt-in checks: NIP-01's machine-readable message prefix isn't enforced by
+  // ok()/closed() themselves since many relays don't follow it strictly.
+  // Compose explicitly: zostr.relayMessage.ok().check(zostr.relayMessage.okMessagePrefixCheck())
+  okMessagePrefixCheck,
+  closedMessagePrefixCheck,
 };
 
 function clientEventMessage() {

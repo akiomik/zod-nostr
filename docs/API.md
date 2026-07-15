@@ -141,14 +141,38 @@ only — `event()` does not verify the embedded event's signature (compose
 | `zostr.relayMessage.notice()` | `["NOTICE", message]` |
 | `zostr.relayMessage.any()` | union of the five above |
 
-The `message` field of `ok()`/`closed()` is validated as a plain `string`;
-NIP-01's `<prefix>: <text>` convention (`duplicate:`, `pow:`, `blocked:`,
-`rate-limited:`, `invalid:`, `restricted:`, `mute:`, `error:`) is not
-enforced, since many relays don't follow it strictly.
+The `message` field of `ok()`/`closed()` is validated as a plain `string` by
+default; NIP-01's `<prefix>: <text>` convention is not enforced, since many
+relays don't follow it strictly.
 
 ```ts
 zostr.relayMessage.any().parse(["EOSE", "sub1"]);
 zostr.relayMessage.ok().parse(["OK", eventId, true, ""]);
+```
+
+### `zostr.relayMessage.okMessagePrefixCheck()` / `zostr.relayMessage.closedMessagePrefixCheck()`
+
+Opt-in [checks](https://zod.dev/api#checks) that enforce NIP-01's
+`"<prefix>: <message>"` shape for `OK`/`CLOSED` messages (a single-word
+machine-readable prefix, `": "`, then human-readable text). The prefix isn't
+restricted to NIP-01's "standardized" list (`duplicate`, `pow`, `blocked`,
+`rate-limited`, `invalid`, `restricted`, `mute`, `error`) — relays may use
+others (NIP-01's own `CLOSED` example uses `unsupported:`), so only the shape
+is checked, not membership in that list.
+
+For `OK`, the format is only required when the event was **rejected** (3rd
+element `false`); NIP-01 allows the message to be an empty string when
+accepted. Compose explicitly, the same way as `signatureCheck()`:
+
+```ts
+const ok = zostr.relayMessage.ok().check(zostr.relayMessage.okMessagePrefixCheck());
+ok.parse(["OK", eventId, false, "duplicate: already have this event"]); // ok
+ok.parse(["OK", eventId, false, "nope"]); // throws — no prefix
+
+const closed = zostr.relayMessage
+  .closed()
+  .check(zostr.relayMessage.closedMessagePrefixCheck());
+closed.parse(["CLOSED", "sub1", "error: could not connect to the database"]); // ok
 ```
 
 ### `zostr.clientMessage`
