@@ -45,7 +45,7 @@ export const zostr = {
   signature: () => miniSchema(z.ZodMiniString, nip01.signature()),
   timestamp: () => miniSchema(z.ZodMiniNumber, nip01.timestamp()),
   kind: () => miniSchema(z.ZodMiniNumber, nip01.kind()),
-  tags: () => miniSchema(z.ZodMiniArray, nip01.tags()),
+  tags: () => z.array(nip01.tags()._zod.def.element),
 
   // NIP-01 event schemas. Re-wrapped through mini's z.object() so .check() is available.
   eventTemplate: () => z.object(nip01.eventTemplate()._zod.def.shape),
@@ -57,16 +57,26 @@ export const zostr = {
 
   // NIP-01 REQ/COUNT filter object
   subscriptionId: () => miniSchema(z.ZodMiniString, nip01.subscriptionId()),
-  filter: () => miniSchema(z.ZodMiniObject, nip01.filter()),
+  filter: () =>
+    z
+      .catchall(
+        z.object(nip01.filter()._zod.def.shape),
+        // nip01.filter() always sets catchall (to an array-of-strings schema
+        // for "#<letter>" tag filters); zod core's own $ZodObjectDef types
+        // `catchall` as `$ZodType | undefined` regardless, so this is never
+        // actually undefined at runtime.
+        nip01.filter()._zod.def.catchall as core.SomeType,
+      )
+      .check(nip01.filterTagKeysCheck()),
 
   // NIP-01 relay-to-client / client-to-relay messages (tuple/union schemas)
   relayMessage: {
-    event: () => miniSchema(z.ZodMiniTuple, nip01.relayMessage.event()),
-    ok: () => miniSchema(z.ZodMiniTuple, nip01.relayMessage.ok()),
-    eose: () => miniSchema(z.ZodMiniTuple, nip01.relayMessage.eose()),
-    closed: () => miniSchema(z.ZodMiniTuple, nip01.relayMessage.closed()),
-    notice: () => miniSchema(z.ZodMiniTuple, nip01.relayMessage.notice()),
-    any: () => miniSchema(z.ZodMiniUnion, nip01.relayMessage.any()),
+    event: () => z.tuple(nip01.relayMessage.event()._zod.def.items),
+    ok: () => z.tuple(nip01.relayMessage.ok()._zod.def.items),
+    eose: () => z.tuple(nip01.relayMessage.eose()._zod.def.items),
+    closed: () => z.tuple(nip01.relayMessage.closed()._zod.def.items),
+    notice: () => z.tuple(nip01.relayMessage.notice()._zod.def.items),
+    any: () => z.union(nip01.relayMessage.any()._zod.def.options),
 
     // Opt-in checks for NIP-01's OK/CLOSED "<prefix>: <message>" convention:
     // zostr.relayMessage.ok().check(zostr.relayMessage.okMessagePrefixCheck())
@@ -74,10 +84,14 @@ export const zostr = {
     closedMessagePrefixCheck: nip01.relayMessage.closedMessagePrefixCheck,
   },
   clientMessage: {
-    event: () => miniSchema(z.ZodMiniTuple, nip01.clientMessage.event()),
-    req: () => miniSchema(z.ZodMiniTuple, nip01.clientMessage.req()),
-    close: () => miniSchema(z.ZodMiniTuple, nip01.clientMessage.close()),
-    any: () => miniSchema(z.ZodMiniUnion, nip01.clientMessage.any()),
+    event: () => z.tuple(nip01.clientMessage.event()._zod.def.items),
+    req: () =>
+      z.tuple(
+        nip01.clientMessage.req()._zod.def.items,
+        nip01.clientMessage.req()._zod.def.rest,
+      ),
+    close: () => z.tuple(nip01.clientMessage.close()._zod.def.items),
+    any: () => z.union(nip01.clientMessage.any()._zod.def.options),
   },
 
   // NIP-05

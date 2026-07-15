@@ -52,11 +52,21 @@ export function zodArray<T extends core.SomeType>(
 
 export function zodTuple<T extends core.SomeType[]>(
   items: [...T],
-  rest: core.SomeType | null = null,
-): core.$ZodTuple<T> {
-  const def = { type: "tuple", items, rest };
+): core.$ZodTuple<T, null>;
+export function zodTuple<T extends core.SomeType[], Rest extends core.SomeType>(
+  items: [...T],
+  rest: Rest,
+): core.$ZodTuple<T, Rest>;
+export function zodTuple<T extends core.SomeType[], Rest extends core.SomeType>(
+  items: [...T],
+  rest?: Rest,
+): core.$ZodTuple<T, Rest | null> {
+  const def = { type: "tuple", items, rest: rest ?? null };
   // biome-ignore lint/suspicious/noExplicitAny: $constructor doesn't accept a typed def; the return type is asserted explicitly below.
-  return new core.$ZodTuple(def as any) as unknown as core.$ZodTuple<T>;
+  return new core.$ZodTuple(def as any) as unknown as core.$ZodTuple<
+    T,
+    Rest | null
+  >;
 }
 
 export function zodUnion<T extends core.SomeType[]>(

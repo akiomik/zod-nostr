@@ -312,6 +312,34 @@ describe("zostr (classic)", () => {
     expect(() => any.parse(["EOSE", "sub1"])).toThrow();
   });
 
+  it("tags()/filter()/relayMessage.*/clientMessage.* infer precise output types (regression: previously fell back to unknown/unknown[] because classic.ts re-wrapped them through the generic classicSchema() helper, which infers T from a bare Ctor reference rather than the actual core schema — see #10)", () => {
+    const t = zostr.tags().parse([["a"]]);
+    const tagChar: string | undefined = t[0]?.[0];
+    expect(tagChar).toBe("a");
+
+    const f = zostr.filter().parse({ kinds: [1] });
+    const kinds: number[] | undefined = f.kinds;
+    expect(kinds).toEqual([1]);
+
+    const ok = zostr.relayMessage.ok().parse(["OK", "a".repeat(64), true, ""]);
+    const accepted: boolean = ok[2];
+    const message: string = ok[3];
+    expect(accepted).toBe(true);
+    expect(message).toBe("");
+
+    const any = zostr.relayMessage.any().parse(["EOSE", "sub1"]);
+    if (any[0] === "EOSE") {
+      const subId: string = any[1];
+      expect(subId).toBe("sub1");
+    }
+
+    const req = zostr.clientMessage
+      .req()
+      .parse(["REQ", "sub1", { kinds: [1] }]);
+    const reqKinds: number[] | undefined = req[2]?.kinds;
+    expect(reqKinds).toEqual([1]);
+  });
+
   it("relayMessage.okMessagePrefixCheck() is opt-in and only enforced when the event is rejected", () => {
     const eventId = "a".repeat(64);
     const checked = zostr.relayMessage

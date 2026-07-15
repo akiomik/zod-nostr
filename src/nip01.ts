@@ -140,7 +140,7 @@ const FILTER_KNOWN_KEYS = new Set([
 
 const FILTER_TAG_KEY = /^#[a-zA-Z]$/;
 
-function filterTagKeysCheck(): core.$ZodCheck<Record<string, unknown>> {
+export function filterTagKeysCheck(): core.$ZodCheck<Record<string, unknown>> {
   return makeCheck<Record<string, unknown>>((payload) => {
     for (const key of Object.keys(payload.value)) {
       if (!FILTER_KNOWN_KEYS.has(key) && !FILTER_TAG_KEY.test(key)) {
