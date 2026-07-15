@@ -141,14 +141,12 @@ request to `main`.
 
 Publishing a release triggers `.github/workflows/publish.yml`, which
 type-checks, lints, tests, builds, verifies the tag matches
-`package.json`'s version, and runs `npm publish --provenance`.
+`package.json`'s version, and runs `npm publish --access public`.
 
-Authentication currently uses an `NPM_TOKEN` repository secret (classic
-token), since npm [trusted publishing](https://docs.npmjs.com/trusted-publishers)
-(OIDC, no token needed) isn't set up yet — the workflow still requests
-`id-token: write` so npm provenance attestation works either way. Once
-trusted publishing is configured for this package, the `NODE_AUTH_TOKEN`
-step can be dropped in favor of OIDC.
+Authentication uses npm [trusted publishing](https://docs.npmjs.com/trusted-publishers)
+(OIDC) — the workflow only needs `id-token: write`, no `NPM_TOKEN`/
+`NODE_AUTH_TOKEN` secret is involved. Provenance attestation is generated
+automatically as part of trusted publishing.
 
 ## License
 

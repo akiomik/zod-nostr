@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `.github/workflows/publish.yml` now authenticates to npm via
+  [trusted publishing](https://docs.npmjs.com/trusted-publishers) (OIDC)
+  instead of the `NPM_TOKEN` repository secret, which has been removed.
+  `npm publish` no longer needs `NODE_AUTH_TOKEN`; provenance is generated
+  automatically as part of trusted publishing, so the explicit `--provenance`
+  flag was dropped (`--access public` is kept).
+
 ## [0.1.0] - 2026-07-15
 
 ### Added
