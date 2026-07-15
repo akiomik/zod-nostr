@@ -3,9 +3,22 @@ import type * as core from "zod/v4/core";
 import { makeCheck } from "./core/checks.js";
 import { makeCodec } from "./core/codecs.js";
 import { hexStringSchema } from "./core/hex.js";
-import { zodArray, zodNumber, zodObject, zodOptional, zodString, zodUnknown } from "./core/primitives.js";
+import {
+	zodArray,
+	zodNumber,
+	zodObject,
+	zodOptional,
+	zodString,
+	zodUnknown,
+} from "./core/primitives.js";
 
-export type Bech32Prefix = "npub" | "nsec" | "note" | "nprofile" | "nevent" | "naddr";
+export type Bech32Prefix =
+	| "npub"
+	| "nsec"
+	| "note"
+	| "nprofile"
+	| "nevent"
+	| "naddr";
 
 export interface ProfilePointer {
 	[key: string]: unknown;
@@ -30,7 +43,9 @@ export interface AddressPointer {
 }
 
 /** Lightweight schema that only validates the prefix (for cases that don't need the decoded value) */
-export function bech32Schema<P extends Bech32Prefix>(prefix: P): core.$ZodString<string> {
+export function bech32Schema<P extends Bech32Prefix>(
+	prefix: P,
+): core.$ZodString<string> {
 	return zodString([
 		makeCheck<string>((payload) => {
 			try {
@@ -52,7 +67,10 @@ export function bech32Schema<P extends Bech32Prefix>(prefix: P): core.$ZodString
 function secretKeySchema(): core.$ZodType<Uint8Array, Uint8Array> {
 	return zodUnknown<Uint8Array>([
 		makeCheck<Uint8Array>((payload) => {
-			if (!(payload.value instanceof Uint8Array) || payload.value.length !== 32) {
+			if (
+				!(payload.value instanceof Uint8Array) ||
+				payload.value.length !== 32
+			) {
 				payload.issues.push({
 					code: "custom",
 					input: payload.value,
@@ -103,17 +121,29 @@ export const noteCodec = makeCodec(bech32Schema("note"), hexStringSchema(64), {
 	encode: (id) => nip19.noteEncode(id),
 });
 
-export const nprofileCodec = makeCodec(bech32Schema("nprofile"), profilePointerSchema(), {
-	decode: (nprofile) => nip19.decode(nprofile).data as ProfilePointer,
-	encode: (profile) => nip19.nprofileEncode(profile),
-});
+export const nprofileCodec = makeCodec(
+	bech32Schema("nprofile"),
+	profilePointerSchema(),
+	{
+		decode: (nprofile) => nip19.decode(nprofile).data as ProfilePointer,
+		encode: (profile) => nip19.nprofileEncode(profile),
+	},
+);
 
-export const neventCodec = makeCodec(bech32Schema("nevent"), eventPointerSchema(), {
-	decode: (nevent) => nip19.decode(nevent).data as EventPointer,
-	encode: (event) => nip19.neventEncode(event),
-});
+export const neventCodec = makeCodec(
+	bech32Schema("nevent"),
+	eventPointerSchema(),
+	{
+		decode: (nevent) => nip19.decode(nevent).data as EventPointer,
+		encode: (event) => nip19.neventEncode(event),
+	},
+);
 
-export const naddrCodec = makeCodec(bech32Schema("naddr"), addressPointerSchema(), {
-	decode: (naddr) => nip19.decode(naddr).data as AddressPointer,
-	encode: (addr) => nip19.naddrEncode(addr),
-});
+export const naddrCodec = makeCodec(
+	bech32Schema("naddr"),
+	addressPointerSchema(),
+	{
+		decode: (naddr) => nip19.decode(naddr).data as AddressPointer,
+		encode: (addr) => nip19.naddrEncode(addr),
+	},
+);

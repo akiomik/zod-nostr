@@ -1,5 +1,9 @@
-import { finalizeEvent, generateSecretKey, getPublicKey } from "nostr-tools/pure";
 import { nip19 } from "nostr-tools";
+import {
+	finalizeEvent,
+	generateSecretKey,
+	getPublicKey,
+} from "nostr-tools/pure";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { zostr } from "./classic.js";
@@ -102,7 +106,10 @@ describe("zostr (classic)", () => {
 		const sk = generateSecretKey();
 		const pk = getPublicKey(sk);
 
-		const nprofile = nip19.nprofileEncode({ pubkey: pk, relays: ["wss://relay.example"] });
+		const nprofile = nip19.nprofileEncode({
+			pubkey: pk,
+			relays: ["wss://relay.example"],
+		});
 		expect(z.decode(zostr.nprofile(), nprofile)).toEqual({
 			pubkey: pk,
 			relays: ["wss://relay.example"],
@@ -116,7 +123,11 @@ describe("zostr (classic)", () => {
 			author: undefined,
 		});
 
-		const naddr = nip19.naddrEncode({ identifier: "foo", pubkey: pk, kind: 30023 });
+		const naddr = nip19.naddrEncode({
+			identifier: "foo",
+			pubkey: pk,
+			kind: 30023,
+		});
 		expect(z.decode(zostr.naddr(), naddr)).toEqual({
 			identifier: "foo",
 			pubkey: pk,
@@ -142,8 +153,14 @@ describe("zostr (classic)", () => {
 
 	it("nip01.textNote() enforces kind === 1", () => {
 		const sk = generateSecretKey();
-		const note = finalizeEvent({ kind: 1, created_at: 0, tags: [], content: "hi" }, sk);
-		const reaction = finalizeEvent({ kind: 7, created_at: 0, tags: [], content: "+" }, sk);
+		const note = finalizeEvent(
+			{ kind: 1, created_at: 0, tags: [], content: "hi" },
+			sk,
+		);
+		const reaction = finalizeEvent(
+			{ kind: 7, created_at: 0, tags: [], content: "+" },
+			sk,
+		);
 
 		expect(zostr.nip01.textNote().parse(note)).toBeTruthy();
 		expect(() => zostr.nip01.textNote().parse(reaction)).toThrow();

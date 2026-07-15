@@ -1,5 +1,9 @@
-import { finalizeEvent, generateSecretKey, getPublicKey } from "nostr-tools/pure";
 import { nip19 } from "nostr-tools";
+import {
+	finalizeEvent,
+	generateSecretKey,
+	getPublicKey,
+} from "nostr-tools/pure";
 import { describe, expect, it } from "vitest";
 import * as z from "zod/mini";
 import { zostr } from "./mini.js";
@@ -63,8 +67,14 @@ describe("zostr (mini)", () => {
 
 	it("nip01.textNote() enforces kind === 1", () => {
 		const sk = generateSecretKey();
-		const note = finalizeEvent({ kind: 1, created_at: 0, tags: [], content: "hi" }, sk);
-		const reaction = finalizeEvent({ kind: 7, created_at: 0, tags: [], content: "+" }, sk);
+		const note = finalizeEvent(
+			{ kind: 1, created_at: 0, tags: [], content: "hi" },
+			sk,
+		);
+		const reaction = finalizeEvent(
+			{ kind: 7, created_at: 0, tags: [], content: "+" },
+			sk,
+		);
 
 		expect(z.parse(zostr.nip01.textNote(), note)).toBeTruthy();
 		expect(() => z.parse(zostr.nip01.textNote(), reaction)).toThrow();

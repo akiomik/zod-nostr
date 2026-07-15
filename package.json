@@ -1,45 +1,60 @@
 {
-  "name": "zod-nostr",
-  "version": "0.0.0",
-  "description": "Zod schemas for Nostr (NIP-01, NIP-05, NIP-19, ...)",
-  "type": "module",
-  "files": ["dist"],
-  "main": "./dist/classic.js",
-  "types": "./dist/classic.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/classic.d.ts",
-      "import": "./dist/classic.js"
-    },
-    "./mini": {
-      "types": "./dist/mini.d.ts",
-      "import": "./dist/mini.js"
-    }
-  },
-  "scripts": {
-    "build": "tsc -p tsconfig.build.json",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run"
-  },
-  "keywords": ["nostr", "zod", "nip-01", "nip-05", "nip-19", "schema", "validation"],
-  "license": "MIT",
-  "author": "Akiomi Kamakura",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/akiomik/zod-nostr.git"
-  },
-  "homepage": "https://github.com/akiomik/zod-nostr#readme",
-  "bugs": "https://github.com/akiomik/zod-nostr/issues",
-  "peerDependencies": {
-    "zod": "^4.4.3"
-  },
-  "dependencies": {
-    "nostr-tools": "^2.23.12"
-  },
-  "devDependencies": {
-    "@types/node": "^26.1.1",
-    "typescript": "^7.0.2",
-    "vitest": "^4.1.10",
-    "zod": "^4.4.3"
-  }
+	"name": "zod-nostr",
+	"version": "0.0.0",
+	"description": "Zod schemas for Nostr (NIP-01, NIP-05, NIP-19, ...)",
+	"type": "module",
+	"files": [
+		"dist"
+	],
+	"main": "./dist/classic.js",
+	"types": "./dist/classic.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/classic.d.ts",
+			"import": "./dist/classic.js"
+		},
+		"./mini": {
+			"types": "./dist/mini.d.ts",
+			"import": "./dist/mini.js"
+		}
+	},
+	"scripts": {
+		"build": "tsc -p tsconfig.build.json",
+		"typecheck": "tsc --noEmit",
+		"test": "vitest run",
+		"lint": "biome lint .",
+		"format": "biome format --write .",
+		"check": "biome check .",
+		"check:write": "biome check --write ."
+	},
+	"keywords": [
+		"nostr",
+		"zod",
+		"nip-01",
+		"nip-05",
+		"nip-19",
+		"schema",
+		"validation"
+	],
+	"license": "MIT",
+	"author": "Akiomi Kamakura",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/akiomik/zod-nostr.git"
+	},
+	"homepage": "https://github.com/akiomik/zod-nostr#readme",
+	"bugs": "https://github.com/akiomik/zod-nostr/issues",
+	"peerDependencies": {
+		"zod": "^4.4.3"
+	},
+	"dependencies": {
+		"nostr-tools": "^2.23.12"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.5.4",
+		"@types/node": "^26.1.1",
+		"typescript": "^7.0.2",
+		"vitest": "^4.1.10",
+		"zod": "^4.4.3"
+	}
 }

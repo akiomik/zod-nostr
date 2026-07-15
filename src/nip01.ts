@@ -1,9 +1,18 @@
-import * as core from "zod/v4/core";
 import { verifyEvent } from "nostr-tools/pure";
-import { makeCheck, signatureCheck as coreSignatureCheck, type NostrEventLike } from "./core/checks.js";
+import * as core from "zod/v4/core";
+import {
+	signatureCheck as coreSignatureCheck,
+	makeCheck,
+	type NostrEventLike,
+} from "./core/checks.js";
 import { makeCodec } from "./core/codecs.js";
 import { hexStringSchema } from "./core/hex.js";
-import { zodArray, zodNumber, zodObject, zodString } from "./core/primitives.js";
+import {
+	zodArray,
+	zodNumber,
+	zodObject,
+	zodString,
+} from "./core/primitives.js";
 import { nip05IdentifierSchema } from "./nip05.js";
 
 export function pubkey(): core.$ZodString<string> {
@@ -26,7 +35,9 @@ export function kind(): core.$ZodNumber<number> {
 	return zodNumber();
 }
 
-export function tags(): core.$ZodArray<core.$ZodArray<core.$ZodString<string>>> {
+export function tags(): core.$ZodArray<
+	core.$ZodArray<core.$ZodString<string>>
+> {
 	return zodArray(zodArray(zodString()));
 }
 
