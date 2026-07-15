@@ -98,7 +98,7 @@ export const zostr = {
   nip05: {
     identifier: () => miniSchema(z.ZodMiniString, nip05.nip05.identifier()),
     nostrJsonDocument: () =>
-      miniSchema(z.ZodMiniObject, nip05.nip05.nostrJsonDocument()),
+      z.object(nip05.nip05.nostrJsonDocument()._zod.def.shape),
     formatIdentifier: nip05.nip05.formatIdentifier,
   },
 
@@ -123,6 +123,6 @@ export const zostr = {
   // NIP-11 relay information document
   nip11: {
     relayInformationDocument: () =>
-      miniSchema(z.ZodMiniObject, nip11.nip11.relayInformationDocument()),
+      z.object(nip11.nip11.relayInformationDocument()._zod.def.shape),
   },
 };
