@@ -115,7 +115,8 @@ rather than inventing a bespoke `.verified()`-style chain method.
   (`nip01.metadata`), kind:1 text notes (`nip01.textNote`), the `REQ`/`COUNT`
   filter object (`filter`), and relay/client protocol messages
   (`relayMessage.*`, `clientMessage.*`)
-- **NIP-05** — identifier format validation (`nip05`)
+- **NIP-05** — identifier format validation (`nip05.identifier`) and
+  `.well-known/nostr.json` document validation (`nip05.nostrJsonDocument`)
 - **NIP-11** — relay information document (`nip11.relayInformationDocument`)
 - **NIP-19** — bech32 entities: `npub`, `nsec`, `note`, `nprofile`, `nevent`,
   `naddr`

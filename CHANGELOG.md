@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- NIP-05 `.well-known/nostr.json` document schema:
+  `zostr.nip05.nostrJsonDocument()`. Validates `names` (required —
+  local-part to lowercase 64-char hex pubkey) and `relays` (optional —
+  pubkey to an array of relay URLs), per the NIP-05 well-known document
+  format.
+
+### Changed
+
+- **Breaking:** `zostr.nip05` is now a namespace, matching how
+  `zostr.nip11.relayInformationDocument()` is namespaced under `nip11`:
+  - `zostr.nip05()` → `zostr.nip05.identifier()`
+  - `zostr.formatNip05Identifier()` → `zostr.nip05.formatIdentifier()`
+
 ## [0.1.2] - 2026-07-15
 
 ### Added
