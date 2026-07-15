@@ -38,6 +38,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   points (previously only used internally by `nip01.metadata()`).
 - `zostr.npub()`, `nsec()`, `note()`, `nprofile()`, `nevent()`, `naddr()`, and
   `nip01.metadata()` now return codecs re-wrapped through each flavor's own
-  `codec()`, so `.decode()`/`.encode()` instance methods work as expected.
+  `codec()`. In classic zod this unlocks `.decode()`/`.encode()`/`.check()`
+  instance methods; in zod/mini it unlocks `.check()` (zod/mini never attaches
+  `.decode()`/`.encode()` as instance methods on any schema — use the
+  top-level `z.decode()`/`z.encode()` there instead).
+
+### Testing
+
+- `src/api-surface.test.ts`: asserts the exact set of public keys on `zostr`
+  (and `zostr.nip01`) for both entry points, and that classic/mini expose
+  identical key sets. Regression coverage for schemas/functions that exist
+  internally but are never wired into the public `zostr` object.
+- `src/classic.test.ts` / `src/mini.test.ts`: assert every event schema and
+  codec exposes its flavor's native `.check()`, and (classic only) every
+  codec exposes native `.decode()`/`.encode()`. Regression coverage for
+  `zostr` members that accidentally return an unwrapped `core.$ZodType`/
+  `core.$ZodCodec` instead of being re-wrapped through the flavor's own
+  constructor.
 
 [Unreleased]: https://github.com/akiomik/zod-nostr/commits/main

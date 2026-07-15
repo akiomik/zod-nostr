@@ -80,16 +80,19 @@ describe("zostr (classic)", () => {
 		expect(codec.decode(npub)).toBe(pk);
 	});
 
-	it("nsec() codec round-trips secret key bytes <-> nsec", () => {
+	it("nsec() codec round-trips secret key bytes <-> nsec, via both top-level and instance methods", () => {
 		const sk = generateSecretKey();
 		const codec = zostr.nsec();
 
 		const nsec = z.encode(codec, sk);
 		expect(nsec.startsWith("nsec1")).toBe(true);
 		expect(z.decode(codec, nsec)).toEqual(sk);
+
+		expect(codec.encode(sk)).toBe(nsec);
+		expect(codec.decode(nsec)).toEqual(sk);
 	});
 
-	it("note() codec round-trips event id <-> note", () => {
+	it("note() codec round-trips event id <-> note, via both top-level and instance methods", () => {
 		const sk = generateSecretKey();
 		const signed = finalizeEvent(
 			{ kind: 1, created_at: 0, tags: [], content: "hi" },
@@ -100,9 +103,12 @@ describe("zostr (classic)", () => {
 		const note = z.encode(codec, signed.id);
 		expect(note.startsWith("note1")).toBe(true);
 		expect(z.decode(codec, note)).toBe(signed.id);
+
+		expect(codec.encode(signed.id)).toBe(note);
+		expect(codec.decode(note)).toBe(signed.id);
 	});
 
-	it("nprofile()/nevent()/naddr() codecs decode structured pointers", () => {
+	it("nprofile()/nevent()/naddr() codecs decode structured pointers, via both top-level and instance methods", () => {
 		const sk = generateSecretKey();
 		const pk = getPublicKey(sk);
 
@@ -110,45 +116,92 @@ describe("zostr (classic)", () => {
 			pubkey: pk,
 			relays: ["wss://relay.example"],
 		});
-		expect(z.decode(zostr.nprofile(), nprofile)).toEqual({
-			pubkey: pk,
-			relays: ["wss://relay.example"],
-		});
+		const nprofileCodec = zostr.nprofile();
+		const nprofileExpected = { pubkey: pk, relays: ["wss://relay.example"] };
+		expect(z.decode(nprofileCodec, nprofile)).toEqual(nprofileExpected);
+		expect(nprofileCodec.decode(nprofile)).toEqual(nprofileExpected);
 
 		const nevent = nip19.neventEncode({ id: "a".repeat(64), kind: 1 });
-		expect(z.decode(zostr.nevent(), nevent)).toEqual({
+		const neventCodec = zostr.nevent();
+		const neventExpected = {
 			id: "a".repeat(64),
 			kind: 1,
 			relays: [],
 			author: undefined,
-		});
+		};
+		expect(z.decode(neventCodec, nevent)).toEqual(neventExpected);
+		expect(neventCodec.decode(nevent)).toEqual(neventExpected);
 
 		const naddr = nip19.naddrEncode({
 			identifier: "foo",
 			pubkey: pk,
 			kind: 30023,
 		});
-		expect(z.decode(zostr.naddr(), naddr)).toEqual({
+		const naddrCodec = zostr.naddr();
+		const naddrExpected = {
 			identifier: "foo",
 			pubkey: pk,
 			kind: 30023,
 			relays: [],
-		});
+		};
+		expect(z.decode(naddrCodec, naddr)).toEqual(naddrExpected);
+		expect(naddrCodec.decode(naddr)).toEqual(naddrExpected);
 	});
 
-	it("nip01.metadata() decodes/validates kind:0 content JSON", () => {
+	it("nip01.metadata() decodes/validates kind:0 content JSON, via both top-level and instance methods", () => {
 		const content = JSON.stringify({
 			name: "alice",
 			display_name: "Alice",
 			picture: "https://example.com/a.png",
 			nip05: "alice@example.com",
 		});
+		const codec = zostr.nip01.metadata();
 
-		const metadata = z.decode(zostr.nip01.metadata(), content);
+		const metadata = z.decode(codec, content);
 		expect(metadata.name).toBe("alice");
 		expect(metadata.nip05).toBe("alice@example.com");
+		expect(() => z.decode(codec, "not json")).toThrow();
 
-		expect(() => z.decode(zostr.nip01.metadata(), "not json")).toThrow();
+		expect(codec.decode(content)).toEqual(metadata);
+		expect(() => codec.decode("not json")).toThrow();
+	});
+
+	it("every wrapped event schema and codec exposes the flavor's native .check() (regression: raw core schemas lack it)", () => {
+		const wrappedSchemas: Array<() => { check: unknown }> = [
+			() => zostr.event(),
+			() => zostr.unsignedEvent(),
+			() => zostr.eventTemplate(),
+			() => zostr.nip01.textNote(),
+			() => zostr.npub(),
+			() => zostr.nsec(),
+			() => zostr.note(),
+			() => zostr.nprofile(),
+			() => zostr.nevent(),
+			() => zostr.naddr(),
+			() => zostr.nip01.metadata(),
+		];
+
+		for (const factory of wrappedSchemas) {
+			expect(typeof factory().check).toBe("function");
+		}
+	});
+
+	it("every NIP-19/metadata codec exposes native .decode()/.encode() (regression: raw core.$ZodCodec lacks these)", () => {
+		const codecFactories: Array<() => { decode: unknown; encode: unknown }> = [
+			() => zostr.npub(),
+			() => zostr.nsec(),
+			() => zostr.note(),
+			() => zostr.nprofile(),
+			() => zostr.nevent(),
+			() => zostr.naddr(),
+			() => zostr.nip01.metadata(),
+		];
+
+		for (const factory of codecFactories) {
+			const codec = factory();
+			expect(typeof codec.decode).toBe("function");
+			expect(typeof codec.encode).toBe("function");
+		}
 	});
 
 	it("nip01.textNote() enforces kind === 1", () => {
