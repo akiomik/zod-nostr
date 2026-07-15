@@ -4,7 +4,7 @@
 [![CI](https://github.com/akiomik/zod-nostr/actions/workflows/ci.yml/badge.svg)](https://github.com/akiomik/zod-nostr/actions/workflows/ci.yml)
 
 Zod schemas and codecs for [Nostr](https://nostr.com) — NIP-01 events, NIP-05
-identifiers, and NIP-19 bech32 entities.
+identifiers, NIP-11 relay information documents, and NIP-19 bech32 entities.
 
 Validation logic is written once against `zod/v4/core` and re-exposed through
 two entry points, so the exact same rules work with both
@@ -116,6 +116,7 @@ rather than inventing a bespoke `.verified()`-style chain method.
   filter object (`filter`), and relay/client protocol messages
   (`relayMessage.*`, `clientMessage.*`)
 - **NIP-05** — identifier format validation (`nip05`)
+- **NIP-11** — relay information document (`nip11.relayInformationDocument`)
 - **NIP-19** — bech32 entities: `npub`, `nsec`, `note`, `nprofile`, `nevent`,
   `naddr`
 

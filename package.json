@@ -1,7 +1,7 @@
 {
   "name": "zod-nostr",
   "version": "0.1.1",
-  "description": "Zod schemas for Nostr (NIP-01, NIP-05, NIP-19, ...)",
+  "description": "Zod schemas for Nostr (NIP-01, NIP-05, NIP-11, NIP-19, ...)",
   "type": "module",
   "files": [
     "dist"
@@ -33,6 +33,7 @@
     "zod",
     "nip-01",
     "nip-05",
+    "nip-11",
     "nip-19",
     "schema",
     "validation"

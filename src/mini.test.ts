@@ -302,4 +302,72 @@ describe("zostr (mini)", () => {
     expect(() => z.parse(checked, ["CLOSED", "sub1", "nope"])).toThrow();
     expect(() => z.parse(checked, ["CLOSED", "sub1", ""])).toThrow();
   });
+
+  it("nip11.relayInformationDocument() validates a full document", () => {
+    const doc = {
+      name: "relay.example",
+      description: "an example relay",
+      pubkey: "a".repeat(64),
+      supported_nips: [1, 11, 42],
+      limitation: {
+        max_message_length: 16384,
+        auth_required: false,
+      },
+      fees: {
+        admission: [{ amount: 1000000, unit: "msats" }],
+      },
+    };
+
+    expect(z.parse(zostr.nip11.relayInformationDocument(), doc)).toEqual(doc);
+  });
+
+  it("nip11.relayInformationDocument() treats every field as optional and strips unknown keys", () => {
+    expect(z.parse(zostr.nip11.relayInformationDocument(), {})).toEqual({});
+    expect(
+      z.parse(zostr.nip11.relayInformationDocument(), {
+        name: "x",
+        extra: "y",
+      }),
+    ).toEqual({ name: "x" });
+  });
+
+  it("nip11.relayInformationDocument() validates pubkey/self as 64-char hex", () => {
+    expect(() =>
+      z.parse(zostr.nip11.relayInformationDocument(), { pubkey: "not-hex" }),
+    ).toThrow();
+    expect(() =>
+      z.parse(zostr.nip11.relayInformationDocument(), { self: "not-hex" }),
+    ).toThrow();
+  });
+
+  it("nip11.relayInformationDocument() validates banner/icon/terms_of_service/payments_url as URLs", () => {
+    expect(() =>
+      z.parse(zostr.nip11.relayInformationDocument(), { banner: "not-a-url" }),
+    ).toThrow();
+    expect(() =>
+      z.parse(zostr.nip11.relayInformationDocument(), { icon: "not-a-url" }),
+    ).toThrow();
+    expect(() =>
+      z.parse(zostr.nip11.relayInformationDocument(), {
+        terms_of_service: "not-a-url",
+      }),
+    ).toThrow();
+    expect(() =>
+      z.parse(zostr.nip11.relayInformationDocument(), {
+        payments_url: "not-a-url",
+      }),
+    ).toThrow();
+
+    // software/contact are left as plain strings, same as rust-nostr
+    expect(
+      z.parse(zostr.nip11.relayInformationDocument(), {
+        software: "git+https://example.com/repo.git",
+      }),
+    ).toEqual({ software: "git+https://example.com/repo.git" });
+    expect(
+      z.parse(zostr.nip11.relayInformationDocument(), {
+        contact: "admin@example.com",
+      }),
+    ).toEqual({ contact: "admin@example.com" });
+  });
 });

@@ -21,6 +21,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   convention: `zostr.relayMessage.okMessagePrefixCheck()` and
   `.closedMessagePrefixCheck()`. Compose with `.check()`, same as
   `signatureCheck()`.
+- NIP-11 relay information document schema: `zostr.nip11.relayInformationDocument()`.
+  `banner`/`icon`/`terms_of_service`/`payments_url` are validated as URLs by
+  default; `pubkey`/`self` as 64-char hex.
 
 ## [0.1.1] - 2026-07-15
 
