@@ -3,6 +3,7 @@ name: Publish
 on:
   release:
     types: [published]
+  workflow_dispatch: {} # manual retry (e.g. run against an existing tag) without recreating the release
 
 permissions:
   contents: read
@@ -44,6 +45,6 @@ jobs:
         run: npm run build
 
       - name: Publish to npm
-        run: npm publish --provenance
+        run: npm publish --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

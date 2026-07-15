@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `.github/workflows/publish.yml`: `npm publish` now passes `--access public`
+  explicitly. npm requires this when generating provenance for a package that
+  has never been published before, even when the package is unscoped (and
+  thus defaults to public access already) — the first release attempt failed
+  at the publish step with `Can't generate provenance for new or private
+  package, you must set access to public` before anything was written to the
+  registry.
+- Added a `workflow_dispatch` trigger to `publish.yml` so a failed publish
+  can be retried by re-running the workflow against the existing tag, without
+  having to delete and recreate the GitHub Release.
+
 ## [0.1.0] - 2026-07-15
 
 ### Added
