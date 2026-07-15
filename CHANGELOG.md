@@ -26,5 +26,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - NIP-19 bech32 support: lightweight prefix-only validation (`bech32()`) and
   full decode/encode codecs for `npub`, `nsec`, `note`, `nprofile`, `nevent`,
   and `naddr`.
+- `README.md`, `docs/API.md`, and this changelog.
+- [Biome](https://biomejs.dev) for linting and formatting (`npm run check`,
+  `npm run check:write`).
+- GitHub Actions CI (`.github/workflows/ci.yml`) running typecheck, lint/format
+  check, tests, and build on every push and pull request to `main`.
+
+### Fixed
+
+- `zostr.nip05()` / `formatNip05Identifier()` are now exposed from both entry
+  points (previously only used internally by `nip01.metadata()`).
+- `zostr.npub()`, `nsec()`, `note()`, `nprofile()`, `nevent()`, `naddr()`, and
+  `nip01.metadata()` now return codecs re-wrapped through each flavor's own
+  `codec()`, so `.decode()`/`.encode()` instance methods work as expected.
 
 [Unreleased]: https://github.com/akiomik/zod-nostr/commits/main

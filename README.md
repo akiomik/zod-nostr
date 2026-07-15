@@ -1,5 +1,7 @@
 # zod-nostr
 
+[![CI](https://github.com/akiomik/zod-nostr/actions/workflows/ci.yml/badge.svg)](https://github.com/akiomik/zod-nostr/actions/workflows/ci.yml)
+
 Zod schemas and codecs for [Nostr](https://nostr.com) — NIP-01 events, NIP-05
 identifiers, and NIP-19 bech32 entities.
 
@@ -119,10 +121,15 @@ See [docs/API.md](docs/API.md) for the full API reference.
 ## Development
 
 ```sh
-npm run typecheck   # tsc --noEmit
-npm test            # vitest run
-npm run build        # emit dist/ (classic.js + mini.js)
+npm run typecheck    # tsc --noEmit
+npm run check         # biome check . (lint + format check)
+npm run check:write   # biome check --write . (auto-fix)
+npm test              # vitest run
+npm run build          # emit dist/ (classic.js + mini.js)
 ```
+
+CI (`.github/workflows/ci.yml`) runs all of the above on every push and pull
+request to `main`.
 
 ## License
 
