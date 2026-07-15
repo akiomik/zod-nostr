@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-07-15
+
 ### Changed
 
 - `.github/workflows/publish.yml` now authenticates to npm via
@@ -95,5 +97,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `core.$ZodCodec` instead of being re-wrapped through the flavor's own
   constructor.
 
-[Unreleased]: https://github.com/akiomik/zod-nostr/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/akiomik/zod-nostr/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/akiomik/zod-nostr/releases/tag/v0.1.1
 [0.1.0]: https://github.com/akiomik/zod-nostr/releases/tag/v0.1.0
