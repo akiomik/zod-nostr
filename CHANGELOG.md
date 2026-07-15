@@ -33,6 +33,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   helper that inferred its type parameter from a bare schema-class
   reference rather than the actual schema, so the output type fell back to
   each class's loose default. Runtime validation behavior is unchanged.
+- **Breaking (type-only):** `zostr.nip11.relayInformationDocument()` and
+  `zostr.nip05.nostrJsonDocument()` now infer their precise field types
+  from `.parse()` (e.g. `.parse(doc).name` is `string | undefined`, not
+  `unknown`), for the same reason as above. Runtime validation behavior is
+  unchanged.
 
 ## [0.1.2] - 2026-07-15
 

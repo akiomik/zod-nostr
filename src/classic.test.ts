@@ -511,4 +511,17 @@ describe("zostr (classic)", () => {
         .parse({ contact: "admin@example.com" }),
     ).toEqual({ contact: "admin@example.com" });
   });
+
+  it("nip11.relayInformationDocument()/nip05.nostrJsonDocument() infer precise output types (regression: previously fell back to unknown because classic.ts re-wrapped them through the generic classicSchema() helper — see #15)", () => {
+    const doc = zostr.nip11.relayInformationDocument().parse({ name: "x" });
+    const name: string | undefined = doc.name;
+    expect(name).toBe("x");
+
+    const pubkey = "a".repeat(64);
+    const nj = zostr.nip05.nostrJsonDocument().parse({
+      names: { bob: pubkey },
+    });
+    const names: Record<string, string> = nj.names;
+    expect(names).toEqual({ bob: pubkey });
+  });
 });

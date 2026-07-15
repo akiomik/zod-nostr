@@ -457,4 +457,17 @@ describe("zostr (mini)", () => {
       }),
     ).toEqual({ contact: "admin@example.com" });
   });
+
+  it("nip11.relayInformationDocument()/nip05.nostrJsonDocument() infer precise output types (regression: previously fell back to unknown because mini.ts re-wrapped them through the generic miniSchema() helper — see #15)", () => {
+    const doc = z.parse(zostr.nip11.relayInformationDocument(), { name: "x" });
+    const name: string | undefined = doc.name;
+    expect(name).toBe("x");
+
+    const pubkey = "a".repeat(64);
+    const nj = z.parse(zostr.nip05.nostrJsonDocument(), {
+      names: { bob: pubkey },
+    });
+    const names: Record<string, string> = nj.names;
+    expect(names).toEqual({ bob: pubkey });
+  });
 });
