@@ -9,9 +9,14 @@ import { makeCodec } from "./core/codecs.js";
 import { hexStringSchema } from "./core/hex.js";
 import {
   zodArray,
+  zodBoolean,
+  zodLiteral,
   zodNumber,
   zodObject,
+  zodOptional,
   zodString,
+  zodTuple,
+  zodUnion,
 } from "./core/primitives.js";
 import { nip05IdentifierSchema } from "./nip05.js";
 
@@ -39,6 +44,22 @@ export function tags(): core.$ZodArray<
   core.$ZodArray<core.$ZodString<string>>
 > {
   return zodArray(zodArray(zodString()));
+}
+
+/** Arbitrary, non-empty string of max length 64 chars, identifying a REQ/EVENT/EOSE/CLOSED subscription */
+export function subscriptionId(): core.$ZodString<string> {
+  return zodString([
+    makeCheck<string>((payload) => {
+      if (payload.value.length === 0 || payload.value.length > 64) {
+        payload.issues.push({
+          code: "custom",
+          input: payload.value,
+          message:
+            "Invalid subscription id (expected a non-empty string of at most 64 chars)",
+        });
+      }
+    }),
+  ]);
 }
 
 /** Before signing, only kind/content/tags/created_at (equivalent to nostr-tools' EventTemplate) */
@@ -107,6 +128,106 @@ function profileMetadataObjectSchema() {
     nip05: nip05IdentifierSchema(),
   });
 }
+
+const FILTER_KNOWN_KEYS = new Set([
+  "ids",
+  "authors",
+  "kinds",
+  "since",
+  "until",
+  "limit",
+]);
+
+const FILTER_TAG_KEY = /^#[a-zA-Z]$/;
+
+function filterTagKeysCheck(): core.$ZodCheck<Record<string, unknown>> {
+  return makeCheck<Record<string, unknown>>((payload) => {
+    for (const key of Object.keys(payload.value)) {
+      if (!FILTER_KNOWN_KEYS.has(key) && !FILTER_TAG_KEY.test(key)) {
+        payload.issues.push({
+          code: "custom",
+          input: payload.value,
+          message: `Invalid filter key (expected a NIP-01 field or "#<letter>" tag filter): ${key}`,
+        });
+      }
+    }
+  });
+}
+
+/** REQ/COUNT filter object (structure only; does not enforce `since <= until`) */
+export function filter() {
+  return zodObject(
+    {
+      ids: zodOptional(zodArray(eventId())),
+      authors: zodOptional(zodArray(pubkey())),
+      kinds: zodOptional(zodArray(kind())),
+      since: zodOptional(timestamp()),
+      until: zodOptional(timestamp()),
+      limit: zodOptional(zodNumber()),
+    },
+    {
+      catchall: zodArray(zodString()),
+      checks: [filterTagKeysCheck()],
+    },
+  );
+}
+
+function relayEventMessage() {
+  return zodTuple([zodLiteral("EVENT"), subscriptionId(), event()]);
+}
+
+function okMessage() {
+  return zodTuple([zodLiteral("OK"), eventId(), zodBoolean(), zodString()]);
+}
+
+function eoseMessage() {
+  return zodTuple([zodLiteral("EOSE"), subscriptionId()]);
+}
+
+function closedMessage() {
+  return zodTuple([zodLiteral("CLOSED"), subscriptionId(), zodString()]);
+}
+
+function noticeMessage() {
+  return zodTuple([zodLiteral("NOTICE"), zodString()]);
+}
+
+/** NIP-01 relay-to-client messages (structure only; EVENT does not verify the signature) */
+export const relayMessage = {
+  event: relayEventMessage,
+  ok: okMessage,
+  eose: eoseMessage,
+  closed: closedMessage,
+  notice: noticeMessage,
+  any: () =>
+    zodUnion([
+      relayEventMessage(),
+      okMessage(),
+      eoseMessage(),
+      closedMessage(),
+      noticeMessage(),
+    ]),
+};
+
+function clientEventMessage() {
+  return zodTuple([zodLiteral("EVENT"), event()]);
+}
+
+function reqMessage() {
+  return zodTuple([zodLiteral("REQ"), subscriptionId()], filter());
+}
+
+function closeMessage() {
+  return zodTuple([zodLiteral("CLOSE"), subscriptionId()]);
+}
+
+/** NIP-01 client-to-relay messages (structure only; EVENT does not verify the signature) */
+export const clientMessage = {
+  event: clientEventMessage,
+  req: reqMessage,
+  close: closeMessage,
+  any: () => zodUnion([clientEventMessage(), reqMessage(), closeMessage()]),
+};
 
 export const nip01 = {
   /** Codec for kind:0 content (JSON string) <-> parsed profile object */

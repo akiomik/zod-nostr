@@ -54,6 +54,26 @@ export const zostr = {
   // Signature verification is check-composition only: zostr.event().check(zostr.signatureCheck())
   signatureCheck: nip01.signatureCheck,
 
+  // NIP-01 REQ/COUNT filter object
+  subscriptionId: () => miniSchema(z.ZodMiniString, nip01.subscriptionId()),
+  filter: () => miniSchema(z.ZodMiniObject, nip01.filter()),
+
+  // NIP-01 relay-to-client / client-to-relay messages (tuple/union schemas)
+  relayMessage: {
+    event: () => miniSchema(z.ZodMiniTuple, nip01.relayMessage.event()),
+    ok: () => miniSchema(z.ZodMiniTuple, nip01.relayMessage.ok()),
+    eose: () => miniSchema(z.ZodMiniTuple, nip01.relayMessage.eose()),
+    closed: () => miniSchema(z.ZodMiniTuple, nip01.relayMessage.closed()),
+    notice: () => miniSchema(z.ZodMiniTuple, nip01.relayMessage.notice()),
+    any: () => miniSchema(z.ZodMiniUnion, nip01.relayMessage.any()),
+  },
+  clientMessage: {
+    event: () => miniSchema(z.ZodMiniTuple, nip01.clientMessage.event()),
+    req: () => miniSchema(z.ZodMiniTuple, nip01.clientMessage.req()),
+    close: () => miniSchema(z.ZodMiniTuple, nip01.clientMessage.close()),
+    any: () => miniSchema(z.ZodMiniUnion, nip01.clientMessage.any()),
+  },
+
   // NIP-05
   nip05: () => miniSchema(z.ZodMiniString, nip05.nip05IdentifierSchema()),
   formatNip05Identifier: nip05.formatNip05Identifier,

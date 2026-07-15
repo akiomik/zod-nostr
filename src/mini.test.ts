@@ -182,4 +182,80 @@ describe("zostr (mini)", () => {
   // exist) — so there's no equivalent "instance method" assertion to make
   // here for codecs. The rewrap through mini's own z.codec() still matters
   // for .check() and for keeping a mini-native schema instance, see above.
+
+  it("subscriptionId() enforces a non-empty string of at most 64 chars", () => {
+    expect(z.parse(zostr.subscriptionId(), "sub1")).toBe("sub1");
+    expect(() => z.parse(zostr.subscriptionId(), "")).toThrow();
+    expect(() => z.parse(zostr.subscriptionId(), "a".repeat(65))).toThrow();
+  });
+
+  it("filter() validates known fields and '#<letter>' tag filters, rejects unknown keys", () => {
+    const filter = {
+      ids: ["a".repeat(64)],
+      authors: ["b".repeat(64)],
+      kinds: [1],
+      since: 0,
+      until: 100,
+      limit: 10,
+      "#e": ["c".repeat(64)],
+    };
+
+    expect(z.parse(zostr.filter(), filter)).toEqual(filter);
+    expect(z.parse(zostr.filter(), {})).toEqual({});
+    expect(() => z.parse(zostr.filter(), { nope: ["x"] })).toThrow();
+    expect(() => z.parse(zostr.filter(), { "#too-long": ["x"] })).toThrow();
+  });
+
+  it("relayMessage.* validate NIP-01 relay-to-client message tuples", () => {
+    const sk = generateSecretKey();
+    const signed = finalizeEvent(
+      { kind: 1, created_at: 0, tags: [], content: "hi" },
+      sk,
+    );
+
+    expect(
+      z.parse(zostr.relayMessage.event(), ["EVENT", "sub1", signed]),
+    ).toBeTruthy();
+    expect(
+      z.parse(zostr.relayMessage.ok(), ["OK", signed.id, true, ""]),
+    ).toBeTruthy();
+    expect(z.parse(zostr.relayMessage.eose(), ["EOSE", "sub1"])).toBeTruthy();
+    expect(
+      z.parse(zostr.relayMessage.closed(), ["CLOSED", "sub1", "reason"]),
+    ).toBeTruthy();
+    expect(
+      z.parse(zostr.relayMessage.notice(), ["NOTICE", "hello"]),
+    ).toBeTruthy();
+
+    expect(() =>
+      z.parse(zostr.relayMessage.event(), ["NOTICE", "sub1", signed]),
+    ).toThrow();
+
+    const any = zostr.relayMessage.any();
+    expect(z.parse(any, ["EOSE", "sub1"])).toBeTruthy();
+    expect(() => z.parse(any, ["REQ", "sub1"])).toThrow();
+  });
+
+  it("clientMessage.* validate NIP-01 client-to-relay message tuples", () => {
+    const sk = generateSecretKey();
+    const signed = finalizeEvent(
+      { kind: 1, created_at: 0, tags: [], content: "hi" },
+      sk,
+    );
+
+    expect(
+      z.parse(zostr.clientMessage.event(), ["EVENT", signed]),
+    ).toBeTruthy();
+    expect(
+      z.parse(zostr.clientMessage.req(), ["REQ", "sub1", { kinds: [1] }, {}]),
+    ).toBeTruthy();
+    expect(z.parse(zostr.clientMessage.req(), ["REQ", "sub1"])).toBeTruthy();
+    expect(
+      z.parse(zostr.clientMessage.close(), ["CLOSE", "sub1"]),
+    ).toBeTruthy();
+
+    const any = zostr.clientMessage.any();
+    expect(z.parse(any, ["CLOSE", "sub1"])).toBeTruthy();
+    expect(() => z.parse(any, ["EOSE", "sub1"])).toThrow();
+  });
 });

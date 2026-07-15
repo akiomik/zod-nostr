@@ -241,4 +241,74 @@ describe("zostr (classic)", () => {
     expect(zostr.nip01.textNote().parse(note)).toBeTruthy();
     expect(() => zostr.nip01.textNote().parse(reaction)).toThrow();
   });
+
+  it("subscriptionId() enforces a non-empty string of at most 64 chars", () => {
+    expect(zostr.subscriptionId().parse("sub1")).toBe("sub1");
+    expect(() => zostr.subscriptionId().parse("")).toThrow();
+    expect(() => zostr.subscriptionId().parse("a".repeat(65))).toThrow();
+  });
+
+  it("filter() validates known fields and '#<letter>' tag filters, rejects unknown keys", () => {
+    const filter = {
+      ids: ["a".repeat(64)],
+      authors: ["b".repeat(64)],
+      kinds: [1],
+      since: 0,
+      until: 100,
+      limit: 10,
+      "#e": ["c".repeat(64)],
+    };
+
+    expect(zostr.filter().parse(filter)).toEqual(filter);
+    expect(zostr.filter().parse({})).toEqual({});
+    expect(() => zostr.filter().parse({ nope: ["x"] })).toThrow();
+    expect(() => zostr.filter().parse({ "#too-long": ["x"] })).toThrow();
+  });
+
+  it("relayMessage.* validate NIP-01 relay-to-client message tuples", () => {
+    const sk = generateSecretKey();
+    const signed = finalizeEvent(
+      { kind: 1, created_at: 0, tags: [], content: "hi" },
+      sk,
+    );
+
+    expect(
+      zostr.relayMessage.event().parse(["EVENT", "sub1", signed]),
+    ).toBeTruthy();
+    expect(
+      zostr.relayMessage.ok().parse(["OK", signed.id, true, ""]),
+    ).toBeTruthy();
+    expect(zostr.relayMessage.eose().parse(["EOSE", "sub1"])).toBeTruthy();
+    expect(
+      zostr.relayMessage.closed().parse(["CLOSED", "sub1", "reason"]),
+    ).toBeTruthy();
+    expect(zostr.relayMessage.notice().parse(["NOTICE", "hello"])).toBeTruthy();
+
+    expect(() =>
+      zostr.relayMessage.event().parse(["NOTICE", "sub1", signed]),
+    ).toThrow();
+
+    const any = zostr.relayMessage.any();
+    expect(any.parse(["EOSE", "sub1"])).toBeTruthy();
+    expect(() => any.parse(["REQ", "sub1"])).toThrow();
+  });
+
+  it("clientMessage.* validate NIP-01 client-to-relay message tuples", () => {
+    const sk = generateSecretKey();
+    const signed = finalizeEvent(
+      { kind: 1, created_at: 0, tags: [], content: "hi" },
+      sk,
+    );
+
+    expect(zostr.clientMessage.event().parse(["EVENT", signed])).toBeTruthy();
+    expect(
+      zostr.clientMessage.req().parse(["REQ", "sub1", { kinds: [1] }, {}]),
+    ).toBeTruthy();
+    expect(zostr.clientMessage.req().parse(["REQ", "sub1"])).toBeTruthy();
+    expect(zostr.clientMessage.close().parse(["CLOSE", "sub1"])).toBeTruthy();
+
+    const any = zostr.clientMessage.any();
+    expect(any.parse(["CLOSE", "sub1"])).toBeTruthy();
+    expect(() => any.parse(["EOSE", "sub1"])).toThrow();
+  });
 });
