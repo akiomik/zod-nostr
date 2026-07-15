@@ -21,8 +21,15 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
-  "keywords": ["nostr", "zod"],
+  "keywords": ["nostr", "zod", "nip-01", "nip-05", "nip-19", "schema", "validation"],
   "license": "MIT",
+  "author": "Akiomi Kamakura",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/akiomik/zod-nostr.git"
+  },
+  "homepage": "https://github.com/akiomik/zod-nostr#readme",
+  "bugs": "https://github.com/akiomik/zod-nostr/issues",
   "peerDependencies": {
     "zod": "^4.4.3"
   },
