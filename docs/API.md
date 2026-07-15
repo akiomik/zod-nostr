@@ -105,6 +105,68 @@ Same shape as `zostr.event()`, with `kind` constrained to the literal value
 `1`. Structure only, same as `event()` — compose `.check(zostr.signatureCheck())`
 if you need signature verification.
 
+### `zostr.subscriptionId()`
+
+A string schema for a NIP-01 subscription id: non-empty, at most 64 chars.
+Used as the second element of `REQ`/`CLOSE`/`EVENT` (relay→client)/`EOSE`/
+`CLOSED` messages.
+
+### `zostr.filter()`
+
+The NIP-01 `REQ`/`COUNT` filter object: `ids`, `authors`, `kinds`, `since`,
+`until`, `limit`, plus any number of `#<a-zA-Z>` tag-value filters (e.g.
+`#e`, `#p`). Unknown keys outside this set are rejected.
+
+```ts
+zostr.filter().parse({
+  kinds: [1],
+  authors: ["3bf0c63f..."],
+  "#e": ["000000..."],
+  limit: 50,
+});
+```
+
+### `zostr.relayMessage`
+
+Tuple schemas for NIP-01 relay→client messages. Each validates structure
+only — `event()` does not verify the embedded event's signature (compose
+`.check(zostr.signatureCheck())` on `zostr.event()` separately if needed).
+
+| function | wire shape |
+| --- | --- |
+| `zostr.relayMessage.event()` | `["EVENT", subscriptionId, event]` |
+| `zostr.relayMessage.ok()` | `["OK", eventId, boolean, message]` |
+| `zostr.relayMessage.eose()` | `["EOSE", subscriptionId]` |
+| `zostr.relayMessage.closed()` | `["CLOSED", subscriptionId, message]` |
+| `zostr.relayMessage.notice()` | `["NOTICE", message]` |
+| `zostr.relayMessage.any()` | union of the five above |
+
+The `message` field of `ok()`/`closed()` is validated as a plain `string`;
+NIP-01's `<prefix>: <text>` convention (`duplicate:`, `pow:`, `blocked:`,
+`rate-limited:`, `invalid:`, `restricted:`, `mute:`, `error:`) is not
+enforced, since many relays don't follow it strictly.
+
+```ts
+zostr.relayMessage.any().parse(["EOSE", "sub1"]);
+zostr.relayMessage.ok().parse(["OK", eventId, true, ""]);
+```
+
+### `zostr.clientMessage`
+
+Tuple schemas for NIP-01 client→relay messages.
+
+| function | wire shape |
+| --- | --- |
+| `zostr.clientMessage.event()` | `["EVENT", event]` |
+| `zostr.clientMessage.req()` | `["REQ", subscriptionId, ...filter[]]` |
+| `zostr.clientMessage.close()` | `["CLOSE", subscriptionId]` |
+| `zostr.clientMessage.any()` | union of the three above |
+
+```ts
+zostr.clientMessage.req().parse(["REQ", "sub1", { kinds: [1] }]);
+zostr.clientMessage.close().parse(["CLOSE", "sub1"]);
+```
+
 ## NIP-05 — identifiers
 
 ### `zostr.nip05()`

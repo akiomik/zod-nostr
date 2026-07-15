@@ -21,6 +21,20 @@ export function zodNumber(
   return new core.$ZodNumber(def as any) as core.$ZodNumber<number>;
 }
 
+export function zodBoolean(): core.$ZodBoolean<boolean> {
+  const def = { type: "boolean", coerce: false };
+  // biome-ignore lint/suspicious/noExplicitAny: $constructor doesn't accept a typed def; the return type is asserted explicitly below.
+  return new core.$ZodBoolean(def as any) as core.$ZodBoolean<boolean>;
+}
+
+export function zodLiteral<T extends core.util.Literal>(
+  value: T,
+): core.$ZodLiteral<T> {
+  const def = { type: "literal", values: [value] };
+  // biome-ignore lint/suspicious/noExplicitAny: $constructor doesn't accept a typed def; the return type is asserted explicitly below.
+  return new core.$ZodLiteral(def as any) as core.$ZodLiteral<T>;
+}
+
 export function zodArray<T extends core.SomeType>(
   element: T,
 ): core.$ZodArray<T> {
@@ -29,10 +43,31 @@ export function zodArray<T extends core.SomeType>(
   return new core.$ZodArray(def as any) as unknown as core.$ZodArray<T>;
 }
 
+export function zodTuple<T extends core.SomeType[]>(
+  items: [...T],
+  rest: core.SomeType | null = null,
+): core.$ZodTuple<T> {
+  const def = { type: "tuple", items, rest };
+  // biome-ignore lint/suspicious/noExplicitAny: $constructor doesn't accept a typed def; the return type is asserted explicitly below.
+  return new core.$ZodTuple(def as any) as unknown as core.$ZodTuple<T>;
+}
+
+export function zodUnion<T extends core.SomeType[]>(
+  options: [...T],
+): core.$ZodUnion<T> {
+  const def = { type: "union", options };
+  // biome-ignore lint/suspicious/noExplicitAny: $constructor doesn't accept a typed def; the return type is asserted explicitly below.
+  return new core.$ZodUnion(def as any) as unknown as core.$ZodUnion<T>;
+}
+
 export function zodObject<Shape extends core.$ZodShape>(
   shape: Shape,
+  options: {
+    catchall?: core.SomeType;
+    checks?: core.$ZodCheck<Record<string, unknown>>[];
+  } = {},
 ): core.$ZodObject<Shape> {
-  const def = { type: "object", shape };
+  const def = { type: "object", shape, ...options };
   // biome-ignore lint/suspicious/noExplicitAny: $constructor doesn't accept a typed def; the return type is asserted explicitly below.
   return new core.$ZodObject(def as any) as core.$ZodObject<Shape>;
 }

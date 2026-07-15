@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- NIP-01 `REQ`/`COUNT` filter object: `zostr.filter()`.
+- NIP-01 subscription id: `zostr.subscriptionId()` (non-empty string, max 64
+  chars).
+- NIP-01 relay-to-client message schemas: `zostr.relayMessage.event()`,
+  `.ok()`, `.eose()`, `.closed()`, `.notice()`, and the combined union
+  `.any()`.
+- NIP-01 client-to-relay message schemas: `zostr.clientMessage.event()`,
+  `.req()`, `.close()`, and the combined union `.any()`.
+
 ## [0.1.1] - 2026-07-15
 
 ### Changed
