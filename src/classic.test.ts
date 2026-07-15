@@ -62,7 +62,7 @@ describe("zostr (classic)", () => {
 		expect(() => z.parse(zostr.bech32("nsec"), npub)).toThrow();
 	});
 
-	it("npub() codec round-trips pubkey <-> npub", () => {
+	it("npub() codec round-trips pubkey <-> npub, via both top-level and instance methods", () => {
 		const sk = generateSecretKey();
 		const pk = getPublicKey(sk);
 		const codec = zostr.npub();
@@ -70,6 +70,10 @@ describe("zostr (classic)", () => {
 		const npub = z.encode(codec, pk);
 		expect(npub.startsWith("npub1")).toBe(true);
 		expect(z.decode(codec, npub)).toBe(pk);
+
+		// classic re-wrapping unlocks native .decode()/.encode() instance methods too
+		expect(codec.encode(pk)).toBe(npub);
+		expect(codec.decode(npub)).toBe(pk);
 	});
 
 	it("nsec() codec round-trips secret key bytes <-> nsec", () => {
