@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-07-15
+
 ### Added
 
 - Shared validation core (`src/core/`) built directly against `zod/v4/core`
@@ -62,4 +64,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `core.$ZodCodec` instead of being re-wrapped through the flavor's own
   constructor.
 
-[Unreleased]: https://github.com/akiomik/zod-nostr/commits/main
+[Unreleased]: https://github.com/akiomik/zod-nostr/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/akiomik/zod-nostr/releases/tag/v0.1.0

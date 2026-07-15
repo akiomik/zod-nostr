@@ -1,6 +1,6 @@
 {
   "name": "zod-nostr",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Zod schemas for Nostr (NIP-01, NIP-05, NIP-19, ...)",
   "type": "module",
   "files": [
