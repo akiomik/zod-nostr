@@ -127,10 +127,10 @@ See [docs/API.md](docs/API.md) for the full API reference.
 
 ```sh
 npm run typecheck    # tsc --noEmit
-npm run check         # biome check . (lint + format check)
-npm run check:write   # biome check --write . (auto-fix)
-npm test              # vitest run
-npm run build          # emit dist/ (classic.js + mini.js)
+npm run check        # biome check . (lint + format check)
+npm run check:write  # biome check --write . (auto-fix)
+npm test             # vitest run
+npm run build        # emit dist/ (classic.js + mini.js)
 ```
 
 CI (`.github/workflows/ci.yml`) runs all of the above on every push and pull
