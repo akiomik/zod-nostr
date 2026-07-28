@@ -32,7 +32,9 @@ A 128-character lowercase hex string schema for a Schnorr signature.
 
 ### `zostr.timestamp()`
 
-A non-negative integer schema for `created_at` (Unix seconds). No coercion.
+An integer schema for `created_at` (Unix seconds), matching NIP-01's
+`<unix timestamp in seconds>` and its `integer` filter `since`/`until`. No
+range bound and no coercion (negative, pre-Epoch values are not rejected).
 
 ### `zostr.kind()`
 

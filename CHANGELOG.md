@@ -35,6 +35,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and values above 65535); those are now rejected. This also tightens `kind`
   wherever it is reused (`event()`, `eventTemplate()`, `unsignedEvent()`,
   `filter().kinds`).
+- **Breaking:** `zostr.timestamp()` now requires an integer, matching NIP-01's
+  `<unix timestamp in seconds>` (and the `integer` filter `since`/`until`
+  compared against `created_at`) and POSIX "Seconds Since the Epoch". It
+  previously accepted any number; non-integers are now rejected. No range bound
+  is imposed and negative (pre-Epoch) values are still accepted. This also
+  tightens the field wherever it is reused (`event()`, `eventTemplate()`,
+  `unsignedEvent()`, `filter().since`, `filter().until`).
 
 ### Added
 

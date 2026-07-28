@@ -248,6 +248,20 @@ describe("zostr (classic)", () => {
     expect(() => zostr.subscriptionId().parse("a".repeat(65))).toThrow();
   });
 
+  it("timestamp() requires an integer (accepts negatives, rejects fractionals)", () => {
+    expect(zostr.timestamp().parse(0)).toBe(0);
+    expect(zostr.timestamp().parse(1700000000)).toBe(1700000000);
+    expect(zostr.timestamp().parse(-1)).toBe(-1);
+    for (const invalid of [
+      1.5,
+      Number.NaN,
+      Number.POSITIVE_INFINITY,
+      Number.NEGATIVE_INFINITY,
+    ]) {
+      expect(() => zostr.timestamp().parse(invalid)).toThrow();
+    }
+  });
+
   it("kind() enforces an integer between 0 and 65535", () => {
     expect(zostr.kind().parse(0)).toBe(0);
     expect(zostr.kind().parse(65535)).toBe(65535);
