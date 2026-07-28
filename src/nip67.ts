@@ -27,15 +27,15 @@ import { subscriptionId } from "./nip01.js";
  *
  * Only the *presence* of `"finish"`/`"more"` is definitive; a missing third
  * element, an empty array, or unknown-only hints leave completeness unknown, in
- * which case the client paginates as usual (NIP-01's count-vs-`limit`
- * heuristic). Interpreting the hints is the consumer's responsibility — this
- * schema validates structure only.
+ * which case NIP-67 says the client SHOULD paginate with `until` set to the
+ * oldest received event's `created_at`. Interpreting the hints is the
+ * consumer's responsibility — this schema validates structure only.
  *
- * This is a strict superset of `nip01.relayMessage.eose()`: it also accepts the
- * bare two-element form a NIP-67 relay still sends. `relayMessage.any()` stays
- * NIP-01-only (like the NIP-42/NIP-45 messages, it isn't folded in); a consumer
- * wanting NIP-67 EOSE alongside the other relay messages composes
- * `z.union([relayMessage.any(), nip67.eose()])`.
+ * This is a strict superset of `zostr.relayMessage.eose()`: it also accepts the
+ * bare two-element form a NIP-67 relay still sends. `zostr.relayMessage.any()`
+ * stays NIP-01-only (like the NIP-42/NIP-45 messages, it isn't folded in); a
+ * consumer wanting NIP-67 EOSE alongside the other relay messages composes
+ * `z.union([zostr.relayMessage.any(), zostr.nip67.eose()])`.
  */
 function eoseMessage() {
   return zodUnion([

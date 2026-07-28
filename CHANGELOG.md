@@ -46,10 +46,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   explicit `undefined` third element is rejected) and infers `["EOSE", string] |
   ["EOSE", string, string[]]`. The hints are plain strings — NIP-67 defines
   `"finish"` and `"more"` but requires clients to accept unknown values, so no
-  enum is baked in; interpreting them is the consumer's job. `nip67.eose()` is a
-  strict superset of `nip01.relayMessage.eose()`; `relayMessage.any()` stays
-  NIP-01-only, so compose `z.union([relayMessage.any(), nip67.eose()])` to accept
-  a NIP-67 `EOSE` alongside the other relay messages.
+  enum is baked in; interpreting them is the consumer's job.
+  `zostr.nip67.eose()` is a strict superset of `zostr.relayMessage.eose()`;
+  `zostr.relayMessage.any()` stays NIP-01-only, so compose
+  `z.union([zostr.relayMessage.any(), zostr.nip67.eose()])` to accept a NIP-67
+  `EOSE` alongside the other relay messages.
 
 ## [0.4.0] - 2026-07-29
 

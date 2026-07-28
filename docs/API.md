@@ -543,15 +543,15 @@ relay has sent every stored event matching the filters — do not paginate) and
 unknown hint values without error, so no enum is baked in. The array MAY be
 empty and MAY carry multiple hints. Only the **presence** of `"finish"`/`"more"`
 is definitive; a missing third element, an empty array, or unknown-only hints
-leave completeness unknown, in which case the client paginates as usual (NIP-01's
-count-vs-`limit` heuristic). Interpreting the hints is the consumer's job — the
-schema validates structure only.
+leave completeness unknown, in which case NIP-67 says the client SHOULD paginate
+with `until` set to the oldest received event's `created_at`. Interpreting the
+hints is the consumer's job — the schema validates structure only.
 
-`nip67.eose()` is a strict superset of
+`zostr.nip67.eose()` is a strict superset of
 [`zostr.relayMessage.eose()`](#zostrrelaymessage) (it also accepts the bare
-two-element form). `relayMessage.any()` stays NIP-01-only — like the NIP-42/45
-messages, it isn't folded in — so to accept a NIP-67 `EOSE` alongside the other
-relay messages, compose a union:
+two-element form). `zostr.relayMessage.any()` stays NIP-01-only — like the
+NIP-42/45 messages, it isn't folded in — so to accept a NIP-67 `EOSE` alongside
+the other relay messages, compose a union:
 
 ```ts
 zostr.nip67.eose().parse(["EOSE", "sub1"]); // bare NIP-01 form still accepted
