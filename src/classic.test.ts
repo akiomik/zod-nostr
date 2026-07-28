@@ -268,6 +268,9 @@ describe("zostr (classic)", () => {
     expect(() => zostr.kind().parse(-1)).toThrow();
     expect(() => zostr.kind().parse(65536)).toThrow();
     expect(() => zostr.kind().parse(1.5)).toThrow();
+    expect(() => zostr.kind().parse(Number.NaN)).toThrow();
+    expect(() => zostr.kind().parse(Number.POSITIVE_INFINITY)).toThrow();
+    expect(() => zostr.kind().parse(Number.NEGATIVE_INFINITY)).toThrow();
   });
 
   it("filter() validates known fields and '#<letter>' tag filters, rejects unknown keys", () => {

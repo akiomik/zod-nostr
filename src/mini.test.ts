@@ -209,6 +209,9 @@ describe("zostr (mini)", () => {
     expect(() => z.parse(zostr.kind(), -1)).toThrow();
     expect(() => z.parse(zostr.kind(), 65536)).toThrow();
     expect(() => z.parse(zostr.kind(), 1.5)).toThrow();
+    expect(() => z.parse(zostr.kind(), Number.NaN)).toThrow();
+    expect(() => z.parse(zostr.kind(), Number.POSITIVE_INFINITY)).toThrow();
+    expect(() => z.parse(zostr.kind(), Number.NEGATIVE_INFINITY)).toThrow();
   });
 
   it("filter() validates known fields and '#<letter>' tag filters, rejects unknown keys", () => {
