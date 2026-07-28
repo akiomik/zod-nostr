@@ -374,11 +374,17 @@ describe("zostr (classic)", () => {
     expect(
       zostr.clientMessage.req().parse(["REQ", "sub1", { kinds: [1] }, {}]),
     ).toBeTruthy();
-    expect(zostr.clientMessage.req().parse(["REQ", "sub1"])).toBeTruthy();
+    // Request-everything sends a single empty {} filter.
+    expect(zostr.clientMessage.req().parse(["REQ", "sub1", {}])).toBeTruthy();
+    // At least one filter is required (matching NIP-01's REQ grammar).
+    expect(() => zostr.clientMessage.req().parse(["REQ", "sub1"])).toThrow();
     expect(zostr.clientMessage.close().parse(["CLOSE", "sub1"])).toBeTruthy();
 
     const any = zostr.clientMessage.any();
     expect(any.parse(["CLOSE", "sub1"])).toBeTruthy();
+    expect(any.parse(["REQ", "sub1", {}])).toBeTruthy();
+    // any() also enforces REQ's at-least-one-filter rule.
+    expect(() => any.parse(["REQ", "sub1"])).toThrow();
     expect(() => any.parse(["EOSE", "sub1"])).toThrow();
   });
 
@@ -406,7 +412,9 @@ describe("zostr (classic)", () => {
     const req = zostr.clientMessage
       .req()
       .parse(["REQ", "sub1", { kinds: [1] }]);
-    const reqKinds: number[] | undefined = req[2]?.kinds;
+    // req[2] is the required first filter (no `?.`) — pins that the third
+    // tuple element is non-optional, not just `filter | undefined`.
+    const reqKinds: number[] | undefined = req[2].kinds;
     expect(reqKinds).toEqual([1]);
   });
 
@@ -732,7 +740,9 @@ describe("zostr (classic)", () => {
     const req = zostr.nip45
       .countRequest()
       .parse(["COUNT", "sub1", { kinds: [1] }]);
-    const reqKinds: number[] | undefined = req[2]?.kinds;
+    // req[2] is the required first filter (no `?.`) — pins that the third
+    // tuple element is non-optional, not just `filter | undefined`.
+    const reqKinds: number[] | undefined = req[2].kinds;
     expect(reqKinds).toEqual([1]);
   });
 });
