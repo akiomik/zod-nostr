@@ -37,7 +37,12 @@ const EXPECTED_TOP_LEVEL_KEYS = [
   "nip11",
 ].sort();
 
-const EXPECTED_NIP01_KEYS = ["metadata", "textNote", "metadataFields"].sort();
+const EXPECTED_NIP01_KEYS = [
+  "metadata",
+  "metadataContent",
+  "textNote",
+  "metadataFields",
+].sort();
 const EXPECTED_METADATA_FIELDS_KEYS = [
   "name",
   "about",

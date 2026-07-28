@@ -7,8 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking:** `zostr.nip01.metadata()` now returns an **object schema** for a
+  parsed kind:0 profile, not a codec. The string ⇄ object codec moved to the
+  new `zostr.nip01.metadataContent()`:
+
+  ```ts
+  // before
+  zostr.nip01.metadata().decode(content);
+  zostr.nip01.metadata().encode(profile);
+  // after
+  zostr.nip01.metadataContent().decode(content);
+  zostr.nip01.metadataContent().encode(profile);
+  // new — metadata() is the object schema:
+  zostr.nip01.metadata().parse(profileObject);
+  ```
+
+  The object's shape also changed: every known field is now **optional** (was
+  all-required) and covers NIP-01/NIP-24/NIP-05/LUD fields
+  (`name`/`about`/`picture`/`display_name`/`website`/`banner`/`bot`/`birthday`/`nip05`/`lud16`/`lud06`),
+  each validated strictly when present (e.g. `picture` as a URL) with no
+  baked-in fallback, and **unknown keys are preserved** (was stripped) so a
+  `metadataContent()` round-trip doesn't drop forward-compatible fields.
+
 ### Added
 
+- `zostr.nip01.metadataContent()`: codec between a kind:0 `content` string and
+  the `metadata()` profile object (same decode/encode behavior as
+  `zostr.jsonCodec(zostr.nip01.metadata())`).
+- `ProfileMetadata` type export (the output type of `zostr.nip01.metadata()`):
+  optional known fields plus an `unknown`-typed catchall for extra keys.
 - Generic JSON codec: `zostr.jsonCodec(schema)`. Decodes a JSON string through
   the given schema (`JSON.parse` + schema; invalid JSON or a schema mismatch is
   a Zod issue, not a raw throw). Encodes a value back to a JSON string when the

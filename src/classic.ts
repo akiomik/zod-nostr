@@ -2,6 +2,9 @@ import { z } from "zod";
 import type * as core from "zod/v4/core";
 import * as json from "./json.js";
 import * as nip01 from "./nip01.js";
+
+export type { ProfileMetadata } from "./nip01.js";
+
 import * as nip05 from "./nip05.js";
 import * as nip11 from "./nip11.js";
 import * as nip19 from "./nip19.js";
@@ -119,7 +122,14 @@ export const zostr = {
 
   // Kind-specific content, namespaced by NIP number
   nip01: {
-    metadata: () => classicCodec(nip01.nip01.metadata()),
+    // Object schema for a parsed kind:0 profile (optional known fields +
+    // preserved unknown keys). For the JSON content string, use metadataContent().
+    metadata: () =>
+      z
+        .object(nip01.nip01.metadata()._zod.def.shape)
+        .catchall(nip01.nip01.metadata()._zod.def.catchall as core.SomeType),
+    // Codec: kind:0 content string <-> the metadata() profile object.
+    metadataContent: () => classicCodec(nip01.nip01.metadataContent()),
     textNote: () => z.object(nip01.nip01.textNote()._zod.def.shape),
 
     // Field-level schemas for kind:0 profile metadata (strict, non-optional;

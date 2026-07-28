@@ -1,11 +1,10 @@
 import { verifyEvent } from "nostr-tools/pure";
-import * as core from "zod/v4/core";
+import type * as core from "zod/v4/core";
 import {
   signatureCheck as coreSignatureCheck,
   makeCheck,
   type NostrEventLike,
 } from "./core/checks.js";
-import { makeCodec } from "./core/codecs.js";
 import { hexStringSchema } from "./core/hex.js";
 import {
   zodArray,
@@ -17,8 +16,10 @@ import {
   zodString,
   zodTuple,
   zodUnion,
+  zodUnknown,
   zodUrl,
 } from "./core/primitives.js";
+import { jsonCodec } from "./json.js";
 import { lud06Schema } from "./lud06.js";
 import { lud16Schema } from "./lud16.js";
 import { nip05IdentifierSchema } from "./nip05.js";
@@ -117,22 +118,6 @@ function kindLiteralCheck(value: number): core.$ZodCheck<number> {
   });
 }
 
-export interface ProfileMetadata {
-  name: string;
-  display_name: string;
-  picture: string;
-  nip05: string;
-}
-
-function profileMetadataObjectSchema() {
-  return zodObject({
-    name: zodString(),
-    display_name: zodString(),
-    picture: zodString(),
-    nip05: nip05IdentifierSchema(),
-  });
-}
-
 /**
  * Field-level schemas for kind:0 profile metadata, grouped by NIP/LUD origin.
  * Each is strict and non-optional so consumers can layer their own
@@ -153,6 +138,41 @@ export const metadataFields = {
   lud16: () => lud16Schema(), // LUD-16
   lud06: () => lud06Schema(), // LUD-06
 };
+
+/**
+ * Object schema for kind:0 profile metadata. Each known field is validated
+ * strictly (via `metadataFields`) but optional — NIP-01/NIP-24 don't require
+ * any field — and no recovery policy (`.catch`/`.default`) is baked in.
+ * Unknown keys are preserved as `unknown` (catchall), matching how real kind:0
+ * content carries forward-compatible and non-standard fields, so a round-trip
+ * through `metadataContent()` doesn't drop them.
+ */
+function metadataObjectSchema() {
+  return zodObject(
+    {
+      name: zodOptional(metadataFields.name()),
+      about: zodOptional(metadataFields.about()),
+      picture: zodOptional(metadataFields.picture()),
+      display_name: zodOptional(metadataFields.displayName()),
+      website: zodOptional(metadataFields.website()),
+      banner: zodOptional(metadataFields.banner()),
+      bot: zodOptional(metadataFields.bot()),
+      birthday: zodOptional(metadataFields.birthday()),
+      nip05: zodOptional(metadataFields.nip05()),
+      lud16: zodOptional(metadataFields.lud16()),
+      lud06: zodOptional(metadataFields.lud06()),
+    },
+    { catchall: zodUnknown() },
+  );
+}
+
+/**
+ * Output type of `metadata()`: optional known fields plus preserved unknown
+ * keys (`[key: string]: unknown`).
+ */
+export type ProfileMetadata = core.output<
+  ReturnType<typeof metadataObjectSchema>
+>;
 
 const FILTER_KNOWN_KEYS = new Set([
   "ids",
@@ -319,23 +339,10 @@ export const clientMessage = {
 };
 
 export const nip01 = {
-  /** Codec for kind:0 content (JSON string) <-> parsed profile object */
-  metadata: () =>
-    makeCodec(zodString(), profileMetadataObjectSchema(), {
-      decode: (content, payload) => {
-        try {
-          return JSON.parse(content);
-        } catch {
-          payload.issues.push({
-            code: "custom",
-            input: content,
-            message: "Invalid Nostr profile content",
-          });
-          return core.NEVER;
-        }
-      },
-      encode: (metadata) => JSON.stringify(metadata),
-    }),
+  /** Object schema for a parsed kind:0 profile object (optional known fields + preserved unknown keys) */
+  metadata: () => metadataObjectSchema(),
+  /** Codec for kind:0 `content` (JSON string) <-> the `metadata()` profile object */
+  metadataContent: () => jsonCodec(metadataObjectSchema()),
   /** Event schema fixed to kind:1 (structure only; compose `.check(signatureCheck())` for the signature) */
   textNote: () =>
     zodObject({

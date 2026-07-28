@@ -109,7 +109,7 @@ describe("zostr (mini)", () => {
     });
   });
 
-  it("nip01.metadata() decodes/validates kind:0 content JSON", () => {
+  it("nip01.metadataContent() decodes/validates kind:0 content JSON", () => {
     const content = JSON.stringify({
       name: "bob",
       display_name: "Bob",
@@ -117,7 +117,7 @@ describe("zostr (mini)", () => {
       nip05: "bob@example.com",
     });
 
-    const metadata = z.decode(zostr.nip01.metadata(), content);
+    const metadata = z.decode(zostr.nip01.metadataContent(), content);
     expect(metadata.name).toBe("bob");
   });
 
