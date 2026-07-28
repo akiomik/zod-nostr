@@ -109,6 +109,18 @@ describe("zostr (mini)", () => {
     });
   });
 
+  it("nevent()/naddr() accept a pointer kind above 65535 (NIP-19 encodes kind as a uint32, not a NIP-01 event kind)", () => {
+    const pk = getPublicKey(generateSecretKey());
+    const nevent = nip19.neventEncode({ id: "a".repeat(64), kind: 70000 });
+    const naddr = nip19.naddrEncode({
+      identifier: "x",
+      pubkey: pk,
+      kind: 70000,
+    });
+    expect(z.decode(zostr.nevent(), nevent).kind).toBe(70000);
+    expect(z.decode(zostr.naddr(), naddr).kind).toBe(70000);
+  });
+
   it("nip01.metadataContent() decodes/validates kind:0 content JSON", () => {
     const content = JSON.stringify({
       name: "bob",
@@ -496,6 +508,54 @@ describe("zostr (mini)", () => {
         contact: "admin@example.com",
       }),
     ).toEqual({ contact: "admin@example.com" });
+  });
+
+  it("nip11.relayInformationDocument() validates numeric fields by their spec-defined form", () => {
+    const doc = zostr.nip11.relayInformationDocument();
+    const parse = (v: unknown) => z.parse(doc, v);
+    // count/length fields: non-negative integers (0 allowed)
+    expect(() => parse({ limitation: { max_limit: -1 } })).toThrow();
+    expect(() => parse({ limitation: { default_limit: 1.5 } })).toThrow();
+    expect(() =>
+      parse({ limitation: { max_message_length: Number.NaN } }),
+    ).toThrow();
+    expect(parse({ limitation: { min_pow_difficulty: 0 } })).toEqual({
+      limitation: { min_pow_difficulty: 0 },
+    });
+    // created_at_*_limit are relative durations in seconds: non-negative
+    // integers, so negatives and fractions are rejected
+    expect(() =>
+      parse({ limitation: { created_at_lower_limit: -1 } }),
+    ).toThrow();
+    expect(() =>
+      parse({ limitation: { created_at_upper_limit: 1.5 } }),
+    ).toThrow();
+    expect(parse({ limitation: { created_at_lower_limit: 94608000 } })).toEqual(
+      {
+        limitation: { created_at_lower_limit: 94608000 },
+      },
+    );
+    // fees.amount is a non-negative finite number (unit is free-form, so
+    // fractions like 0.5 are allowed); period is a non-negative integer;
+    // kinds are NIP-01 event kinds (0..65535)
+    expect(
+      parse({ fees: { admission: [{ amount: 0.5, unit: "BTC" }] } }),
+    ).toEqual({ fees: { admission: [{ amount: 0.5, unit: "BTC" }] } });
+    expect(() =>
+      parse({ fees: { admission: [{ amount: -1, unit: "msats" }] } }),
+    ).toThrow();
+    expect(() =>
+      parse({
+        fees: { admission: [{ amount: 1, unit: "msats", period: 1.5 }] },
+      }),
+    ).toThrow();
+    expect(() =>
+      parse({
+        fees: { publication: [{ amount: 1, unit: "msats", kinds: [65536] }] },
+      }),
+    ).toThrow();
+    // supported_nips are non-negative integers
+    expect(() => parse({ supported_nips: [1, -2] })).toThrow();
   });
 
   it("nip11.relayInformationDocument()/nip05.nostrJsonDocument() infer precise output types (regression: previously fell back to unknown because mini.ts re-wrapped them through the generic miniSchema() helper — see #15)", () => {

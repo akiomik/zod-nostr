@@ -17,6 +17,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `max_limit`/`default_limit` are NIP-11 policy, not part of this shape). This
   also tightens `limit` wherever the filter is reused
   (`clientMessage.req()`/`clientMessage.any()`).
+- **Breaking:** `zostr.nip11.relayInformationDocument()` now validates its
+  numeric fields to their spec-defined form instead of accepting any number.
+  Negative and non-finite values are rejected, as are fractions on the integer
+  fields:
+  - Count/length fields — `limitation.max_message_length`, `max_subscriptions`,
+    `max_subid_length`, `max_limit`, `max_event_tags`, `max_content_length`,
+    `min_pow_difficulty`, `default_limit`, `fees.*[].period`, and
+    `supported_nips[]` — are now **non-negative integers** (`0` allowed, no upper
+    bound).
+  - `limitation.created_at_lower_limit`/`created_at_upper_limit` are now
+    **non-negative integers** too: they are relative offsets in seconds (how far
+    in the past/future an event's `created_at` may be), not absolute timestamps —
+    the spec's example values (`94608000` ≈ 3y, `300` = 5min) only make sense as
+    durations.
+  - `fees.*[].amount` is now a **non-negative finite number** (not required to be
+    an integer, since `unit` is free-form and may be sub-unit).
+  - `fees.*[].kinds[]` are now NIP-01 event kinds (via `kind()`, `0..65535`).
+- **Breaking:** `zostr.nevent()`/`zostr.naddr()` now validate the pointer `kind`
+  as a **32-bit unsigned integer** (`0..4294967295`), matching NIP-19's
+  big-endian `uint32` encoding. It previously accepted any number; non-integers,
+  negatives, and values above `2^32 - 1` are now rejected. The range is **not**
+  narrowed to NIP-01's `0..65535`, since NIP-19 does not — compose `kind()`
+  yourself for event-kind validation.
 
 ## [0.3.0] - 2026-07-28
 

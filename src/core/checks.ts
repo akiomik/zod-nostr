@@ -14,6 +14,58 @@ export function makeCheck<T>(
   return ch;
 }
 
+/**
+ * Check factory for a non-negative integer (an integer `>= 0`). Used for count,
+ * length, and duration fields — event limits, byte lengths, seconds, PoW
+ * difficulty — where fractional, negative, and non-finite values (`NaN`/
+ * `Infinity`, which `JSON.stringify` would emit as `null`) are never valid. `0`
+ * is allowed. Pass `max` to also cap the value at a spec-defined encoding bound
+ * (e.g. NIP-19's 32-bit unsigned pointer kind). `label` names the field in the
+ * error message.
+ */
+export function nonNegativeIntegerCheck(
+  label: string,
+  max?: number,
+): core.$ZodCheck<number> {
+  return makeCheck<number>((payload) => {
+    const value = payload.value;
+    if (
+      !Number.isInteger(value) ||
+      value < 0 ||
+      (max !== undefined && value > max)
+    ) {
+      payload.issues.push({
+        code: "custom",
+        input: value,
+        message:
+          max === undefined
+            ? `Invalid ${label} (expected a non-negative integer)`
+            : `Invalid ${label} (expected an integer in 0..${max})`,
+      });
+    }
+  });
+}
+
+/**
+ * Check factory for a non-negative finite number (`>= 0`, not `NaN`/`Infinity`).
+ * Unlike {@link nonNegativeIntegerCheck} this allows fractions, for amount
+ * fields whose unit is caller-defined and may be sub-unit (e.g. NIP-11
+ * `fees[].amount`, which is not normatively an integer). `label` names the
+ * field in the error message.
+ */
+export function nonNegativeNumberCheck(label: string): core.$ZodCheck<number> {
+  return makeCheck<number>((payload) => {
+    const value = payload.value;
+    if (!Number.isFinite(value) || value < 0) {
+      payload.issues.push({
+        code: "custom",
+        input: value,
+        message: `Invalid ${label} (expected a non-negative number)`,
+      });
+    }
+  });
+}
+
 export interface NostrEventLike {
   id: string;
   pubkey: string;
