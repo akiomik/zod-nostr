@@ -8,27 +8,9 @@ import {
   zodRecord,
   zodString,
 } from "./core/primitives.js";
+import { isInternetIdentifierDomain } from "./internet-identifier.js";
 
 const NIP05_LOCAL_PART = /^[a-z0-9._-]+$/i;
-
-/**
- * Shared internet-identifier domain check for `<local-part>@<domain>`
- * identifiers (NIP-05 and LUD-16): `<domain>` must be a bare host with no
- * path, query, or fragment.
- */
-export function isInternetIdentifierDomain(domain: string): boolean {
-  try {
-    const url = new URL(`https://${domain}`);
-    return (
-      url.host.toLowerCase() === domain.toLowerCase() &&
-      url.pathname === "/" &&
-      !url.search &&
-      !url.hash
-    );
-  } catch {
-    return false;
-  }
-}
 
 export function nip05IdentifierSchema(): core.$ZodString<string> {
   return zodString([
