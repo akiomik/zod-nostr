@@ -36,7 +36,8 @@ A non-negative integer schema for `created_at` (Unix seconds). No coercion.
 
 ### `zostr.kind()`
 
-A non-negative integer schema for `kind`. No coercion.
+An integer schema for `kind`, constrained to `0`–`65535` as NIP-01 defines it
+(`<integer between 0 and 65535>`). No coercion.
 
 ### `zostr.tags()`
 

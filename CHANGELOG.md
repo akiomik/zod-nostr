@@ -30,6 +30,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   each validated strictly when present (e.g. `picture` as a URL) with no
   baked-in fallback, and **unknown keys are preserved** (was stripped) so a
   `metadataContent()` round-trip doesn't drop forward-compatible fields.
+- **Breaking:** `zostr.kind()` now enforces NIP-01's `<integer between 0 and
+  65535>` constraint. It previously accepted any number (non-integers, negatives,
+  and values above 65535); those are now rejected. This also tightens `kind`
+  wherever it is reused (`event()`, `eventTemplate()`, `unsignedEvent()`,
+  `filter().kinds`).
 
 ### Added
 
