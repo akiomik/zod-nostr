@@ -8,6 +8,7 @@ export type { ProfileMetadata } from "./nip01.js";
 import * as nip05 from "./nip05.js";
 import * as nip11 from "./nip11.js";
 import * as nip19 from "./nip19.js";
+import * as nip45 from "./nip45.js";
 
 /**
  * Re-wraps a core.$ZodCodec (shared, flavor-agnostic) through classic's own
@@ -154,5 +155,16 @@ export const zostr = {
   nip11: {
     relayInformationDocument: () =>
       z.object(nip11.nip11.relayInformationDocument()._zod.def.shape),
+  },
+
+  // NIP-45 event counts (COUNT request/response messages + response body object)
+  nip45: {
+    count: () => z.object(nip45.nip45.count()._zod.def.shape),
+    countRequest: () =>
+      z.tuple(
+        nip45.nip45.countRequest()._zod.def.items,
+        nip45.nip45.countRequest()._zod.def.rest,
+      ),
+    countResponse: () => z.tuple(nip45.nip45.countResponse()._zod.def.items),
   },
 };

@@ -410,6 +410,52 @@ what `nostr-tools`' `nip19.decode()` returns, including default `relays: []`
 and `author: undefined` fields when the source bech32 string didn't encode
 them.
 
+## NIP-45 — event counts
+
+Tuple schemas for the NIP-45 `COUNT` request/response, plus the response body
+object. Each validates structure only.
+
+| function | wire shape |
+| --- | --- |
+| `zostr.nip45.countRequest()` | `["COUNT", queryId, filter, ...filter[]]` |
+| `zostr.nip45.countResponse()` | `["COUNT", queryId, count]` |
+| `zostr.nip45.count()` | `{ count, approximate?, hll? }` |
+
+NIP-45 names the id `query_id` on the wire (its HLL section also calls it
+`subscription_id`); it is validated with the same format as a NIP-01
+subscription id — a non-empty string of at most 64 chars (see
+[`zostr.subscriptionId()`](#zostrsubscriptionid)) — which also lets a `CLOSED`
+refusal reuse the same constraints.
+
+`countRequest()` carries the same NIP-01 `REQ`/`COUNT` filters (see
+[`zostr.filter()`](#zostrfilter)), OR'd together. **At least one** filter is
+required, matching NIP-01's `REQ` grammar (`<filters1>` then `<filters2>...`);
+to count everything, send a single empty `{}` filter.
+
+### `zostr.nip45.count()`
+
+The COUNT response body object:
+
+- `count` — a **non-negative integer**. Relays may return a probabilistic
+  estimate, but it's still an event count, so fractional, negative, and
+  non-finite values are rejected.
+- `approximate?` — optional `boolean` flagging a probabilistic count.
+- `hll?` — optional HyperLogLog value: a **512-char hex** string (256 `uint8`
+  registers concatenated). NIP-45 doesn't mandate lowercase, so upper/mixed
+  case is accepted.
+
+Unknown keys are stripped (as in `zostr.event()` and the NIP-05/NIP-11
+documents), and no recovery policy (`.catch`/`.default`) is baked in.
+
+```ts
+zostr.nip45.countRequest().parse(["COUNT", "sub1", { kinds: [7], "#e": [id] }]);
+zostr.nip45.countResponse().parse(["COUNT", "sub1", { count: 93412452, approximate: true }]);
+zostr.nip45.count().parse({ count: 2044, hll: "01ef0705..." /* 512 hex chars */ });
+```
+
+A relay refusing a `COUNT` request replies with NIP-01's `CLOSED` message
+(`zostr.relayMessage.closed()`), not a `COUNT`.
+
 ## Generic codecs
 
 ### `zostr.jsonCodec(schema)`

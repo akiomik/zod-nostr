@@ -608,4 +608,92 @@ describe("zostr (mini)", () => {
     const names: Record<string, string> = nj.names;
     expect(names).toEqual({ bob: pubkey });
   });
+
+  it("nip45.countRequest() validates a NIP-45 COUNT request tuple", () => {
+    expect(
+      z.parse(zostr.nip45.countRequest(), [
+        "COUNT",
+        "sub1",
+        { kinds: [1] },
+        {},
+      ]),
+    ).toBeTruthy();
+    // Count-everything sends a single empty {} filter.
+    expect(
+      z.parse(zostr.nip45.countRequest(), ["COUNT", "sub1", {}]),
+    ).toBeTruthy();
+    // At least one filter is required (matching NIP-01's REQ grammar).
+    expect(() =>
+      z.parse(zostr.nip45.countRequest(), ["COUNT", "sub1"]),
+    ).toThrow();
+
+    expect(() =>
+      z.parse(zostr.nip45.countRequest(), ["REQ", "sub1"]),
+    ).toThrow();
+    expect(() =>
+      z.parse(zostr.nip45.countRequest(), ["COUNT", "", {}]),
+    ).toThrow();
+    expect(() =>
+      z.parse(zostr.nip45.countRequest(), ["COUNT", "sub1", { foo: ["x"] }]),
+    ).toThrow();
+  });
+
+  it("nip45.countResponse()/count() validate a NIP-45 COUNT response", () => {
+    expect(
+      z.parse(zostr.nip45.countResponse(), ["COUNT", "sub1", { count: 0 }]),
+    ).toBeTruthy();
+    const hll = "0".repeat(512);
+    expect(
+      z.parse(zostr.nip45.countResponse(), [
+        "COUNT",
+        "sub1",
+        { count: 2044, approximate: true, hll },
+      ]),
+    ).toBeTruthy();
+
+    expect(z.parse(zostr.nip45.count(), { count: 42 })).toEqual({ count: 42 });
+    // count is a non-negative integer (relays may return a probabilistic estimate).
+    expect(() => z.parse(zostr.nip45.count(), { count: -1 })).toThrow();
+    expect(() => z.parse(zostr.nip45.count(), { count: 1.5 })).toThrow();
+    expect(() => z.parse(zostr.nip45.count(), { count: Number.NaN })).toThrow();
+    expect(() => z.parse(zostr.nip45.count(), {})).toThrow();
+    // hll is a 512-char hex string (256 uint8 registers); NIP-45 doesn't
+    // mandate lowercase, so upper/mixed case is accepted.
+    expect(
+      z.parse(zostr.nip45.count(), { count: 1, hll: "A".repeat(512) }),
+    ).toBeTruthy();
+    expect(
+      z.parse(zostr.nip45.count(), { count: 1, hll: "aF".repeat(256) }),
+    ).toBeTruthy();
+    expect(() =>
+      z.parse(zostr.nip45.count(), { count: 1, hll: "0".repeat(511) }),
+    ).toThrow();
+    expect(() =>
+      z.parse(zostr.nip45.count(), { count: 1, hll: "z".repeat(512) }),
+    ).toThrow();
+    // Unknown keys are stripped.
+    expect(z.parse(zostr.nip45.count(), { count: 1, extra: true })).toEqual({
+      count: 1,
+    });
+  });
+
+  it("nip45.* infer precise output types", () => {
+    const res = z.parse(zostr.nip45.countResponse(), [
+      "COUNT",
+      "sub1",
+      { count: 5 },
+    ]);
+    const c: number = res[2].count;
+    const approximate: boolean | undefined = res[2].approximate;
+    expect(c).toBe(5);
+    expect(approximate).toBeUndefined();
+
+    const req = z.parse(zostr.nip45.countRequest(), [
+      "COUNT",
+      "sub1",
+      { kinds: [1] },
+    ]);
+    const reqKinds: number[] | undefined = req[2]?.kinds;
+    expect(reqKinds).toEqual([1]);
+  });
 });

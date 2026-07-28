@@ -4,7 +4,8 @@
 [![CI](https://github.com/akiomik/zod-nostr/actions/workflows/ci.yml/badge.svg)](https://github.com/akiomik/zod-nostr/actions/workflows/ci.yml)
 
 Zod schemas and codecs for [Nostr](https://nostr.com) — NIP-01 events, NIP-05
-identifiers, NIP-11 relay information documents, and NIP-19 bech32 entities.
+identifiers, NIP-11 relay information documents, NIP-19 bech32 entities, and
+NIP-45 event counts.
 
 Validation logic is written once against `zod/v4/core` and re-exposed through
 two entry points, so the exact same rules work with both
@@ -125,6 +126,9 @@ rather than inventing a bespoke `.verified()`-style chain method.
 - **NIP-11** — relay information document (`nip11.relayInformationDocument`)
 - **NIP-19** — bech32 entities: `npub`, `nsec`, `note`, `nprofile`, `nevent`,
   `naddr`
+- **NIP-45** — event counts (`COUNT`): request/response messages
+  (`nip45.countRequest`, `nip45.countResponse`) and the response body object
+  (`nip45.count`)
 
 See [docs/API.md](docs/API.md) for the full API reference.
 
