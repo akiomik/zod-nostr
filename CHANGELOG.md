@@ -39,6 +39,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   HyperLogLog registers). The `queryId` reuses the NIP-01 subscription-id format.
   Structure only; a relay refusing a `COUNT` replies with the existing NIP-01
   `CLOSED` message.
+- `zostr.nip67` — NIP-67 EOSE completeness hint. `nip67.eose()` is the
+  relay-to-client `EOSE` message extended with an optional third element, an
+  array of hint strings: `["EOSE", subscriptionId]` or `["EOSE", subscriptionId,
+  hints]`. It's a union of the exact two- and three-element wire shapes (so an
+  explicit `undefined` third element is rejected) and infers `["EOSE", string] |
+  ["EOSE", string, string[]]`. The hints are plain strings — NIP-67 defines
+  `"finish"` and `"more"` but requires clients to accept unknown values, so no
+  enum is baked in; interpreting them is the consumer's job. `nip67.eose()` is a
+  strict superset of `nip01.relayMessage.eose()`; `relayMessage.any()` stays
+  NIP-01-only, so compose `z.union([relayMessage.any(), nip67.eose()])` to accept
+  a NIP-67 `EOSE` alongside the other relay messages.
 
 ## [0.4.0] - 2026-07-29
 
