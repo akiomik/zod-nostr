@@ -412,7 +412,9 @@ describe("zostr (classic)", () => {
     const req = zostr.clientMessage
       .req()
       .parse(["REQ", "sub1", { kinds: [1] }]);
-    const reqKinds: number[] | undefined = req[2]?.kinds;
+    // req[2] is the required first filter (no `?.`) — pins that the third
+    // tuple element is non-optional, not just `filter | undefined`.
+    const reqKinds: number[] | undefined = req[2].kinds;
     expect(reqKinds).toEqual([1]);
   });
 
@@ -738,7 +740,9 @@ describe("zostr (classic)", () => {
     const req = zostr.nip45
       .countRequest()
       .parse(["COUNT", "sub1", { kinds: [1] }]);
-    const reqKinds: number[] | undefined = req[2]?.kinds;
+    // req[2] is the required first filter (no `?.`) — pins that the third
+    // tuple element is non-optional, not just `filter | undefined`.
+    const reqKinds: number[] | undefined = req[2].kinds;
     expect(reqKinds).toEqual([1]);
   });
 });
