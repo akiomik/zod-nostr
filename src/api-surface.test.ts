@@ -37,6 +37,7 @@ const EXPECTED_TOP_LEVEL_KEYS = [
   "nip11",
   "nip42",
   "nip45",
+  "nip67",
 ].sort();
 
 const EXPECTED_NIP01_KEYS = [
@@ -73,6 +74,7 @@ const EXPECTED_NIP42_KEYS = [
   "createdAtCheck",
 ].sort();
 const EXPECTED_NIP45_KEYS = ["count", "countRequest", "countResponse"].sort();
+const EXPECTED_NIP67_KEYS = ["eose"].sort();
 const EXPECTED_RELAY_MESSAGE_KEYS = [
   "event",
   "ok",
@@ -95,6 +97,7 @@ const NESTED_NAMESPACES: [string, string[]][] = [
   ["nip11", EXPECTED_NIP11_KEYS],
   ["nip42", EXPECTED_NIP42_KEYS],
   ["nip45", EXPECTED_NIP45_KEYS],
+  ["nip67", EXPECTED_NIP67_KEYS],
   ["relayMessage", EXPECTED_RELAY_MESSAGE_KEYS],
   ["clientMessage", EXPECTED_CLIENT_MESSAGE_KEYS],
 ];

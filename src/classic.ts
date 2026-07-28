@@ -10,6 +10,7 @@ import * as nip11 from "./nip11.js";
 import * as nip19 from "./nip19.js";
 import * as nip42 from "./nip42.js";
 import * as nip45 from "./nip45.js";
+import * as nip67 from "./nip67.js";
 
 /**
  * Re-wraps a core.$ZodCodec (shared, flavor-agnostic) through classic's own
@@ -181,5 +182,10 @@ export const zostr = {
         nip45.nip45.countRequest()._zod.def.rest,
       ),
     countResponse: () => z.tuple(nip45.nip45.countResponse()._zod.def.items),
+  },
+
+  // NIP-67 EOSE completeness hint (relay→client EOSE with an optional hints array)
+  nip67: {
+    eose: () => z.union(nip67.nip67.eose()._zod.def.options),
   },
 };

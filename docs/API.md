@@ -523,6 +523,45 @@ zostr.nip45.count().parse({ count: 2044, hll: "01ef0705..." /* 512 hex chars */ 
 A relay refusing a `COUNT` request replies with NIP-01's `CLOSED` message
 (`zostr.relayMessage.closed()`), not a `COUNT`.
 
+## NIP-67 — EOSE completeness hint
+
+NIP-67 extends NIP-01's `EOSE` with an optional third element: an array of hint
+strings.
+
+| function | wire shape |
+| --- | --- |
+| `zostr.nip67.eose()` | `["EOSE", subscriptionId]` or `["EOSE", subscriptionId, hints]` |
+
+`eose()` is a union of the exact two- and three-element wire shapes (not a tuple
+with an optional third item), so it accepts only the shapes that appear on the
+JSON wire — an explicit `undefined` third element is rejected — and infers the
+precise `["EOSE", string] | ["EOSE", string, string[]]`.
+
+The `hints` are plain strings, not a fixed enum. NIP-67 defines `"finish"` (the
+relay has sent every stored event matching the filters — do not paginate) and
+`"more"` (the relay holds more — paginate), but requires clients to accept
+unknown hint values without error, so no enum is baked in. The array MAY be
+empty and MAY carry multiple hints. Only the **presence** of `"finish"`/`"more"`
+is definitive; a missing third element, an empty array, or unknown-only hints
+leave completeness unknown, in which case NIP-67 says the client SHOULD paginate
+with `until` set to the oldest received event's `created_at`. Interpreting the
+hints is the consumer's job — the schema validates structure only.
+
+`zostr.nip67.eose()` is a strict superset of
+[`zostr.relayMessage.eose()`](#zostrrelaymessage) (it also accepts the bare
+two-element form). `zostr.relayMessage.any()` stays NIP-01-only — like the
+NIP-42/45 messages, it isn't folded in — so to accept a NIP-67 `EOSE` alongside
+the other relay messages, compose a union:
+
+```ts
+zostr.nip67.eose().parse(["EOSE", "sub1"]); // bare NIP-01 form still accepted
+zostr.nip67.eose().parse(["EOSE", "sub1", ["finish"]]);
+
+// relayMessage.any() alone rejects the three-element form:
+const relayMessage = z.union([zostr.relayMessage.any(), zostr.nip67.eose()]);
+relayMessage.parse(["EOSE", "sub1", ["more"]]);
+```
+
 ## Generic codecs
 
 ### `zostr.jsonCodec(schema)`

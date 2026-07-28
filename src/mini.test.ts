@@ -846,4 +846,74 @@ describe("zostr (mini)", () => {
     const kind: 22242 = auth[1].kind;
     expect(kind).toBe(22242);
   });
+
+  it("nip67.eose() accepts the two- and three-element EOSE wire shapes", () => {
+    // The bare NIP-01 form (a NIP-67 relay still sends it).
+    expect(z.parse(zostr.nip67.eose(), ["EOSE", "sub1"])).toEqual([
+      "EOSE",
+      "sub1",
+    ]);
+    // Defined hints.
+    expect(z.parse(zostr.nip67.eose(), ["EOSE", "sub1", ["finish"]])).toEqual([
+      "EOSE",
+      "sub1",
+      ["finish"],
+    ]);
+    expect(
+      z.parse(zostr.nip67.eose(), ["EOSE", "sub1", ["more"]]),
+    ).toBeTruthy();
+    // The array MAY be empty and MAY carry multiple hints.
+    expect(z.parse(zostr.nip67.eose(), ["EOSE", "sub1", []])).toBeTruthy();
+    expect(
+      z.parse(zostr.nip67.eose(), ["EOSE", "sub1", ["finish", "more"]]),
+    ).toBeTruthy();
+    // Unknown hint values are accepted as plain strings (no enum baked in).
+    expect(
+      z.parse(zostr.nip67.eose(), ["EOSE", "sub1", ["future"]]),
+    ).toBeTruthy();
+  });
+
+  it("nip67.eose() rejects non-wire and malformed shapes", () => {
+    // The hints must be an array of strings, not a bare string...
+    expect(() =>
+      z.parse(zostr.nip67.eose(), ["EOSE", "sub1", "finish"]),
+    ).toThrow();
+    // ...nor an array containing non-strings.
+    expect(() => z.parse(zostr.nip67.eose(), ["EOSE", "sub1", [1]])).toThrow();
+    // An explicit `undefined` third element is not a JSON wire shape (the union
+    // of exact tuples rejects it, unlike an optional-tuple item would).
+    expect(() =>
+      z.parse(zostr.nip67.eose(), ["EOSE", "sub1", undefined]),
+    ).toThrow();
+    // No fourth element.
+    expect(() =>
+      z.parse(zostr.nip67.eose(), ["EOSE", "sub1", ["finish"], "extra"]),
+    ).toThrow();
+    // The subscription id still applies (non-empty).
+    expect(() =>
+      z.parse(zostr.nip67.eose(), ["EOSE", "", ["finish"]]),
+    ).toThrow();
+  });
+
+  it("NIP-01 relayMessage.any() rejects a NIP-67 EOSE; a composed union accepts it", () => {
+    // relayMessage.any() is NIP-01-only, so the three-element form is rejected.
+    expect(() =>
+      z.parse(zostr.relayMessage.any(), ["EOSE", "sub1", ["finish"]]),
+    ).toThrow();
+    // The documented composition accepts both NIP-01 messages and NIP-67 EOSE.
+    const relayMessage = z.union([
+      zostr.relayMessage.any(),
+      zostr.nip67.eose(),
+    ]);
+    expect(z.parse(relayMessage, ["EOSE", "sub1"])).toBeTruthy();
+    expect(z.parse(relayMessage, ["EOSE", "sub1", ["finish"]])).toBeTruthy();
+    expect(z.parse(relayMessage, ["NOTICE", "hi"])).toBeTruthy();
+  });
+
+  it("nip67.eose() infers the precise two-/three-element union type", () => {
+    const eose = z.parse(zostr.nip67.eose(), ["EOSE", "sub1", ["finish"]]);
+    // The hints (when present) are string[].
+    const hints: string[] | undefined = eose.length === 3 ? eose[2] : undefined;
+    expect(hints).toEqual(["finish"]);
+  });
 });
