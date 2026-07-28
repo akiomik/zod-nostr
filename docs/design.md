@@ -83,17 +83,19 @@ reusable object schema and the transport as a generic, composable codec, so
 consumers can reuse either independently instead of being handed only a fused
 unit.
 
-*(Applied to kind:0 profile metadata: the `metadataFields` atom set shipped in
-0.2.1; the object schema, generic JSON codec, and convenience content codec are
-planned for 0.3.0 — see the metadata worked example, added with that release.)*
+*(Applied to kind:0 profile metadata: the `metadataFields` atom set (0.2.1) and
+the generic `jsonCodec(schema)` transport already exist; the `metadata()` object
+schema and the `metadataContent()` convenience codec are planned for 0.3.0 — see
+the metadata worked example, added with that release.)*
 
 ### Put guarantees in schemas
 
 Guarantees about output values are expressed in the schema/type, not in runtime
 transport helpers ("parse, don't validate"). A generic JSON codec's `encode`
-follows `JSON.stringify` semantics and converts only raw throws and a top-level
-`undefined` into Zod issues; a consumer who needs a stronger JSON guarantee
-models it in the output schema rather than relying on the serializer.
+follows `JSON.stringify` semantics and converts only a raw `JSON.stringify`
+error or a top-level `undefined` into Zod issues; a consumer who needs a
+stronger JSON guarantee models it in the output schema rather than relying on
+the serializer.
 
 ### Keep classic and mini equivalent
 
@@ -114,7 +116,7 @@ which layer it extends.
 - **Checks** — composable, opt-in `.check()`s (`signatureCheck`, the message
   prefix checks).
 - **Generic codecs** — transport codecs parameterized by an output schema
-  (`jsonCodec(schema)`, planned for 0.3.0).
+  (`jsonCodec(schema)`).
 - **Entity codecs** — decode/encode a specific entity to a fixed output type
   (bech32 entities `npub` / `nsec` / `note` / `nprofile` / `nevent` / `naddr`).
 - **Convenience codecs** — a specific transport + shape assembled for a common
@@ -196,8 +198,9 @@ way an external consumer would.
 ## Metadata API worked example
 
 *Deferred.* The shape/transport separation for kind:0 metadata — the
-`metadata()` object schema, a generic JSON codec, and the `metadataContent()`
-convenience codec — lands in 0.3.0. This section (including the alternatives
-considered and rejected, kept as short one-liners) will be added with that
-release, and is expected to become the first record when `docs/decisions/` is
+`metadata()` object schema and the `metadataContent()` convenience codec (built
+on the generic `jsonCodec`) — lands in 0.3.0. This section (including the
+alternatives considered and rejected, kept as short one-liners) will be added
+with that release, and is expected to become the first record when
+`docs/decisions/` is
 introduced.
