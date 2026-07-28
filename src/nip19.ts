@@ -1,6 +1,6 @@
 import { nip19 } from "nostr-tools";
 import type * as core from "zod/v4/core";
-import { makeCheck } from "./core/checks.js";
+import { makeCheck, nonNegativeIntegerCheck } from "./core/checks.js";
 import { makeCodec } from "./core/codecs.js";
 import { hexStringSchema } from "./core/hex.js";
 import {
@@ -11,6 +11,17 @@ import {
   zodString,
   zodUnknown,
 } from "./core/primitives.js";
+
+/**
+ * NIP-19 encodes the pointer `kind` of `nevent`/`naddr` as a 32-bit unsigned
+ * integer (big-endian). It does not narrow this to NIP-01's `0..65535` event-
+ * kind range, so this schema mirrors the encoding and accepts any `uint32`;
+ * layering NIP-01 event-kind validation on top is left to the consumer.
+ */
+const UINT32_MAX = 0xff_ff_ff_ff;
+function pointerKind(): core.$ZodNumber<number> {
+  return zodNumber([nonNegativeIntegerCheck("kind", UINT32_MAX)]);
+}
 
 export type Bech32Prefix =
   | "npub"
@@ -93,7 +104,7 @@ function eventPointerSchema() {
     id: hexStringSchema(64),
     relays: zodOptional(zodArray(zodString())),
     author: zodOptional(hexStringSchema(64)),
-    kind: zodOptional(zodNumber()),
+    kind: zodOptional(pointerKind()),
   });
 }
 
@@ -101,7 +112,7 @@ function addressPointerSchema() {
   return zodObject({
     identifier: zodString(),
     pubkey: hexStringSchema(64),
-    kind: zodNumber(),
+    kind: pointerKind(),
     relays: zodOptional(zodArray(zodString())),
   });
 }

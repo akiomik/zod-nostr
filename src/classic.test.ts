@@ -148,6 +148,18 @@ describe("zostr (classic)", () => {
     expect(naddrCodec.decode(naddr)).toEqual(naddrExpected);
   });
 
+  it("nevent()/naddr() accept a pointer kind above 65535 (NIP-19 encodes kind as a uint32, not a NIP-01 event kind)", () => {
+    const pk = getPublicKey(generateSecretKey());
+    const nevent = nip19.neventEncode({ id: "a".repeat(64), kind: 70000 });
+    const naddr = nip19.naddrEncode({
+      identifier: "x",
+      pubkey: pk,
+      kind: 70000,
+    });
+    expect(zostr.nevent().decode(nevent).kind).toBe(70000);
+    expect(zostr.naddr().decode(naddr).kind).toBe(70000);
+  });
+
   it("nip01.metadataContent() decodes/validates kind:0 content JSON, via both top-level and instance methods", () => {
     const content = JSON.stringify({
       name: "alice",
@@ -550,6 +562,53 @@ describe("zostr (classic)", () => {
         .relayInformationDocument()
         .parse({ contact: "admin@example.com" }),
     ).toEqual({ contact: "admin@example.com" });
+  });
+
+  it("nip11.relayInformationDocument() validates numeric fields by their spec-defined form", () => {
+    const doc = zostr.nip11.relayInformationDocument();
+    // count/length fields: non-negative integers (0 allowed)
+    expect(() => doc.parse({ limitation: { max_limit: -1 } })).toThrow();
+    expect(() => doc.parse({ limitation: { default_limit: 1.5 } })).toThrow();
+    expect(() =>
+      doc.parse({ limitation: { max_message_length: Number.NaN } }),
+    ).toThrow();
+    expect(doc.parse({ limitation: { min_pow_difficulty: 0 } })).toEqual({
+      limitation: { min_pow_difficulty: 0 },
+    });
+    // created_at_*_limit are relative durations in seconds: non-negative
+    // integers, so negatives and fractions are rejected
+    expect(() =>
+      doc.parse({ limitation: { created_at_lower_limit: -1 } }),
+    ).toThrow();
+    expect(() =>
+      doc.parse({ limitation: { created_at_upper_limit: 1.5 } }),
+    ).toThrow();
+    expect(
+      doc.parse({ limitation: { created_at_lower_limit: 94608000 } }),
+    ).toEqual({ limitation: { created_at_lower_limit: 94608000 } });
+    // fees.amount is a non-negative finite number (unit is free-form, so
+    // fractions like 0.5 are allowed); period is a non-negative integer;
+    // kinds are NIP-01 event kinds (0..65535)
+    expect(
+      doc.parse({ fees: { admission: [{ amount: 0.5, unit: "BTC" }] } }),
+    ).toEqual({ fees: { admission: [{ amount: 0.5, unit: "BTC" }] } });
+    expect(() =>
+      doc.parse({ fees: { admission: [{ amount: -1, unit: "msats" }] } }),
+    ).toThrow();
+    expect(() =>
+      doc.parse({
+        fees: {
+          admission: [{ amount: 1, unit: "msats", period: 1.5 }],
+        },
+      }),
+    ).toThrow();
+    expect(() =>
+      doc.parse({
+        fees: { publication: [{ amount: 1, unit: "msats", kinds: [65536] }] },
+      }),
+    ).toThrow();
+    // supported_nips are non-negative integers
+    expect(() => doc.parse({ supported_nips: [1, -2] })).toThrow();
   });
 
   it("nip11.relayInformationDocument()/nip05.nostrJsonDocument() infer precise output types (regression: previously fell back to unknown because classic.ts re-wrapped them through the generic classicSchema() helper — see #15)", () => {

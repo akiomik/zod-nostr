@@ -4,6 +4,7 @@ import {
   signatureCheck as coreSignatureCheck,
   makeCheck,
   type NostrEventLike,
+  nonNegativeIntegerCheck,
 } from "./core/checks.js";
 import { hexStringSchema } from "./core/hex.js";
 import {
@@ -86,18 +87,7 @@ export function kind(): core.$ZodNumber<number> {
  * (`max_limit`/`default_limit`) are NIP-11 policy, not part of this shape.
  */
 function limit(): core.$ZodNumber<number> {
-  return zodNumber([
-    makeCheck<number>((payload) => {
-      const value = payload.value;
-      if (!Number.isInteger(value) || value < 0) {
-        payload.issues.push({
-          code: "custom",
-          input: value,
-          message: "Invalid limit (expected a non-negative integer)",
-        });
-      }
-    }),
-  ]);
+  return zodNumber([nonNegativeIntegerCheck("limit")]);
 }
 
 export function tags(): core.$ZodArray<

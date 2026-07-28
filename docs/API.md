@@ -321,13 +321,25 @@ ignore any additional fields they do not understand") — unknown keys are
 stripped rather than rejected.
 
 `pubkey`/`self` are validated as 64-character lowercase hex strings (same as
-[`zostr.pubkey()`](#zostrpubkey)); `supported_nips` as an array of numbers;
-`banner`/`icon`/`terms_of_service`/`payments_url` as URLs (any scheme, not
-just `http`/`https`); `limitation` and `fees` as nested objects with their
+[`zostr.pubkey()`](#zostrpubkey)); `supported_nips` as an array of non-negative
+integers; `banner`/`icon`/`terms_of_service`/`payments_url` as URLs (any scheme,
+not just `http`/`https`); `limitation` and `fees` as nested objects with their
 own optional/required fields (`fees.*[].amount`/`.unit` are required,
 `.period`/`.kinds` are optional). `software`/`contact` are left as plain
 strings — `software` is documented as a URL but not always one in practice,
 and `contact` may be a bare email address rather than a URL.
+
+Numeric fields are validated to their spec-defined form. Count and length
+fields (`limitation.max_*`, `default_limit`, `min_pow_difficulty`,
+`fees.*[].period`) are non-negative integers. `limitation.created_at_*_limit`
+are also non-negative integers — they are relative offsets in seconds (how far
+in the past/future an event's `created_at` may be), not absolute timestamps, so
+the spec's example values (`94608000` ≈ 3 years, `300` = 5 minutes) only make
+sense as durations. `fees.*[].amount` is a non-negative **finite number** (not
+required to be an integer, since `unit` is free-form and may be sub-unit). And
+`fees.*[].kinds` are NIP-01 event kinds (same as [`zostr.kind()`](#zostrkind),
+`0..65535`). Negative and non-finite values are rejected, as are fractions on
+the integer fields.
 
 ```ts
 zostr.nip11.relayInformationDocument().parse({
@@ -371,6 +383,12 @@ other schema.
 | `zostr.nprofile()` | `{ pubkey: string, relays?: string[] }` |
 | `zostr.nevent()` | `{ id: string, relays?: string[], author?: string, kind?: number }` |
 | `zostr.naddr()` | `{ identifier: string, pubkey: string, kind: number, relays?: string[] }` |
+
+The `kind` in `nevent()`/`naddr()` is validated as a **32-bit unsigned
+integer** (`0..4294967295`), matching how NIP-19 encodes it (big-endian
+`uint32`) — it is not narrowed to NIP-01's `0..65535` event-kind range, since
+NIP-19 does not. Layer [`zostr.kind()`](#zostrkind) on top yourself if you want
+NIP-01 event-kind validation.
 
 ```ts
 import { getPublicKey } from "nostr-tools/pure";

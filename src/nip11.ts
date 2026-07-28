@@ -1,3 +1,8 @@
+import type * as core from "zod/v4/core";
+import {
+  nonNegativeIntegerCheck,
+  nonNegativeNumberCheck,
+} from "./core/checks.js";
 import { hexStringSchema } from "./core/hex.js";
 import {
   zodArray,
@@ -8,13 +13,22 @@ import {
   zodString,
   zodUrl,
 } from "./core/primitives.js";
+import { kind } from "./nip01.js";
+
+/** Non-negative integer atom for NIP-11 count/length/duration fields */
+function nonNegativeInteger(label: string): core.$ZodNumber<number> {
+  return zodNumber([nonNegativeIntegerCheck(label)]);
+}
 
 function feeSchema() {
   return zodObject({
-    amount: zodNumber(),
+    // `amount` is a caller-defined `unit` value (msats in the spec's examples,
+    // but `unit` is free-form), so it is not required to be an integer; `kinds`
+    // are NIP-01 event kinds
+    amount: zodNumber([nonNegativeNumberCheck("amount")]),
     unit: zodString(),
-    period: zodOptional(zodNumber()),
-    kinds: zodOptional(zodArray(zodNumber())),
+    period: zodOptional(nonNegativeInteger("period")),
+    kinds: zodOptional(zodArray(kind())),
   });
 }
 
@@ -28,19 +42,26 @@ function feesSchema() {
 
 function limitationSchema() {
   return zodObject({
-    max_message_length: zodOptional(zodNumber()),
-    max_subscriptions: zodOptional(zodNumber()),
-    max_subid_length: zodOptional(zodNumber()),
-    max_limit: zodOptional(zodNumber()),
-    max_event_tags: zodOptional(zodNumber()),
-    max_content_length: zodOptional(zodNumber()),
-    min_pow_difficulty: zodOptional(zodNumber()),
+    max_message_length: zodOptional(nonNegativeInteger("max_message_length")),
+    max_subscriptions: zodOptional(nonNegativeInteger("max_subscriptions")),
+    max_subid_length: zodOptional(nonNegativeInteger("max_subid_length")),
+    max_limit: zodOptional(nonNegativeInteger("max_limit")),
+    max_event_tags: zodOptional(nonNegativeInteger("max_event_tags")),
+    max_content_length: zodOptional(nonNegativeInteger("max_content_length")),
+    min_pow_difficulty: zodOptional(nonNegativeInteger("min_pow_difficulty")),
     auth_required: zodOptional(zodBoolean()),
     payment_required: zodOptional(zodBoolean()),
     restricted_writes: zodOptional(zodBoolean()),
-    created_at_lower_limit: zodOptional(zodNumber()),
-    created_at_upper_limit: zodOptional(zodNumber()),
-    default_limit: zodOptional(zodNumber()),
+    // created_at_*_limit are relative offsets in seconds (how far in the
+    // past/future an event's created_at may be), not absolute timestamps — the
+    // spec's examples (94608000 ≈ 3y, 300 = 5min) only make sense as durations
+    created_at_lower_limit: zodOptional(
+      nonNegativeInteger("created_at_lower_limit"),
+    ),
+    created_at_upper_limit: zodOptional(
+      nonNegativeInteger("created_at_upper_limit"),
+    ),
+    default_limit: zodOptional(nonNegativeInteger("default_limit")),
   });
 }
 
@@ -65,7 +86,7 @@ export function relayInformationDocumentSchema() {
     pubkey: zodOptional(hexStringSchema(64)),
     self: zodOptional(hexStringSchema(64)),
     contact: zodOptional(zodString()),
-    supported_nips: zodOptional(zodArray(zodNumber())),
+    supported_nips: zodOptional(zodArray(nonNegativeInteger("supported_nips"))),
     software: zodOptional(zodString()),
     version: zodOptional(zodString()),
     terms_of_service: zodOptional(zodUrl()),
