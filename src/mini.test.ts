@@ -708,4 +708,143 @@ describe("zostr (mini)", () => {
     const reqKinds: number[] | undefined = req[2].kinds;
     expect(reqKinds).toEqual([1]);
   });
+
+  it("nip42.authEvent() enforces kind === 22242", () => {
+    const sk = generateSecretKey();
+    const now = Math.floor(Date.now() / 1000);
+    const authEvent = finalizeEvent(
+      {
+        kind: 22242,
+        created_at: now,
+        tags: [
+          ["relay", "wss://relay.example.com/"],
+          ["challenge", "challengestringhere"],
+        ],
+        content: "",
+      },
+      sk,
+    );
+    const wrongKind = finalizeEvent(
+      { kind: 1, created_at: now, tags: [], content: "hi" },
+      sk,
+    );
+
+    expect(z.parse(zostr.nip42.authEvent(), authEvent)).toBeTruthy();
+    expect(() => z.parse(zostr.nip42.authEvent(), wrongKind)).toThrow();
+  });
+
+  it("nip42.challengeMessage()/authMessage() validate AUTH tuples", () => {
+    const sk = generateSecretKey();
+    const authEvent = finalizeEvent(
+      {
+        kind: 22242,
+        created_at: Math.floor(Date.now() / 1000),
+        tags: [["challenge", "abc"]],
+        content: "",
+      },
+      sk,
+    );
+
+    expect(
+      z.parse(zostr.nip42.challengeMessage(), ["AUTH", "challengestringhere"]),
+    ).toBeTruthy();
+    expect(
+      z.parse(zostr.nip42.authMessage(), ["AUTH", authEvent]),
+    ).toBeTruthy();
+
+    // The two directions carry different payloads (string vs. event) and don't
+    // validate as each other.
+    expect(() =>
+      z.parse(zostr.nip42.authMessage(), ["AUTH", "challengestringhere"]),
+    ).toThrow();
+    expect(() =>
+      z.parse(zostr.nip42.challengeMessage(), ["AUTH", authEvent]),
+    ).toThrow();
+    // authMessage rejects a non-22242 event.
+    const note = finalizeEvent(
+      { kind: 1, created_at: 0, tags: [], content: "hi" },
+      sk,
+    );
+    expect(() => z.parse(zostr.nip42.authMessage(), ["AUTH", note])).toThrow();
+  });
+
+  it("nip42 opt-in checks verify signature, challenge/relay tags, and created_at recency", () => {
+    const sk = generateSecretKey();
+    const now = Math.floor(Date.now() / 1000);
+    const relay = "wss://relay.example.com/";
+    const challenge = "challengestringhere";
+    const authEvent = finalizeEvent(
+      {
+        kind: 22242,
+        created_at: now,
+        tags: [
+          ["relay", relay],
+          ["challenge", challenge],
+        ],
+        content: "",
+      },
+      sk,
+    );
+
+    const verified = zostr.nip42
+      .authEvent()
+      .check(zostr.signatureCheck())
+      .check(zostr.nip42.challengeTagCheck(challenge))
+      .check(zostr.nip42.relayTagCheck(relay))
+      .check(zostr.nip42.createdAtCheck(now));
+    expect(z.parse(verified, authEvent)).toBeTruthy();
+
+    // Wrong challenge / relay / stale created_at each fail their check.
+    expect(() =>
+      z.parse(
+        zostr.nip42.authEvent().check(zostr.nip42.challengeTagCheck("nope")),
+        authEvent,
+      ),
+    ).toThrow();
+    expect(() =>
+      z.parse(
+        zostr.nip42
+          .authEvent()
+          .check(zostr.nip42.relayTagCheck("wss://other.example.com/")),
+        authEvent,
+      ),
+    ).toThrow();
+    expect(() =>
+      z.parse(
+        zostr.nip42.authEvent().check(zostr.nip42.createdAtCheck(now + 601)),
+        authEvent,
+      ),
+    ).toThrow();
+    // The window is symmetric (Math.abs): drift the other way fails too.
+    expect(() =>
+      z.parse(
+        zostr.nip42.authEvent().check(zostr.nip42.createdAtCheck(now - 601)),
+        authEvent,
+      ),
+    ).toThrow();
+    // Within the default ~10 min (600s) tolerance passes.
+    expect(
+      z.parse(
+        zostr.nip42.authEvent().check(zostr.nip42.createdAtCheck(now + 599)),
+        authEvent,
+      ),
+    ).toBeTruthy();
+  });
+
+  it("nip42.* infer precise output types", () => {
+    const challenge = z.parse(zostr.nip42.challengeMessage(), ["AUTH", "abc"]);
+    // challenge[1] is the challenge string (no `?.`).
+    const c: string = challenge[1];
+    expect(c).toBe("abc");
+
+    const sk = generateSecretKey();
+    const signed = finalizeEvent(
+      { kind: 22242, created_at: 0, tags: [], content: "" },
+      sk,
+    );
+    const auth = z.parse(zostr.nip42.authMessage(), ["AUTH", signed]);
+    // auth[1] is the auth event object (not a string) — kind is a number.
+    const kind: number = auth[1].kind;
+    expect(kind).toBe(22242);
+  });
 });
