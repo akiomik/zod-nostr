@@ -151,7 +151,7 @@ export function signatureCheck(): core.$ZodCheck<NostrEventLike> {
   return coreSignatureCheck(verifyEvent);
 }
 
-export function kindLiteralCheck(value: number): core.$ZodCheck<number> {
+function kindLiteralCheck(value: number): core.$ZodCheck<number> {
   return makeCheck<number>((payload) => {
     if (payload.value !== value) {
       payload.issues.push({

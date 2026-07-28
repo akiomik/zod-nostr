@@ -448,7 +448,11 @@ checks rather than baked in:
 - `zostr.nip42.createdAtCheck(now, toleranceSeconds?)` — `created_at` is within
   `toleranceSeconds` of `now` (both in unix seconds). `toleranceSeconds` defaults
   to `600` (~10 minutes, the window NIP-42 gives as an example) and can be
-  overridden.
+  overridden. Because NIP-42 makes the relay's time check a MUST, this fails
+  **closed** on misconfiguration: the factory throws if `now` isn't finite or
+  `toleranceSeconds` isn't finite and non-negative (which would otherwise make
+  the comparison silently accept every timestamp), rather than quietly disabling
+  the check.
 
 Compose them the same way as `zostr.signatureCheck()` (which verifies the
 signature — reuse it, there's no NIP-42-specific signature check):

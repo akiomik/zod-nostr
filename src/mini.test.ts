@@ -809,26 +809,25 @@ describe("zostr (mini)", () => {
         authEvent,
       ),
     ).toThrow();
+    const check = (n: number) =>
+      zostr.nip42.authEvent().check(zostr.nip42.createdAtCheck(n));
+    // Just outside the default 600s window fails, in both directions (Math.abs).
+    expect(() => z.parse(check(now + 601), authEvent)).toThrow();
+    expect(() => z.parse(check(now - 601), authEvent)).toThrow();
+    // The boundary is inclusive: exactly ±600s passes.
+    expect(z.parse(check(now + 600), authEvent)).toBeTruthy();
+    expect(z.parse(check(now - 600), authEvent)).toBeTruthy();
+  });
+
+  it("nip42.createdAtCheck() throws on misconfiguration (fails closed, not open)", () => {
+    // A NaN/Infinity `now` or tolerance would make Math.abs(...) > tol always
+    // false, silently accepting every timestamp — the factory rejects it.
+    expect(() => zostr.nip42.createdAtCheck(Number.NaN)).toThrow();
+    expect(() => zostr.nip42.createdAtCheck(1000, Number.NaN)).toThrow();
     expect(() =>
-      z.parse(
-        zostr.nip42.authEvent().check(zostr.nip42.createdAtCheck(now + 601)),
-        authEvent,
-      ),
+      zostr.nip42.createdAtCheck(1000, Number.POSITIVE_INFINITY),
     ).toThrow();
-    // The window is symmetric (Math.abs): drift the other way fails too.
-    expect(() =>
-      z.parse(
-        zostr.nip42.authEvent().check(zostr.nip42.createdAtCheck(now - 601)),
-        authEvent,
-      ),
-    ).toThrow();
-    // Within the default ~10 min (600s) tolerance passes.
-    expect(
-      z.parse(
-        zostr.nip42.authEvent().check(zostr.nip42.createdAtCheck(now + 599)),
-        authEvent,
-      ),
-    ).toBeTruthy();
+    expect(() => zostr.nip42.createdAtCheck(1000, -1)).toThrow();
   });
 
   it("nip42.* infer precise output types", () => {
@@ -843,8 +842,8 @@ describe("zostr (mini)", () => {
       sk,
     );
     const auth = z.parse(zostr.nip42.authMessage(), ["AUTH", signed]);
-    // auth[1] is the auth event object (not a string) — kind is a number.
-    const kind: number = auth[1].kind;
+    // auth[1] is the auth event object; kind infers as the literal 22242.
+    const kind: 22242 = auth[1].kind;
     expect(kind).toBe(22242);
   });
 });

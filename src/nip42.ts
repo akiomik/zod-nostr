@@ -2,19 +2,11 @@ import type * as core from "zod/v4/core";
 import { makeCheck, type NostrEventLike } from "./core/checks.js";
 import {
   zodLiteral,
-  zodNumber,
   zodObject,
   zodString,
   zodTuple,
 } from "./core/primitives.js";
-import {
-  eventId,
-  kindLiteralCheck,
-  pubkey,
-  signature,
-  tags,
-  timestamp,
-} from "./nip01.js";
+import { eventId, pubkey, signature, tags, timestamp } from "./nip01.js";
 
 /** NIP-42 fixes the canonical authentication event to `kind: 22242`. */
 const AUTH_EVENT_KIND = 22242;
@@ -25,11 +17,12 @@ const AUTH_EVENT_KIND = 22242;
  * message. Like `nip01.event()`/`textNote()` it does not verify the signature;
  * compose `.check(signatureCheck())` for that.
  *
- * The kind is fixed, but the `"relay"`/`"challenge"` tags are NOT required by
- * the base schema: NIP-42 only says the event *should* carry them ("it should
- * have at least two tags"), and matching them against the connection's relay
- * URL and challenge is a relay-side verification step that depends on context
- * the schema doesn't have. Those are exposed as opt-in checks
+ * The kind is fixed with a literal schema, so it both validates to and infers
+ * exactly `22242`. The `"relay"`/`"challenge"` tags are NOT required by the base
+ * schema: NIP-42 only says the event *should* carry them ("it should have at
+ * least two tags"), and matching them against the connection's relay URL and
+ * challenge is a relay-side verification step that depends on context the schema
+ * doesn't have. Those are exposed as opt-in checks
  * (`challengeTagCheck`/`relayTagCheck`/`createdAtCheck`) instead of baked in.
  */
 function authEvent() {
@@ -37,7 +30,7 @@ function authEvent() {
     id: eventId(),
     pubkey: pubkey(),
     created_at: timestamp(),
-    kind: zodNumber([kindLiteralCheck(AUTH_EVENT_KIND)]),
+    kind: zodLiteral(AUTH_EVENT_KIND),
     tags: tags(),
     content: zodString(),
     sig: signature(),
@@ -116,11 +109,28 @@ function relayTagCheck(relayUrl: string): core.$ZodCheck<NostrEventLike> {
  * difference — defaulting to `600` (~10 minutes), the window NIP-42 gives as an
  * example. The default can be overridden in either direction. Compose on
  * `authEvent()`: `authEvent().check(createdAtCheck(nowInSeconds))`.
+ *
+ * NIP-42 makes the relay's time check a MUST, so this fails **closed** on
+ * misconfiguration: a non-finite `now`, or a `toleranceSeconds` that isn't
+ * finite and non-negative, would make the `Math.abs(...) > tolerance`
+ * comparison silently accept every timestamp (`NaN`/`Infinity` comparisons are
+ * always false). Rather than let that pass, the factory throws so the mistake
+ * surfaces at composition time instead of quietly disabling the check.
  */
 function createdAtCheck(
   now: number,
   toleranceSeconds = 600,
 ): core.$ZodCheck<NostrEventLike> {
+  if (!Number.isFinite(now)) {
+    throw new TypeError(
+      "createdAtCheck: `now` must be a finite unix timestamp in seconds",
+    );
+  }
+  if (!Number.isFinite(toleranceSeconds) || toleranceSeconds < 0) {
+    throw new TypeError(
+      "createdAtCheck: `toleranceSeconds` must be a finite, non-negative number",
+    );
+  }
   return makeCheck<NostrEventLike>((payload) => {
     if (Math.abs(payload.value.created_at - now) > toleranceSeconds) {
       payload.issues.push({
