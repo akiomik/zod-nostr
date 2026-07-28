@@ -109,16 +109,38 @@ describe("zostr (mini)", () => {
     });
   });
 
-  it("nevent()/naddr() accept a pointer kind above 65535 (NIP-19 encodes kind as a uint32, not a NIP-01 event kind)", () => {
+  it("nevent()/naddr() validate the pointer kind as a uint32: accept 0..2^32-1 (incl. above NIP-01's 65535), reject 2^32", () => {
     const pk = getPublicKey(generateSecretKey());
+    const UINT32_MAX = 0xff_ff_ff_ff; // 4294967295
+
+    // decode accepts a kind above NIP-01's 65535, up to the uint32 max
     const nevent = nip19.neventEncode({ id: "a".repeat(64), kind: 70000 });
-    const naddr = nip19.naddrEncode({
+    const naddrMax = nip19.naddrEncode({
       identifier: "x",
       pubkey: pk,
-      kind: 70000,
+      kind: UINT32_MAX,
     });
     expect(z.decode(zostr.nevent(), nevent).kind).toBe(70000);
-    expect(z.decode(zostr.naddr(), naddr).kind).toBe(70000);
+    expect(z.decode(zostr.naddr(), naddrMax).kind).toBe(UINT32_MAX);
+
+    // 2^32 is out of range. A bech32 pointer can't carry a kind that wide over
+    // the wire, so pin the upper bound via encode — which validates the pointer
+    // schema (with the same `Invalid kind` check) before re-encoding.
+    expect(() =>
+      z.encode(zostr.nevent(), {
+        id: "a".repeat(64),
+        kind: UINT32_MAX + 1,
+        relays: [],
+      }),
+    ).toThrow();
+    expect(() =>
+      z.encode(zostr.naddr(), {
+        identifier: "x",
+        pubkey: pk,
+        kind: UINT32_MAX + 1,
+        relays: [],
+      }),
+    ).toThrow();
   });
 
   it("nip01.metadataContent() decodes/validates kind:0 content JSON", () => {
@@ -522,6 +544,11 @@ describe("zostr (mini)", () => {
     expect(parse({ limitation: { min_pow_difficulty: 0 } })).toEqual({
       limitation: { min_pow_difficulty: 0 },
     });
+    // min_pow_difficulty is intentionally left an unbounded non-negative
+    // integer: NIP-13's derived 0..256 range is not baked in, so 257 is accepted
+    expect(parse({ limitation: { min_pow_difficulty: 257 } })).toEqual({
+      limitation: { min_pow_difficulty: 257 },
+    });
     // created_at_*_limit are relative durations in seconds: non-negative
     // integers, so negatives and fractions are rejected
     expect(() =>
@@ -543,6 +570,17 @@ describe("zostr (mini)", () => {
     ).toEqual({ fees: { admission: [{ amount: 0.5, unit: "BTC" }] } });
     expect(() =>
       parse({ fees: { admission: [{ amount: -1, unit: "msats" }] } }),
+    ).toThrow();
+    // amount must be finite: NaN/Infinity are rejected
+    expect(() =>
+      parse({ fees: { admission: [{ amount: Number.NaN, unit: "msats" }] } }),
+    ).toThrow();
+    expect(() =>
+      parse({
+        fees: {
+          admission: [{ amount: Number.POSITIVE_INFINITY, unit: "msats" }],
+        },
+      }),
     ).toThrow();
     expect(() =>
       parse({
