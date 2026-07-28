@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type * as core from "zod/v4/core";
+import * as json from "./json.js";
 import * as nip01 from "./nip01.js";
 import * as nip05 from "./nip05.js";
 import * as nip11 from "./nip11.js";
@@ -103,6 +104,10 @@ export const zostr = {
   // NIP-19 / bech32 (lightweight version that only validates the prefix)
   bech32: (prefix: nip19.Bech32Prefix) =>
     classicSchema(z.ZodString, nip19.bech32Schema(prefix)),
+
+  // Generic codec: JSON string <-> the given schema's value
+  jsonCodec: <T extends core.SomeType>(schema: T) =>
+    classicCodec(json.jsonCodec(schema)),
 
   // NIP-19 codecs (decode/encode to the actual data)
   npub: () => classicCodec(nip19.npubCodec),

@@ -26,6 +26,7 @@ const EXPECTED_TOP_LEVEL_KEYS = [
   "clientMessage",
   "nip05",
   "bech32",
+  "jsonCodec",
   "npub",
   "nsec",
   "note",

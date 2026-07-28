@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Generic JSON codec: `zostr.jsonCodec(schema)`. Decodes a JSON string through
+  the given schema (`JSON.parse` + schema; invalid JSON or a schema mismatch is
+  a Zod issue, not a raw throw). Encodes a value back to a JSON string when the
+  schema is backward-encodable (schema + `JSON.stringify`; a one-way
+  `.transform()` throws per zod's codec rules, while `JSON.stringify`'s own raw
+  errors and a top-level `undefined` become Zod issues). Additive; decode
+  composes with any output schema.
+
 ## [0.2.1] - 2026-07-28
 
 ### Added

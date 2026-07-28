@@ -365,3 +365,35 @@ rather than an arbitrary choice specific to this library.
 what `nostr-tools`' `nip19.decode()` returns, including default `relays: []`
 and `author: undefined` fields when the source bech32 string didn't encode
 them.
+
+## Generic codecs
+
+### `zostr.jsonCodec(schema)`
+
+A **codec** between a JSON string and the given `schema`'s value — the generic
+transport for any JSON-encoded content.
+
+```ts
+const codec = zostr.jsonCodec(z.object({ a: z.number() }));
+
+z.decode(codec, '{"a":1}'); // { a: 1 }
+z.encode(codec, { a: 1 });  // '{"a":1}'
+```
+
+- **decode** accepts any schema. It runs `JSON.parse` then the schema; invalid
+  JSON, or a value that doesn't match the schema, is reported as a Zod issue
+  (via `z.safeDecode`) rather than throwing a raw `SyntaxError`.
+- **encode** requires a schema that can be encoded backward (no one-way
+  `.transform()`). Zod encodes the value through the schema first, so a
+  unidirectional transform throws `$ZodEncodeError` there — a zod codec property
+  the codec does not convert to an issue (it throws even under `z.safeEncode`).
+  After that succeeds, `JSON.stringify` runs, following its usual semantics:
+  only its own raw error (a `BigInt`, a circular reference) or a top-level
+  `undefined` result is turned into a Zod issue; other conversions (dropping
+  nested `undefined`/functions, `NaN`/`Infinity` → `null`, `Date` → ISO string,
+  ...) apply as usual. For a stronger JSON guarantee, express it in the output
+  `schema` rather than relying on the codec.
+
+Its decode side composes with any output schema — e.g.
+`zostr.jsonCodec(zostr.nip11.relayInformationDocument())` decodes a NIP-11
+document served as a JSON string.
