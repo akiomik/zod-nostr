@@ -99,6 +99,45 @@ Decoding throws if `content` isn't valid JSON or doesn't match the shape
 above. There is no `.catch()`/fallback behavior built in — handle malformed
 profiles the way that suits your application (e.g. `.safeDecode()`).
 
+### `zostr.nip01.metadataFields`
+
+Field-level schemas for kind:0 profile metadata, grouped by NIP/LUD origin.
+Use these to compose your **own** profile schema (relax it for messy data,
+reuse a subset, or apply per-field fallbacks) instead of the all-or-nothing
+`metadata()` codec.
+
+| factory | origin | validates |
+| --- | --- | --- |
+| `metadataFields.name()` | NIP-01 | `string` |
+| `metadataFields.about()` | NIP-01 | `string` |
+| `metadataFields.picture()` | NIP-01 | URL |
+| `metadataFields.displayName()` | NIP-24 | `string` |
+| `metadataFields.website()` | NIP-24 | URL |
+| `metadataFields.banner()` | NIP-24 | URL |
+| `metadataFields.bot()` | NIP-24 | `boolean` |
+| `metadataFields.birthday()` | NIP-24 | `{ year?, month?, day? }` (numbers) |
+| `metadataFields.nip05()` | NIP-05 | NIP-05 identifier |
+| `metadataFields.lud16()` | LUD-16 | `<username>[+<tag>]@<domain>` lightning address |
+| `metadataFields.lud06()` | LUD-06 | bech32 `lnurl` string (checksum + data words) |
+
+Each schema is **strict and non-optional** — a deliberate choice so you can add
+`optional`/`catch`/`default` yourself (a pre-weakened field can't be recovered).
+`lud06()` validates the bech32 checksum and `lnurl` HRP only; it does not decode
+to a LUD-01 URL.
+
+```ts
+// classic — build a lenient profile schema from the strict field atoms
+const f = zostr.nip01.metadataFields;
+const Profile = z.object({
+  name: f.name().trim().min(1).catch("").default(""),
+  picture: f.picture().catch("").default(""),
+  nip05: f.nip05().catch("").default(""),
+});
+```
+
+In zod/mini, compose with the functional API instead
+(`z._default(z.catch(f.name(), ""), "")`).
+
 ### `zostr.nip01.textNote()`
 
 Same shape as `zostr.event()`, with `kind` constrained to the literal value

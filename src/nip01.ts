@@ -17,8 +17,12 @@ import {
   zodString,
   zodTuple,
   zodUnion,
+  zodUrl,
 } from "./core/primitives.js";
+import { lud06Schema } from "./lud06.js";
+import { lud16Schema } from "./lud16.js";
 import { nip05IdentifierSchema } from "./nip05.js";
+import * as nip24 from "./nip24.js";
 
 export function pubkey(): core.$ZodString<string> {
   return hexStringSchema(64);
@@ -128,6 +132,27 @@ function profileMetadataObjectSchema() {
     nip05: nip05IdentifierSchema(),
   });
 }
+
+/**
+ * Field-level schemas for kind:0 profile metadata, grouped by NIP/LUD origin.
+ * Each is strict and non-optional so consumers can layer their own
+ * optional/catch/default policy (a pre-weakened field can't be recovered).
+ * Fields defined by other specs live in their own modules (`nip24.ts`,
+ * `nip05.ts`, `lud16.ts`, `lud06.ts`); this object only aggregates them.
+ */
+export const metadataFields = {
+  name: () => zodString(), // NIP-01
+  about: () => zodString(), // NIP-01
+  picture: () => zodUrl(), // NIP-01
+  displayName: () => nip24.displayName(), // NIP-24
+  website: () => nip24.website(), // NIP-24
+  banner: () => nip24.banner(), // NIP-24
+  bot: () => nip24.bot(), // NIP-24
+  birthday: () => nip24.birthday(), // NIP-24
+  nip05: () => nip05IdentifierSchema(), // NIP-05
+  lud16: () => lud16Schema(), // LUD-16
+  lud06: () => lud06Schema(), // LUD-06
+};
 
 const FILTER_KNOWN_KEYS = new Set([
   "ids",

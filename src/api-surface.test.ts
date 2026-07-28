@@ -36,7 +36,20 @@ const EXPECTED_TOP_LEVEL_KEYS = [
   "nip11",
 ].sort();
 
-const EXPECTED_NIP01_KEYS = ["metadata", "textNote"].sort();
+const EXPECTED_NIP01_KEYS = ["metadata", "textNote", "metadataFields"].sort();
+const EXPECTED_METADATA_FIELDS_KEYS = [
+  "name",
+  "about",
+  "picture",
+  "displayName",
+  "website",
+  "banner",
+  "bot",
+  "birthday",
+  "nip05",
+  "lud16",
+  "lud06",
+].sort();
 const EXPECTED_NIP05_KEYS = [
   "identifier",
   "nostrJsonDocument",
@@ -54,6 +67,10 @@ const EXPECTED_RELAY_MESSAGE_KEYS = [
   "closedMessagePrefixCheck",
 ].sort();
 const EXPECTED_CLIENT_MESSAGE_KEYS = ["event", "req", "close", "any"].sort();
+
+// Keys inside a namespace that are themselves sub-namespace objects (not
+// callable factories), so the "every key is callable" check skips only these.
+const SUB_NAMESPACE_KEYS = new Set(["metadataFields"]);
 
 const NESTED_NAMESPACES: [string, string[]][] = [
   ["nip01", EXPECTED_NIP01_KEYS],
@@ -105,10 +122,28 @@ describe.each([
     (namespace, expectedKeys) => {
       const nested = namespaceOf(zostr, namespace);
       for (const key of expectedKeys) {
+        // Only explicitly-known sub-namespaces (nip01.metadataFields) are
+        // objects; every other key must stay callable. Don't blanket-skip all
+        // objects, or a field accidentally becoming an object would pass.
+        if (SUB_NAMESPACE_KEYS.has(key)) {
+          expect(typeof nested[key]).toBe("object");
+          continue;
+        }
         expect(typeof nested[key]).toBe("function");
       }
     },
   );
+
+  it("exposes exactly the expected zostr.nip01.metadataFields keys", () => {
+    const fields = namespaceOf(zostr, "nip01").metadataFields as Record<
+      string,
+      unknown
+    >;
+    expect(keysOf(fields)).toEqual(EXPECTED_METADATA_FIELDS_KEYS);
+    for (const key of EXPECTED_METADATA_FIELDS_KEYS) {
+      expect(typeof fields[key]).toBe("function");
+    }
+  });
 });
 
 it("classic and mini expose identical key sets (dual-flavor parity)", () => {
@@ -118,4 +153,7 @@ it("classic and mini expose identical key sets (dual-flavor parity)", () => {
       keysOf(namespaceOf(miniZostr, namespace)),
     );
   }
+  expect(
+    keysOf(namespaceOf(classicZostr, "nip01").metadataFields as object),
+  ).toEqual(keysOf(namespaceOf(miniZostr, "nip01").metadataFields as object));
 });
