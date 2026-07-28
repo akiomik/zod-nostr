@@ -37,8 +37,28 @@ export function signature(): core.$ZodString<string> {
   return hexStringSchema(128);
 }
 
+/**
+ * NIP-01 defines `created_at` as a `<unix timestamp in seconds>`, and its
+ * filter `since`/`until` (compared against `created_at`) as an
+ * `<integer unix timestamp in seconds>`. So an integer is required, matching
+ * POSIX "Seconds Since the Epoch". The spec sets no bound and POSIX only marks
+ * pre-Epoch (negative) values as undefined, not invalid, so negatives are not
+ * rejected.
+ */
 export function timestamp(): core.$ZodNumber<number> {
-  return zodNumber();
+  return zodNumber([
+    makeCheck<number>((payload) => {
+      const value = payload.value;
+      if (!Number.isInteger(value)) {
+        payload.issues.push({
+          code: "custom",
+          input: value,
+          message:
+            "Invalid timestamp (expected an integer unix timestamp in seconds)",
+        });
+      }
+    }),
+  ]);
 }
 
 /** NIP-01 defines kind as `<integer between 0 and 65535>` */

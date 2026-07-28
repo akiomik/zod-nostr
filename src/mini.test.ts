@@ -189,6 +189,20 @@ describe("zostr (mini)", () => {
     expect(() => z.parse(zostr.subscriptionId(), "a".repeat(65))).toThrow();
   });
 
+  it("timestamp() requires an integer (accepts negatives, rejects fractionals)", () => {
+    expect(z.parse(zostr.timestamp(), 0)).toBe(0);
+    expect(z.parse(zostr.timestamp(), 1700000000)).toBe(1700000000);
+    expect(z.parse(zostr.timestamp(), -1)).toBe(-1);
+    for (const invalid of [
+      1.5,
+      Number.NaN,
+      Number.POSITIVE_INFINITY,
+      Number.NEGATIVE_INFINITY,
+    ]) {
+      expect(() => z.parse(zostr.timestamp(), invalid)).toThrow();
+    }
+  });
+
   it("kind() enforces an integer between 0 and 65535", () => {
     expect(z.parse(zostr.kind(), 0)).toBe(0);
     expect(z.parse(zostr.kind(), 65535)).toBe(65535);
