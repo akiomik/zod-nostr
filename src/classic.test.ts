@@ -290,6 +290,17 @@ describe("zostr (classic)", () => {
     expect(() => zostr.filter().parse({ "#too-long": ["x"] })).toThrow();
   });
 
+  it("filter() limit enforces a non-negative integer", () => {
+    expect(zostr.filter().parse({ limit: 0 })).toEqual({ limit: 0 });
+    expect(zostr.filter().parse({ limit: 500 })).toEqual({ limit: 500 });
+    expect(() => zostr.filter().parse({ limit: -1 })).toThrow();
+    expect(() => zostr.filter().parse({ limit: 1.5 })).toThrow();
+    expect(() => zostr.filter().parse({ limit: Number.NaN })).toThrow();
+    expect(() =>
+      zostr.filter().parse({ limit: Number.POSITIVE_INFINITY }),
+    ).toThrow();
+  });
+
   it("relayMessage.* validate NIP-01 relay-to-client message tuples", () => {
     const sk = generateSecretKey();
     const signed = finalizeEvent(

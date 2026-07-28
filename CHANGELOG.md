@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking:** `zostr.filter()`'s `limit` now enforces a non-negative integer,
+  matching NIP-01's `<maximum number of events ...>` (an event count). It
+  previously accepted any number; non-integers, negatives, and non-finite values
+  (`NaN`/`Infinity`, which `JSON.stringify` would emit as `null`) are now
+  rejected. `0` is still accepted and no upper bound is imposed (relay-side
+  `max_limit`/`default_limit` are NIP-11 policy, not part of this shape). This
+  also tightens `limit` wherever the filter is reused
+  (`clientMessage.req()`/`clientMessage.any()`).
+
 ## [0.3.0] - 2026-07-28
 
 ### Changed
