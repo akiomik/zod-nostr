@@ -178,7 +178,9 @@ Used as the second element of `REQ`/`CLOSE`/`EVENT` (relay→client)/`EOSE`/
 
 The NIP-01 `REQ`/`COUNT` filter object: `ids`, `authors`, `kinds`, `since`,
 `until`, `limit`, plus any number of `#<a-zA-Z>` tag-value filters (e.g.
-`#e`, `#p`). Unknown keys outside this set are rejected.
+`#e`, `#p`). Unknown keys outside this set are rejected. `since`/`until` are
+integer timestamps and `limit` is a non-negative integer (an event count);
+non-integer, negative, and non-finite values are rejected.
 
 ```ts
 zostr.filter().parse({

@@ -77,6 +77,29 @@ export function kind(): core.$ZodNumber<number> {
   ]);
 }
 
+/**
+ * NIP-01 defines a filter's `limit` as `<maximum number of events relays
+ * SHOULD return in the initial query>`. As an event count it is a non-negative
+ * integer: fractional, negative, and non-finite values (`NaN`/`Infinity`, which
+ * `JSON.stringify` would emit as `null`) are never valid over the wire. `0`
+ * (return no events) is allowed; no upper bound is imposed — relay-side caps
+ * (`max_limit`/`default_limit`) are NIP-11 policy, not part of this shape.
+ */
+function limit(): core.$ZodNumber<number> {
+  return zodNumber([
+    makeCheck<number>((payload) => {
+      const value = payload.value;
+      if (!Number.isInteger(value) || value < 0) {
+        payload.issues.push({
+          code: "custom",
+          input: value,
+          message: "Invalid limit (expected a non-negative integer)",
+        });
+      }
+    }),
+  ]);
+}
+
 export function tags(): core.$ZodArray<
   core.$ZodArray<core.$ZodString<string>>
 > {
@@ -240,7 +263,7 @@ export function filter() {
       kinds: zodOptional(zodArray(kind())),
       since: zodOptional(timestamp()),
       until: zodOptional(timestamp()),
-      limit: zodOptional(zodNumber()),
+      limit: zodOptional(limit()),
     },
     {
       catchall: zodArray(zodString()),

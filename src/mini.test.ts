@@ -231,6 +231,17 @@ describe("zostr (mini)", () => {
     expect(() => z.parse(zostr.filter(), { "#too-long": ["x"] })).toThrow();
   });
 
+  it("filter() limit enforces a non-negative integer", () => {
+    expect(z.parse(zostr.filter(), { limit: 0 })).toEqual({ limit: 0 });
+    expect(z.parse(zostr.filter(), { limit: 500 })).toEqual({ limit: 500 });
+    expect(() => z.parse(zostr.filter(), { limit: -1 })).toThrow();
+    expect(() => z.parse(zostr.filter(), { limit: 1.5 })).toThrow();
+    expect(() => z.parse(zostr.filter(), { limit: Number.NaN })).toThrow();
+    expect(() =>
+      z.parse(zostr.filter(), { limit: Number.POSITIVE_INFINITY }),
+    ).toThrow();
+  });
+
   it("relayMessage.* validate NIP-01 relay-to-client message tuples", () => {
     const sk = generateSecretKey();
     const signed = finalizeEvent(
