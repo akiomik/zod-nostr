@@ -54,6 +54,10 @@ points — only the import path and the ambient zod flavor differ.
 
 ## Design notes
 
+These notes summarize a few user-facing choices. The full public-API design
+principles — controllability, strict atoms, opt-in checks, versioning, and the
+verification bar for new APIs — live in [docs/design.md](docs/design.md).
+
 ### Why two entry points?
 
 zod v4 ships two API flavors: classic zod (chainable methods, e.g.
@@ -138,6 +142,11 @@ CI (`.github/workflows/ci.yml`) runs all of the above on every push and pull
 request to `main`.
 
 ## Release process
+
+Versioning follows
+[docs/design.md](docs/design.md#compatibility-and-versioning): before 1.0,
+backward-incompatible public API changes bump the minor version, and
+backward-compatible additions and fixes bump the patch version.
 
 1. Bump `version` in `package.json` and add a dated section to
    `CHANGELOG.md` (move the relevant `[Unreleased]` entries under it).
