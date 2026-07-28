@@ -374,11 +374,17 @@ describe("zostr (classic)", () => {
     expect(
       zostr.clientMessage.req().parse(["REQ", "sub1", { kinds: [1] }, {}]),
     ).toBeTruthy();
-    expect(zostr.clientMessage.req().parse(["REQ", "sub1"])).toBeTruthy();
+    // Request-everything sends a single empty {} filter.
+    expect(zostr.clientMessage.req().parse(["REQ", "sub1", {}])).toBeTruthy();
+    // At least one filter is required (matching NIP-01's REQ grammar).
+    expect(() => zostr.clientMessage.req().parse(["REQ", "sub1"])).toThrow();
     expect(zostr.clientMessage.close().parse(["CLOSE", "sub1"])).toBeTruthy();
 
     const any = zostr.clientMessage.any();
     expect(any.parse(["CLOSE", "sub1"])).toBeTruthy();
+    expect(any.parse(["REQ", "sub1", {}])).toBeTruthy();
+    // any() also enforces REQ's at-least-one-filter rule.
+    expect(() => any.parse(["REQ", "sub1"])).toThrow();
     expect(() => any.parse(["EOSE", "sub1"])).toThrow();
   });
 

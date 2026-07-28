@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking:** `zostr.clientMessage.req()` now requires **at least one** filter,
+  matching NIP-01's `REQ` grammar (`["REQ", <subscription_id>, <filters1>,
+  <filters2>...]`, where `<filters1>` is mandatory). A bare `["REQ", subId]` with
+  no filters is now rejected; to subscribe to everything, send a single empty
+  `{}` filter. This also tightens `zostr.clientMessage.any()`, which includes the
+  `REQ` message. (`zostr.nip45.countRequest()` already enforced this for `COUNT`.)
+
 ### Added
 
 - `zostr.nip45` — NIP-45 event counts (`COUNT`). `nip45.countRequest()` is the

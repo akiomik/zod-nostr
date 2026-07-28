@@ -247,12 +247,17 @@ Tuple schemas for NIP-01 client→relay messages.
 | function | wire shape |
 | --- | --- |
 | `zostr.clientMessage.event()` | `["EVENT", event]` |
-| `zostr.clientMessage.req()` | `["REQ", subscriptionId, ...filter[]]` |
+| `zostr.clientMessage.req()` | `["REQ", subscriptionId, filter, ...filter[]]` |
 | `zostr.clientMessage.close()` | `["CLOSE", subscriptionId]` |
 | `zostr.clientMessage.any()` | union of the three above |
 
+`req()` requires **at least one** filter, matching NIP-01's grammar
+(`<filters1>` then `<filters2>...`); to subscribe to everything, send a single
+empty `{}` filter.
+
 ```ts
 zostr.clientMessage.req().parse(["REQ", "sub1", { kinds: [1] }]);
+zostr.clientMessage.req().parse(["REQ", "sub1", {}]); // everything
 zostr.clientMessage.close().parse(["CLOSE", "sub1"]);
 ```
 

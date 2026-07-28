@@ -367,8 +367,15 @@ function clientEventMessage() {
   return zodTuple([zodLiteral("EVENT"), event()]);
 }
 
+/**
+ * `["REQ", subscriptionId, filter, ...filter[]]`. At least one filter is
+ * required, matching NIP-01's grammar (`<filters1>` then `<filters2>...`): the
+ * first filter is a fixed tuple item and any further filters are the rest.
+ * Requesting everything sends a single empty `{}` filter, so there is no need
+ * to allow zero.
+ */
 function reqMessage() {
-  return zodTuple([zodLiteral("REQ"), subscriptionId()], filter());
+  return zodTuple([zodLiteral("REQ"), subscriptionId(), filter()], filter());
 }
 
 function closeMessage() {
