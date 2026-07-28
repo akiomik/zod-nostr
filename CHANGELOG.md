@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `zostr.nip45` — NIP-45 event counts (`COUNT`). `nip45.countRequest()` is the
+  client-to-relay `["COUNT", subscriptionId, ...filter[]]` message (reusing the
+  NIP-01 `REQ`/`COUNT` filters as the tuple rest); `nip45.countResponse()` is the
+  relay-to-client `["COUNT", subscriptionId, count]` message; and `nip45.count()`
+  is the response body object schema — `count` (non-negative integer), optional
+  `approximate` (boolean), and optional `hll` (512-char lowercase hex, the 256
+  HyperLogLog registers). Structure only; a relay refusing a `COUNT` replies with
+  the existing NIP-01 `CLOSED` message.
+
 ## [0.4.0] - 2026-07-29
 
 ### Changed

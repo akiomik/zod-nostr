@@ -410,6 +410,44 @@ what `nostr-tools`' `nip19.decode()` returns, including default `relays: []`
 and `author: undefined` fields when the source bech32 string didn't encode
 them.
 
+## NIP-45 — event counts
+
+Tuple schemas for the NIP-45 `COUNT` request/response, plus the response body
+object. Each validates structure only.
+
+| function | wire shape |
+| --- | --- |
+| `zostr.nip45.countRequest()` | `["COUNT", subscriptionId, ...filter[]]` |
+| `zostr.nip45.countResponse()` | `["COUNT", subscriptionId, count]` |
+| `zostr.nip45.count()` | `{ count, approximate?, hll? }` |
+
+`countRequest()` carries the same NIP-01 `REQ`/`COUNT` filters (see
+[`zostr.filter()`](#zostrfilter)) as the tuple rest — zero or more, OR'd
+together — so it reuses `filter()` exactly like `zostr.clientMessage.req()`.
+
+### `zostr.nip45.count()`
+
+The COUNT response body object:
+
+- `count` — a **non-negative integer**. Relays may return a probabilistic
+  estimate, but it's still an event count, so fractional, negative, and
+  non-finite values are rejected.
+- `approximate?` — optional `boolean` flagging a probabilistic count.
+- `hll?` — optional HyperLogLog value: a **512-char lowercase hex** string
+  (256 `uint8` registers concatenated).
+
+Unknown keys are stripped (as in `zostr.event()` and the NIP-05/NIP-11
+documents), and no recovery policy (`.catch`/`.default`) is baked in.
+
+```ts
+zostr.nip45.countRequest().parse(["COUNT", "sub1", { kinds: [7], "#e": [id] }]);
+zostr.nip45.countResponse().parse(["COUNT", "sub1", { count: 93412452, approximate: true }]);
+zostr.nip45.count().parse({ count: 2044, hll: "01ef0705..." /* 512 hex chars */ });
+```
+
+A relay refusing a `COUNT` request replies with NIP-01's `CLOSED` message
+(`zostr.relayMessage.closed()`), not a `COUNT`.
+
 ## Generic codecs
 
 ### `zostr.jsonCodec(schema)`
