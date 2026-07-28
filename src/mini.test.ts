@@ -618,13 +618,21 @@ describe("zostr (mini)", () => {
         {},
       ]),
     ).toBeTruthy();
-    // Like REQ, filters are the tuple rest: zero or more.
-    expect(z.parse(zostr.nip45.countRequest(), ["COUNT", "sub1"])).toBeTruthy();
+    // Count-everything sends a single empty {} filter.
+    expect(
+      z.parse(zostr.nip45.countRequest(), ["COUNT", "sub1", {}]),
+    ).toBeTruthy();
+    // At least one filter is required (matching NIP-01's REQ grammar).
+    expect(() =>
+      z.parse(zostr.nip45.countRequest(), ["COUNT", "sub1"]),
+    ).toThrow();
 
     expect(() =>
       z.parse(zostr.nip45.countRequest(), ["REQ", "sub1"]),
     ).toThrow();
-    expect(() => z.parse(zostr.nip45.countRequest(), ["COUNT", ""])).toThrow();
+    expect(() =>
+      z.parse(zostr.nip45.countRequest(), ["COUNT", "", {}]),
+    ).toThrow();
     expect(() =>
       z.parse(zostr.nip45.countRequest(), ["COUNT", "sub1", { foo: ["x"] }]),
     ).toThrow();
@@ -649,7 +657,14 @@ describe("zostr (mini)", () => {
     expect(() => z.parse(zostr.nip45.count(), { count: 1.5 })).toThrow();
     expect(() => z.parse(zostr.nip45.count(), { count: Number.NaN })).toThrow();
     expect(() => z.parse(zostr.nip45.count(), {})).toThrow();
-    // hll must be a 512-char lowercase hex string (256 uint8 registers).
+    // hll is a 512-char hex string (256 uint8 registers); NIP-45 doesn't
+    // mandate lowercase, so upper/mixed case is accepted.
+    expect(
+      z.parse(zostr.nip45.count(), { count: 1, hll: "A".repeat(512) }),
+    ).toBeTruthy();
+    expect(
+      z.parse(zostr.nip45.count(), { count: 1, hll: "aF".repeat(256) }),
+    ).toBeTruthy();
     expect(() =>
       z.parse(zostr.nip45.count(), { count: 1, hll: "0".repeat(511) }),
     ).toThrow();
