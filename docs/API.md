@@ -83,28 +83,49 @@ verifiedEvent.parse(event); // throws if id/sig don't match
 
 ### `zostr.nip01.metadata()`
 
-A **codec** between a kind:0 `content` string (JSON) and a parsed, validated
-profile object `{ name, display_name, picture, nip05 }`. All four fields are
-required strings; `nip05` is additionally validated as a NIP-05 identifier
-(see [`zostr.nip05.identifier()`](#zostrnip05identifier)).
+An **object schema** for a parsed kind:0 profile. Every known field is
+**optional** and validated strictly when present, grouped by originating spec
+(see [`zostr.nip01.metadataFields`](#zostrnip01metadatafields) for the field
+list); unknown keys are **preserved** as `unknown` (a forward-compatible
+catchall), not stripped. No `.catch()`/fallback is baked in — a present-but-
+invalid field fails, so layer your own recovery policy on top (or reuse the
+field atoms from `metadataFields`).
 
 ```ts
-const profile = zostr.nip01.metadata().decode(event.content);
-// { name: "...", display_name: "...", picture: "...", nip05: "..." }
+zostr.nip01.metadata().parse({ name: "alice", nip05: "alice@example.com" });
+// { name: "alice", nip05: "alice@example.com" }
 
-const content = zostr.nip01.metadata().encode(profile);
+// unknown keys are kept, not stripped:
+zostr.nip01.metadata().parse({ name: "a", custom: 1 }); // { name: "a", custom: 1 }
 ```
 
-Decoding throws if `content` isn't valid JSON or doesn't match the shape
-above. There is no `.catch()`/fallback behavior built in — handle malformed
-profiles the way that suits your application (e.g. `.safeDecode()`).
+The output type is exported as `ProfileMetadata`. For the JSON `content`
+**string** carried by a kind:0 event, use
+[`zostr.nip01.metadataContent()`](#zostrnip01metadatacontent).
+
+### `zostr.nip01.metadataContent()`
+
+A **codec** between a kind:0 `content` string (JSON) and the `metadata()`
+profile object, with the same decode/encode behavior as
+`zostr.jsonCodec(zostr.nip01.metadata())`.
+
+```ts
+const profile = zostr.nip01.metadataContent().decode(event.content);
+const content = zostr.nip01.metadataContent().encode(profile);
+```
+
+Invalid JSON, or a field that fails validation, is reported as a Zod issue (see
+[`zostr.jsonCodec(schema)`](#zostrjsoncodecschema) for the encode/decode
+contract). Because `metadata()` preserves unknown keys, a decode → encode
+round-trip keeps forward-compatible and non-standard fields rather than
+dropping them.
 
 ### `zostr.nip01.metadataFields`
 
 Field-level schemas for kind:0 profile metadata, grouped by NIP/LUD origin.
-Use these to compose your **own** profile schema (relax it for messy data,
-reuse a subset, or apply per-field fallbacks) instead of the all-or-nothing
-`metadata()` codec.
+Use these to compose your **own** profile schema (add per-field fallbacks,
+reuse a subset, or tighten a field) — from scratch or by extending
+[`metadata()`](#zostrnip01metadata).
 
 | factory | origin | validates |
 | --- | --- | --- |

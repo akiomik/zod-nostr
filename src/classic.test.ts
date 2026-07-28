@@ -148,14 +148,14 @@ describe("zostr (classic)", () => {
     expect(naddrCodec.decode(naddr)).toEqual(naddrExpected);
   });
 
-  it("nip01.metadata() decodes/validates kind:0 content JSON, via both top-level and instance methods", () => {
+  it("nip01.metadataContent() decodes/validates kind:0 content JSON, via both top-level and instance methods", () => {
     const content = JSON.stringify({
       name: "alice",
       display_name: "Alice",
       picture: "https://example.com/a.png",
       nip05: "alice@example.com",
     });
-    const codec = zostr.nip01.metadata();
+    const codec = zostr.nip01.metadataContent();
 
     const metadata = z.decode(codec, content);
     expect(metadata.name).toBe("alice");
@@ -217,7 +217,7 @@ describe("zostr (classic)", () => {
       () => zostr.nprofile(),
       () => zostr.nevent(),
       () => zostr.naddr(),
-      () => zostr.nip01.metadata(),
+      () => zostr.nip01.metadataContent(),
     ];
 
     for (const factory of codecFactories) {
