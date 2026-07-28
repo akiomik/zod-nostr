@@ -248,6 +248,14 @@ describe("zostr (classic)", () => {
     expect(() => zostr.subscriptionId().parse("a".repeat(65))).toThrow();
   });
 
+  it("kind() enforces an integer between 0 and 65535", () => {
+    expect(zostr.kind().parse(0)).toBe(0);
+    expect(zostr.kind().parse(65535)).toBe(65535);
+    expect(() => zostr.kind().parse(-1)).toThrow();
+    expect(() => zostr.kind().parse(65536)).toThrow();
+    expect(() => zostr.kind().parse(1.5)).toThrow();
+  });
+
   it("filter() validates known fields and '#<letter>' tag filters, rejects unknown keys", () => {
     const filter = {
       ids: ["a".repeat(64)],
