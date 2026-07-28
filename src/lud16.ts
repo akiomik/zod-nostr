@@ -1,7 +1,7 @@
 import type * as core from "zod/v4/core";
 import { makeCheck } from "./core/checks.js";
 import { zodString } from "./core/primitives.js";
-import { isInternetIdentifierDomain } from "./nip05.js";
+import { isInternetIdentifierDomain } from "./internet-identifier.js";
 
 /** LUD-16 local part: `<username>[+<tag>]@<domain>`, single non-empty tag, lowercase */
 const LUD16_LOCAL_PART = /^[a-z0-9._-]+(?:\+[a-z0-9._-]+)?$/;
