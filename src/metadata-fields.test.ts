@@ -98,6 +98,8 @@ describe.each(FLAVORS)(
     it("delegates nip05 to the NIP-05 identifier schema", () => {
       expect(parse(f.nip05(), "alice@example.com")).toBe("alice@example.com");
       expect(accepts(f.nip05(), "nope")).toBe(false);
+      // NIP-05 local-part is lowercase-only ("MUST only use characters a-z0-9-_.").
+      expect(accepts(f.nip05(), "Alice@example.com")).toBe(false);
     });
 
     it.each(LUD16_VALID)("lud16 accepts %s", (value) => {

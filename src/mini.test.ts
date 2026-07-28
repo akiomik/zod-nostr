@@ -406,6 +406,10 @@ describe("zostr (mini)", () => {
     expect(() =>
       z.parse(zostr.nip05.nostrJsonDocument(), { names: { "bob!": pubkey } }),
     ).toThrow();
+    // Local-part is lowercase-only per NIP-05; uppercase names keys are rejected.
+    expect(() =>
+      z.parse(zostr.nip05.nostrJsonDocument(), { names: { Bob: pubkey } }),
+    ).toThrow();
 
     expect(
       z.parse(zostr.nip05.nostrJsonDocument(), {
