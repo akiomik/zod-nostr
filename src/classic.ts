@@ -116,6 +116,23 @@ export const zostr = {
   nip01: {
     metadata: () => classicCodec(nip01.nip01.metadata()),
     textNote: () => z.object(nip01.nip01.textNote()._zod.def.shape),
+
+    // Field-level schemas for kind:0 profile metadata (strict, non-optional;
+    // compose your own optional/catch/default on top).
+    metadataFields: {
+      name: () => classicSchema(z.ZodString, nip01.metadataFields.name()),
+      about: () => classicSchema(z.ZodString, nip01.metadataFields.about()),
+      picture: () => classicSchema(z.ZodURL, nip01.metadataFields.picture()),
+      displayName: () =>
+        classicSchema(z.ZodString, nip01.metadataFields.displayName()),
+      website: () => classicSchema(z.ZodURL, nip01.metadataFields.website()),
+      banner: () => classicSchema(z.ZodURL, nip01.metadataFields.banner()),
+      bot: () => classicSchema(z.ZodBoolean, nip01.metadataFields.bot()),
+      birthday: () => z.object(nip01.metadataFields.birthday()._zod.def.shape),
+      nip05: () => classicSchema(z.ZodString, nip01.metadataFields.nip05()),
+      lud16: () => classicSchema(z.ZodString, nip01.metadataFields.lud16()),
+      lud06: () => classicSchema(z.ZodString, nip01.metadataFields.lud06()),
+    },
   },
 
   // NIP-11 relay information document

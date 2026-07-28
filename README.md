@@ -112,8 +112,9 @@ rather than inventing a bespoke `.verified()`-style chain method.
 
 - **NIP-01** — event structure (`event`, `unsignedEvent`, `eventTemplate`),
   signature verification (`signatureCheck`), kind:0 metadata content
-  (`nip01.metadata`), kind:1 text notes (`nip01.textNote`), the `REQ`/`COUNT`
-  filter object (`filter`), and relay/client protocol messages
+  (`nip01.metadata`), field-level kind:0 metadata schemas
+  (`nip01.metadataFields.*`), kind:1 text notes (`nip01.textNote`), the
+  `REQ`/`COUNT` filter object (`filter`), and relay/client protocol messages
   (`relayMessage.*`, `clientMessage.*`)
 - **NIP-05** — identifier format validation (`nip05.identifier`) and
   `.well-known/nostr.json` document validation (`nip05.nostrJsonDocument`)

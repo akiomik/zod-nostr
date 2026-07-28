@@ -1,0 +1,40 @@
+import type * as core from "zod/v4/core";
+import { makeCheck } from "./core/checks.js";
+import { zodString } from "./core/primitives.js";
+import { isInternetIdentifierDomain } from "./nip05.js";
+
+/** LUD-16 local part: `<username>[+<tag>]@<domain>`, single non-empty tag, lowercase */
+const LUD16_LOCAL_PART = /^[a-z0-9._-]+(?:\+[a-z0-9._-]+)?$/;
+
+/** LUD-16 lightning address (`<username>[+<tag>]@<domain>`) */
+export function lud16Schema(): core.$ZodString<string> {
+  return zodString([
+    makeCheck<string>((payload) => {
+      const value = payload.value;
+      const separator = value.indexOf("@");
+      if (separator <= 0 || separator !== value.lastIndexOf("@")) {
+        payload.issues.push({
+          code: "custom",
+          input: value,
+          message: "Invalid LUD-16 address",
+        });
+        return;
+      }
+      if (!LUD16_LOCAL_PART.test(value.slice(0, separator))) {
+        payload.issues.push({
+          code: "custom",
+          input: value,
+          message: "Invalid LUD-16 name",
+        });
+        return;
+      }
+      if (!isInternetIdentifierDomain(value.slice(separator + 1))) {
+        payload.issues.push({
+          code: "custom",
+          input: value,
+          message: "Invalid LUD-16 domain",
+        });
+      }
+    }),
+  ]);
+}

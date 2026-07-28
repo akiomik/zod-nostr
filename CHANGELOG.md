@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Field-level schemas for kind:0 profile metadata:
+  `zostr.nip01.metadataFields.*`. Each factory is a strict, non-optional
+  schema for one metadata field, grouped by NIP/LUD origin — `name`, `about`,
+  `picture` (NIP-01); `displayName`, `website`, `banner`, `bot`, `birthday`
+  (NIP-24); `nip05` (NIP-05); `lud16` (LUD-16); `lud06` (LUD-06). They let you
+  compose your own profile schema (relax it for messy data, reuse a subset, or
+  apply per-field fallbacks) instead of the all-or-nothing `nip01.metadata()`
+  codec, and are deliberately strict so you can layer your own
+  `optional`/`catch`/`default` on top. Additive and fully backward compatible:
+  the existing `nip01.metadata()` codec is unchanged.
+- `@scure/base` (`^2.0.0`) as a direct dependency, used by
+  `metadataFields.lud06()` to validate LNURL bech32 strings.
+
 ## [0.2.0] - 2026-07-16
 
 ### Added
