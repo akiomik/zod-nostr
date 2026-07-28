@@ -10,7 +10,8 @@ import {
 } from "./core/primitives.js";
 import { isInternetIdentifierDomain } from "./internet-identifier.js";
 
-const NIP05_LOCAL_PART = /^[a-z0-9._-]+$/i;
+// NIP-05: "the <local-part> part MUST only use characters a-z0-9-_." (lowercase only).
+const NIP05_LOCAL_PART = /^[a-z0-9._-]+$/;
 
 export function nip05IdentifierSchema(): core.$ZodString<string> {
   return zodString([

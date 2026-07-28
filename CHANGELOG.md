@@ -42,6 +42,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   is imposed and negative (pre-Epoch) values are still accepted. This also
   tightens the field wherever it is reused (`event()`, `eventTemplate()`,
   `unsignedEvent()`, `filter().since`, `filter().until`).
+- **Breaking:** NIP-05 local-part validation is now lowercase-only, matching
+  the spec's "the `<local-part>` part MUST only use characters `a-z0-9-_.`".
+  It previously accepted uppercase (e.g. `Bob@example.com`); those are now
+  rejected. This also tightens `.well-known/nostr.json` `names` key validation
+  (`zostr.nip05.nostrJsonDocument()`), which shares the same rule.
 
 ### Added
 
