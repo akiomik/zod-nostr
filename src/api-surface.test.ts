@@ -35,6 +35,7 @@ const EXPECTED_TOP_LEVEL_KEYS = [
   "naddr",
   "nip01",
   "nip11",
+  "nip42",
   "nip45",
 ].sort();
 
@@ -63,6 +64,14 @@ const EXPECTED_NIP05_KEYS = [
   "formatIdentifier",
 ].sort();
 const EXPECTED_NIP11_KEYS = ["relayInformationDocument"].sort();
+const EXPECTED_NIP42_KEYS = [
+  "authEvent",
+  "challengeMessage",
+  "authMessage",
+  "challengeTagCheck",
+  "relayTagCheck",
+  "createdAtCheck",
+].sort();
 const EXPECTED_NIP45_KEYS = ["count", "countRequest", "countResponse"].sort();
 const EXPECTED_RELAY_MESSAGE_KEYS = [
   "event",
@@ -84,6 +93,7 @@ const NESTED_NAMESPACES: [string, string[]][] = [
   ["nip01", EXPECTED_NIP01_KEYS],
   ["nip05", EXPECTED_NIP05_KEYS],
   ["nip11", EXPECTED_NIP11_KEYS],
+  ["nip42", EXPECTED_NIP42_KEYS],
   ["nip45", EXPECTED_NIP45_KEYS],
   ["relayMessage", EXPECTED_RELAY_MESSAGE_KEYS],
   ["clientMessage", EXPECTED_CLIENT_MESSAGE_KEYS],

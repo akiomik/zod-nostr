@@ -8,6 +8,7 @@ export type { ProfileMetadata } from "./nip01.js";
 import * as nip05 from "./nip05.js";
 import * as nip11 from "./nip11.js";
 import * as nip19 from "./nip19.js";
+import * as nip42 from "./nip42.js";
 import * as nip45 from "./nip45.js";
 
 /**
@@ -155,6 +156,20 @@ export const zostr = {
   nip11: {
     relayInformationDocument: () =>
       z.object(nip11.nip11.relayInformationDocument()._zod.def.shape),
+  },
+
+  // NIP-42 client-to-relay authentication (AUTH messages + auth event + opt-in checks)
+  nip42: {
+    authEvent: () => z.object(nip42.nip42.authEvent()._zod.def.shape),
+    challengeMessage: () =>
+      z.tuple(nip42.nip42.challengeMessage()._zod.def.items),
+    authMessage: () => z.tuple(nip42.nip42.authMessage()._zod.def.items),
+
+    // Opt-in verification checks composed onto authEvent(), the same way as
+    // signatureCheck(): zostr.nip42.authEvent().check(zostr.nip42.challengeTagCheck(challenge))
+    challengeTagCheck: nip42.nip42.challengeTagCheck,
+    relayTagCheck: nip42.nip42.relayTagCheck,
+    createdAtCheck: nip42.nip42.createdAtCheck,
   },
 
   // NIP-45 event counts (COUNT request/response messages + response body object)

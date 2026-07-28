@@ -415,6 +415,68 @@ what `nostr-tools`' `nip19.decode()` returns, including default `relays: []`
 and `author: undefined` fields when the source bech32 string didn't encode
 them.
 
+## NIP-42 — authentication
+
+Schemas for the NIP-42 `AUTH` handshake (a client authenticating to a relay by
+signing an ephemeral `kind: 22242` event), plus opt-in checks for the relay-side
+verification steps.
+
+| function | wire shape |
+| --- | --- |
+| `zostr.nip42.authEvent()` | canonical auth event `{ ..., kind: 22242 }` |
+| `zostr.nip42.challengeMessage()` | `["AUTH", challenge]` (relay → client) |
+| `zostr.nip42.authMessage()` | `["AUTH", signedAuthEvent]` (client → relay) |
+
+Both directions use the `AUTH` message name; they're distinguished by the
+payload — the relay sends a `challenge` string, the client replies with the
+signed `authEvent()`.
+
+### `zostr.nip42.authEvent()`
+
+The canonical authentication event, fixed to `kind: 22242`. Structure only, the
+same as `zostr.event()` — it does **not** verify the signature. The
+`"relay"`/`"challenge"` tags are not required by the schema: NIP-42 only says the
+event *should* carry them, and matching them (and the timestamp) is a relay-side
+step that depends on the connection's context. Those are exposed as opt-in
+checks rather than baked in:
+
+- `zostr.nip42.challengeTagCheck(challenge)` — the `"challenge"` tag matches the
+  challenge the relay sent.
+- `zostr.nip42.relayTagCheck(relayUrl)` — the `"relay"` tag matches the relay
+  URL. Compared as **exact strings**; NIP-42 allows URL normalization, so a
+  consumer wanting a looser match (e.g. by domain) normalizes both sides first.
+- `zostr.nip42.createdAtCheck(now, toleranceSeconds?)` — `created_at` is within
+  `toleranceSeconds` of `now` (both in unix seconds). `toleranceSeconds` defaults
+  to `600` (~10 minutes, the window NIP-42 gives as an example) and can be
+  overridden. Because NIP-42 makes the relay's time check a MUST, this fails
+  **closed** on misconfiguration: the factory throws if `now` isn't finite or
+  `toleranceSeconds` isn't finite and non-negative (which would otherwise make
+  the comparison silently accept every timestamp), rather than quietly disabling
+  the check.
+
+Compose them the same way as `zostr.signatureCheck()` (which verifies the
+signature — reuse it, there's no NIP-42-specific signature check):
+
+```ts
+const relay = "wss://relay.example.com/";
+const nowInSeconds = Math.floor(Date.now() / 1000);
+
+const verifiedAuth = zostr.nip42
+  .authEvent()
+  .check(zostr.signatureCheck())
+  .check(zostr.nip42.challengeTagCheck(challenge))
+  .check(zostr.nip42.relayTagCheck(relay))
+  .check(zostr.nip42.createdAtCheck(nowInSeconds));
+
+zostr.nip42.challengeMessage().parse(["AUTH", challenge]); // relay → client
+zostr.nip42.authMessage().parse(["AUTH", signedAuthEvent]); // client → relay
+```
+
+`AUTH` messages sent by clients are answered with the existing NIP-01 `OK`
+message (`zostr.relayMessage.ok()`); NIP-42's `auth-required:`/`restricted:`
+prefixes on `OK`/`CLOSED` are ordinary prefixes accepted by
+`zostr.relayMessage.okMessagePrefixCheck()`/`closedMessagePrefixCheck()`.
+
 ## NIP-45 — event counts
 
 Tuple schemas for the NIP-45 `COUNT` request/response, plus the response body
