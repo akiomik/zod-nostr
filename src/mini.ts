@@ -166,9 +166,8 @@ export const zostr = {
   // NIP-42 client-to-relay authentication (AUTH messages + auth event + opt-in checks)
   nip42: {
     authEvent: () => z.object(nip42.nip42.authEvent()._zod.def.shape),
-    challengeMessage: () =>
-      z.tuple(nip42.nip42.challengeMessage()._zod.def.items),
-    authMessage: () => z.tuple(nip42.nip42.authMessage()._zod.def.items),
+    authChallenge: () => z.tuple(nip42.nip42.authChallenge()._zod.def.items),
+    authRequest: () => z.tuple(nip42.nip42.authRequest()._zod.def.items),
 
     // Opt-in verification checks composed onto authEvent(), the same way as
     // signatureCheck(): zostr.nip42.authEvent().check(zostr.nip42.challengeTagCheck(challenge))

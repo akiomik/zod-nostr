@@ -129,7 +129,7 @@ rather than inventing a bespoke `.verified()`-style chain method.
   `naddr`
 - **NIP-42** — authentication (`AUTH`): the `kind: 22242` auth event
   (`nip42.authEvent`), the relay/client `AUTH` messages
-  (`nip42.challengeMessage`, `nip42.authMessage`), and opt-in verification
+  (`nip42.authChallenge`, `nip42.authRequest`), and opt-in verification
   checks (`nip42.challengeTagCheck`, `nip42.relayTagCheck`,
   `nip42.createdAtCheck`)
 - **NIP-45** — event counts (`COUNT`): request/response messages
