@@ -5,6 +5,7 @@ import { makeCodec } from "./core/codecs.js";
 import { hexStringSchema } from "./core/hex.js";
 import {
   zodArray,
+  zodNever,
   zodNumber,
   zodObject,
   zodOptional,
@@ -32,13 +33,11 @@ export type Bech32Prefix =
   | "naddr";
 
 export interface ProfilePointer {
-  [key: string]: unknown;
   pubkey: string;
   relays?: string[];
 }
 
 export interface EventPointer {
-  [key: string]: unknown;
   id: string;
   relays?: string[];
   author?: string;
@@ -46,7 +45,6 @@ export interface EventPointer {
 }
 
 export interface AddressPointer {
-  [key: string]: unknown;
   identifier: string;
   pubkey: string;
   kind: number;
@@ -92,19 +90,19 @@ function secretKeySchema(): core.$ZodType<Uint8Array, Uint8Array> {
   ]);
 }
 
-// The pointer schemas preserve unknown keys (catchall `unknown`) rather than
-// stripping them: the `ProfilePointer`/`EventPointer`/`AddressPointer`
-// interfaces carry an `[key: string]: unknown` index signature, so a value of
-// the declared type may hold extra keys — rejecting or silently dropping them
-// would contradict that type. The extra keys are inert (NIP-19's TLV encoding
-// only emits the known fields).
+// The pointer schemas reject unknown keys (catchall `never`). A NIP-19 pointer
+// is a fixed TLV shape: decode only ever produces the known fields, and encode
+// cannot carry an extra object key onto the wire (the TLV encoder emits only the
+// known fields). Preserving unknown keys would be a lie — they would silently
+// vanish on a decode(encode(x)) round-trip — so an unknown key is rejected
+// instead, and the output type carries no index signature.
 function profilePointerSchema() {
   return zodObject(
     {
       pubkey: hexStringSchema(64),
       relays: zodOptional(zodArray(zodString())),
     },
-    { catchall: zodUnknown() },
+    { catchall: zodNever() },
   );
 }
 
@@ -116,7 +114,7 @@ function eventPointerSchema() {
       author: zodOptional(hexStringSchema(64)),
       kind: zodOptional(pointerKind()),
     },
-    { catchall: zodUnknown() },
+    { catchall: zodNever() },
   );
 }
 
@@ -128,7 +126,7 @@ function addressPointerSchema() {
       kind: pointerKind(),
       relays: zodOptional(zodArray(zodString())),
     },
-    { catchall: zodUnknown() },
+    { catchall: zodNever() },
   );
 }
 

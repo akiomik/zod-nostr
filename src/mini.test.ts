@@ -1127,15 +1127,49 @@ describe("zostr (mini)", () => {
     ).toThrow();
   });
 
-  it("metadata() and NIP-19 pointers preserve unknown keys", () => {
+  it("metadata() preserves unknown keys; NIP-19 pointers reject them", () => {
     expect(
       z.parse(zostr.nip01.metadata(), { name: "alice", custom_field: 1 }),
     ).toEqual({ name: "alice", custom_field: 1 });
 
     const pk = getPublicKey(generateSecretKey());
-    expect(
+    expect(z.encode(zostr.nprofile(), { pubkey: pk, relays: [] })).toMatch(
+      /^nprofile1/,
+    );
+    expect(() =>
+      // @ts-expect-error extra keys are not part of the pointer shape
       z.encode(zostr.nprofile(), { pubkey: pk, relays: [], extra: "x" }),
-    ).toMatch(/^nprofile1/);
+    ).toThrow();
+  });
+
+  it("an event embedded in a message rejects unknown keys at runtime and in the inferred type", () => {
+    const signed = finalizeEvent(
+      { kind: 1, created_at: 0, tags: [], content: "hi" },
+      generateSecretKey(),
+    );
+    expect(() =>
+      z.parse(zostr.nip01.relayMessage.event(), [
+        "EVENT",
+        "sub",
+        { ...signed, extra: 1 },
+      ]),
+    ).toThrow();
+
+    const relayed = z.parse(zostr.nip01.relayMessage.event(), [
+      "EVENT",
+      "sub",
+      signed,
+    ]);
+    // @ts-expect-error embedded event output is strict
+    relayed[2].extension;
+
+    const counted = z.parse(zostr.nip45.relayMessage.count(), [
+      "COUNT",
+      "sub",
+      { count: 1 },
+    ]);
+    // @ts-expect-error embedded count output is strict
+    counted[2].extension;
   });
 
   it("nip11.relayInformationDocument() validates software as a URL", () => {

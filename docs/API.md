@@ -218,9 +218,13 @@ The NIP-01 `REQ`/`COUNT` filter object: `ids`, `authors`, `kinds`, `since`,
 `#e`, `#p`). Unknown keys outside this set are rejected. `since`/`until` are
 integer timestamps and `limit` is a non-negative integer (an event count);
 non-integer, negative, and non-finite values are rejected. `ids`, `authors`,
-`kinds`, and each `#<letter>` array must be **non-empty** when present — an empty
-array matches nothing, which NIP-01 expresses by omitting the field. The empty
-filter object `{}` (match anything) stays valid.
+`kinds`, and each `#<letter>` array must be **non-empty** when present, matching
+NIP-01's grammar (an array field, when present, lists at least one value); a
+previously-accepted empty `[]` is now rejected. The empty filter object `{}`
+(match anything) stays valid. An empty array had no defined meaning, so there is
+no drop-in replacement: **omit** the field to place no constraint on that
+dimension (this widens the match), or drop the filter / don't send the request
+to select nothing.
 
 ```ts
 zostr.filter().parse({
@@ -458,10 +462,11 @@ rather than an arbitrary choice specific to this library.
 `nprofile()`/`nevent()`/`naddr()` decode to plain objects reflecting exactly
 what `nostr-tools`' `nip19.decode()` returns, including default `relays: []`
 and `author: undefined` fields when the source bech32 string didn't encode
-them. These pointer objects **preserve** unknown keys (their output type carries
-a `[key: string]: unknown` index signature), matching the pointer interfaces'
-own index signature — the extra keys are inert, since only the fixed fields are
-encoded on the wire.
+them. A pointer is a fixed TLV shape, so these schemas **reject** unknown keys
+(their output type has no index signature): `encode()` throws on an extra object
+key rather than dropping it, since the TLV encoding carries only the known
+fields — preserving it in the type would be a lie a `decode(encode(x))`
+round-trip can't honor.
 
 ## NIP-42 — authentication
 

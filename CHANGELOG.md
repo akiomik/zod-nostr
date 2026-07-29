@@ -110,22 +110,28 @@ collision-specific name suffixes.
   ```
 
 - **Breaking:** a `filter()`'s `ids`, `authors`, `kinds`, and each `"#<letter>"`
-  tag filter must be **non-empty** when present — an empty array matches nothing,
-  which NIP-01 expresses by omitting the field, not by sending `[]`. The empty
-  filter object `{}` (match anything) is still valid. Applies wherever the filter
-  is reused (`nip01.clientMessage.req()`/`any()`, `nip45.clientMessage.count()`,
+  tag filter must be **non-empty** when present, matching NIP-01's grammar (an
+  array field, when present, lists at least one value). A previously-accepted
+  empty array `[]` is now rejected. The empty filter object `{}` (match anything)
+  is still valid. Applies wherever the filter is reused
+  (`nip01.clientMessage.req()`/`any()`, `nip45.clientMessage.count()`,
   `nip50.filter()`/`clientMessage.req()`).
 
-  ```ts
-  // before → after
-  { kinds: [] }  →  { kinds: [1] } // or omit the field entirely
-  ```
+  There is no drop-in replacement for an empty array, because it never had a
+  defined meaning — migrate by intent: to place **no** constraint on that
+  dimension, **omit the field** (this widens the match, so do it deliberately);
+  to select **nothing**, there is no single-filter form — remove that filter from
+  the `REQ`/`COUNT` (if it is one OR-branch among several) or don't send the
+  request at all (if it is the only filter).
 
 - **Breaking:** the event schemas (`event()`, `eventTemplate()`,
-  `unsignedEvent()`, `textNote()`, `nip42.authEvent()`) and the NIP-45 COUNT
-  response body (`nip45.count()`) now **reject** unknown keys instead of silently
-  stripping them — they are fixed protocol shapes, and an unrecognized key could
-  change their meaning. Forward-compatible metadata belongs in `tags`.
+  `unsignedEvent()`, `textNote()`, `nip42.authEvent()`), the NIP-45 COUNT
+  response body (`nip45.count()`), and the NIP-19 pointer schemas (the
+  `nprofile`/`nevent`/`naddr` codecs' value side) now **reject** unknown keys
+  instead of silently stripping them — they are fixed protocol shapes. For the
+  NIP-19 pointers this also means `encode()` throws on an extra object key rather
+  than dropping it, since the TLV encoding can only carry the known fields.
+  Forward-compatible event metadata belongs in `tags`.
 - **Breaking:** `nip11.relayInformationDocument()`'s `software` field is now
   validated as a **URL** (NIP-11 defines it as "URL to the relay's software
   homepage"), instead of accepting any string. `contact` stays a plain string
@@ -134,11 +140,16 @@ collision-specific name suffixes.
   carry a `[key: string]: unknown` index signature in their inferred output type,
   reflecting that unknown keys are kept rather than stripped:
   `nip05.nostrJsonDocument()`, `nip11.relayInformationDocument()` (and its nested
-  `limitation`/`fees` objects), the NIP-19 pointer outputs
-  (`nprofile`/`nevent`/`naddr`), and `nip01.metadataFields.birthday()`.
+  `limitation`/`fees` objects), and `nip01.metadataFields.birthday()`.
   (`nip01.metadata()` already carried this.) No runtime change for these — they
-  already preserved unknown keys or, for NIP-19 pointers, only ever received the
-  fixed decoded fields.
+  already preserved unknown keys.
+- **Breaking (type-only):** object schemas that reject unknown keys now infer a
+  **strict** output type (no index signature), including when embedded in a
+  message tuple/union. Previously an embedded event/count element (e.g.
+  `nip01.relayMessage.event()[2]`, `nip45.relayMessage.count()[2]`, the NIP-19
+  pointer codecs' decoded value) inferred an open `Record<string, unknown>`, so
+  unknown-key access type-checked even though it was rejected at runtime; the
+  inferred type now matches the runtime contract.
 
 ### Removed
 

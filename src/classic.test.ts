@@ -1135,19 +1135,53 @@ describe("zostr (classic)", () => {
     ).toThrow();
   });
 
-  it("metadata() and NIP-19 pointers preserve unknown keys", () => {
+  it("metadata() preserves unknown keys; NIP-19 pointers reject them", () => {
     // kind:0 profile content is forward-compatible: unknown keys survive a
     // metadata() parse (and a metadataContent() round-trip).
     expect(
       zostr.nip01.metadata().parse({ name: "alice", custom_field: 1 }),
     ).toEqual({ name: "alice", custom_field: 1 });
 
-    // A decoded NIP-19 pointer keeps extra keys (its interface has a
-    // `[key: string]: unknown` index signature).
+    // A NIP-19 pointer is a fixed TLV shape: an unknown key can't be carried on
+    // the wire, so encode rejects it rather than silently dropping it on the
+    // decode(encode(x)) round-trip.
     const pk = getPublicKey(generateSecretKey());
-    expect(
+    expect(zostr.nprofile().encode({ pubkey: pk, relays: [] })).toMatch(
+      /^nprofile1/,
+    );
+    expect(() =>
+      // @ts-expect-error extra keys are not part of the pointer shape
       zostr.nprofile().encode({ pubkey: pk, relays: [], extra: "x" }),
-    ).toMatch(/^nprofile1/);
+    ).toThrow();
+  });
+
+  it("an event embedded in a message rejects unknown keys at runtime and in the inferred type", () => {
+    const signed = finalizeEvent(
+      { kind: 1, created_at: 0, tags: [], content: "hi" },
+      generateSecretKey(),
+    );
+    // runtime: the embedded event is the reject schema, so a message carrying an
+    // event with an extra key is rejected.
+    expect(() =>
+      zostr.nip01.relayMessage
+        .event()
+        .parse(["EVENT", "sub", { ...signed, extra: 1 }]),
+    ).toThrow();
+
+    // type: the embedded event element infers a strict object (no unknown index
+    // access), matching the runtime contract. Regression for the loose default
+    // `$ZodObjectConfig` leaking through a tuple/union that isn't re-wrapped.
+    const relayed = zostr.nip01.relayMessage
+      .event()
+      .parse(["EVENT", "sub", signed]);
+    // @ts-expect-error embedded event output is strict
+    relayed[2].extension;
+
+    const counted = zostr.nip45.relayMessage
+      .count()
+      .parse(["COUNT", "sub", { count: 1 }]);
+    // @ts-expect-error embedded count output is strict
+    counted[2].extension;
   });
 
   it("nip11.relayInformationDocument() validates software as a URL", () => {
