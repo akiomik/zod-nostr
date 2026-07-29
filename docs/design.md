@@ -132,14 +132,20 @@ Public names follow provenance and the protocol's own wire vocabulary:
 - **Object schemas** are named for what they model (`filter`, `event`, `count`,
   `authEvent`); a NIP namespace drops the redundant prefix (`nip50.filter`, not
   `nip50.searchFilter`).
-- **Protocol messages** normally reuse the lowercased wire token when
-  unambiguous, and protocol abbreviations are not expanded (`req`, not
-  `request`; `eose`, `ok`). When schemas sharing a token would collide within a
-  namespace, use unambiguous full-word role/direction or semantic names rather
-  than abbreviations — existing precedents are `countRequest`/`countResponse`
-  (COUNT both ways) and `challengeMessage`/`authMessage` (the two AUTH messages,
-  named for their content role). A single-message type stays bare (`nip67.eose`,
-  `nip50.req`).
+- **Protocol messages** are named from the lowercased wire token, and protocol
+  abbreviations are not expanded (`req`, not `request`; `eose`, `ok`).
+  Collisions are judged **within a namespace**: a token that appears in only one
+  message schema in its namespace stays bare (`nip50.req`, `nip67.eose`), and
+  the same bare token may recur across namespaces without conflict —
+  `clientMessage.event()` (`["EVENT", event]`) and `relayMessage.event()`
+  (`["EVENT", subscriptionId, event]`) are both bare `event`. When two message
+  schemas sharing a token would collide **within the same namespace**, keep the
+  token as the base and append a full-word role/direction to it rather than
+  switching to a content-role name — so the wire token is always recoverable
+  from the public name. The precedents are `countRequest`/`countResponse` (COUNT
+  both ways in `nip45`) and `authChallenge`/`authRequest` (in `nip42`, the
+  relay's `["AUTH", challenge]` and the client's `["AUTH", signedAuthEvent]`,
+  which requests authentication and is answered by `OK`).
 - A schema that is a **superset** of an existing one reuses the leaf name, when
   unambiguous, to signal the relationship: `nip50.req` ⊃ `clientMessage.req`,
   `nip50.filter` ⊃ `filter`, `nip67.eose` ⊃ `relayMessage.eose`.

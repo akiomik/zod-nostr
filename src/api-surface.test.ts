@@ -68,8 +68,8 @@ const EXPECTED_NIP05_KEYS = [
 const EXPECTED_NIP11_KEYS = ["relayInformationDocument"].sort();
 const EXPECTED_NIP42_KEYS = [
   "authEvent",
-  "challengeMessage",
-  "authMessage",
+  "authChallenge",
+  "authRequest",
   "challengeTagCheck",
   "relayTagCheck",
   "createdAtCheck",

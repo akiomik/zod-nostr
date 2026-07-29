@@ -20,9 +20,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `zostr.nip42` — NIP-42 authentication (`AUTH`). `nip42.authEvent()` is the
   canonical ephemeral auth event fixed to `kind: 22242` (structure only, like
-  `event()`); `nip42.challengeMessage()` is the relay-to-client `["AUTH",
-  challenge]` and `nip42.authMessage()` is the client-to-relay `["AUTH",
-  signedAuthEvent]`. The relay-side verification steps are opt-in checks composed
+  `event()`); `nip42.authChallenge()` is the relay-to-client `["AUTH",
+  challenge]` and `nip42.authRequest()` is the client-to-relay `["AUTH",
+  signedAuthEvent]` (answered by an `OK` message). The relay-side verification
+  steps are opt-in checks composed
   onto `authEvent()`, the same way as `signatureCheck()`:
   `nip42.challengeTagCheck(challenge)` (the `"challenge"` tag matches),
   `nip42.relayTagCheck(relayUrl)` (the `"relay"` tag matches, exact string),

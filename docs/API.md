@@ -424,12 +424,13 @@ verification steps.
 | function | wire shape |
 | --- | --- |
 | `zostr.nip42.authEvent()` | canonical auth event `{ ..., kind: 22242 }` |
-| `zostr.nip42.challengeMessage()` | `["AUTH", challenge]` (relay → client) |
-| `zostr.nip42.authMessage()` | `["AUTH", signedAuthEvent]` (client → relay) |
+| `zostr.nip42.authChallenge()` | `["AUTH", challenge]` (relay → client) |
+| `zostr.nip42.authRequest()` | `["AUTH", signedAuthEvent]` (client → relay) |
 
 Both directions use the `AUTH` message name; they're distinguished by the
-payload — the relay sends a `challenge` string, the client replies with the
-signed `authEvent()`.
+payload — the relay sends a `challenge` string (`authChallenge`), the client
+replies with the signed `authEvent()` to request authentication
+(`authRequest`), and the relay answers that with an `OK` message.
 
 ### `zostr.nip42.authEvent()`
 
@@ -468,8 +469,8 @@ const verifiedAuth = zostr.nip42
   .check(zostr.nip42.relayTagCheck(relay))
   .check(zostr.nip42.createdAtCheck(nowInSeconds));
 
-zostr.nip42.challengeMessage().parse(["AUTH", challenge]); // relay → client
-zostr.nip42.authMessage().parse(["AUTH", signedAuthEvent]); // client → relay
+zostr.nip42.authChallenge().parse(["AUTH", challenge]); // relay → client
+zostr.nip42.authRequest().parse(["AUTH", signedAuthEvent]); // client → relay
 ```
 
 `AUTH` messages sent by clients are answered with the existing NIP-01 `OK`

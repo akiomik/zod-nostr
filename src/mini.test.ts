@@ -733,7 +733,7 @@ describe("zostr (mini)", () => {
     expect(() => z.parse(zostr.nip42.authEvent(), wrongKind)).toThrow();
   });
 
-  it("nip42.challengeMessage()/authMessage() validate AUTH tuples", () => {
+  it("nip42.authChallenge()/authRequest() validate AUTH tuples", () => {
     const sk = generateSecretKey();
     const authEvent = finalizeEvent(
       {
@@ -746,26 +746,26 @@ describe("zostr (mini)", () => {
     );
 
     expect(
-      z.parse(zostr.nip42.challengeMessage(), ["AUTH", "challengestringhere"]),
+      z.parse(zostr.nip42.authChallenge(), ["AUTH", "challengestringhere"]),
     ).toBeTruthy();
     expect(
-      z.parse(zostr.nip42.authMessage(), ["AUTH", authEvent]),
+      z.parse(zostr.nip42.authRequest(), ["AUTH", authEvent]),
     ).toBeTruthy();
 
     // The two directions carry different payloads (string vs. event) and don't
     // validate as each other.
     expect(() =>
-      z.parse(zostr.nip42.authMessage(), ["AUTH", "challengestringhere"]),
+      z.parse(zostr.nip42.authRequest(), ["AUTH", "challengestringhere"]),
     ).toThrow();
     expect(() =>
-      z.parse(zostr.nip42.challengeMessage(), ["AUTH", authEvent]),
+      z.parse(zostr.nip42.authChallenge(), ["AUTH", authEvent]),
     ).toThrow();
-    // authMessage rejects a non-22242 event.
+    // authRequest rejects a non-22242 event.
     const note = finalizeEvent(
       { kind: 1, created_at: 0, tags: [], content: "hi" },
       sk,
     );
-    expect(() => z.parse(zostr.nip42.authMessage(), ["AUTH", note])).toThrow();
+    expect(() => z.parse(zostr.nip42.authRequest(), ["AUTH", note])).toThrow();
   });
 
   it("nip42 opt-in checks verify signature, challenge/relay tags, and created_at recency", () => {
@@ -831,7 +831,7 @@ describe("zostr (mini)", () => {
   });
 
   it("nip42.* infer precise output types", () => {
-    const challenge = z.parse(zostr.nip42.challengeMessage(), ["AUTH", "abc"]);
+    const challenge = z.parse(zostr.nip42.authChallenge(), ["AUTH", "abc"]);
     // challenge[1] is the challenge string (no `?.`).
     const c: string = challenge[1];
     expect(c).toBe("abc");
@@ -841,7 +841,7 @@ describe("zostr (mini)", () => {
       { kind: 22242, created_at: 0, tags: [], content: "" },
       sk,
     );
-    const auth = z.parse(zostr.nip42.authMessage(), ["AUTH", signed]);
+    const auth = z.parse(zostr.nip42.authRequest(), ["AUTH", signed]);
     // auth[1] is the auth event object; kind infers as the literal 22242.
     const kind: 22242 = auth[1].kind;
     expect(kind).toBe(22242);
