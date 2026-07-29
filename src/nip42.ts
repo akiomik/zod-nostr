@@ -2,6 +2,7 @@ import type * as core from "zod/v4/core";
 import { makeCheck, type NostrEventLike } from "./core/checks.js";
 import {
   zodLiteral,
+  zodNever,
   zodObject,
   zodString,
   zodTuple,
@@ -26,15 +27,20 @@ const AUTH_EVENT_KIND = 22242;
  * (`challengeTagCheck`/`relayTagCheck`/`createdAtCheck`) instead of baked in.
  */
 function authEvent() {
-  return zodObject({
-    id: eventId(),
-    pubkey: pubkey(),
-    created_at: timestamp(),
-    kind: zodLiteral(AUTH_EVENT_KIND),
-    tags: tags(),
-    content: zodString(),
-    sig: signature(),
-  });
+  return zodObject(
+    {
+      id: eventId(),
+      pubkey: pubkey(),
+      created_at: timestamp(),
+      kind: zodLiteral(AUTH_EVENT_KIND),
+      tags: tags(),
+      content: zodString(),
+      sig: signature(),
+    },
+    // Fixed event shape, same as nip01.event()/textNote(): reject unknown keys
+    // rather than silently strip them.
+    { catchall: zodNever() },
+  );
 }
 
 /**

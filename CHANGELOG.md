@@ -16,32 +16,7 @@ A small, curated set of Nostr-wide concepts is re-exposed at the root as an
 `relayMessage`/`clientMessage` namespace under each NIP instead of by
 collision-specific name suffixes.
 
-### Changed — breaking path changes
-
-- **Breaking:** the root `zostr.relayMessage.*` and `zostr.clientMessage.*`
-  namespaces are **removed**. NIP-01 relay/client messages now live at
-  `zostr.nip01.relayMessage.*` and `zostr.nip01.clientMessage.*`. The unqualified
-  root names implied an aggregate of every supported NIP but only ever meant
-  NIP-01; the NIP-01-scoped path makes that explicit and leaves room for other
-  NIPs' messages (NIP-42/45/50/67) under their own namespaces.
-
-  ```ts
-  // before
-  zostr.relayMessage.ok();
-  zostr.clientMessage.req();
-  // after
-  zostr.nip01.relayMessage.ok();
-  zostr.nip01.clientMessage.req();
-  ```
-
-- **Breaking:** `zostr.clientMessage.req()` (now `zostr.nip01.clientMessage.req()`)
-  requires **at least one** filter, matching NIP-01's `REQ` grammar (`["REQ",
-  <subscription_id>, <filters1>, <filters2>...]`, where `<filters1>` is
-  mandatory). A bare `["REQ", subId]` with no filters is now rejected; to
-  subscribe to everything, send a single empty `{}` filter. This also tightens
-  `zostr.nip01.clientMessage.any()`, which includes the `REQ` message.
-
-### Added — canonical namespaces and ergonomic aliases
+### Added
 
 - **`zostr.nip01`** is now the canonical home for every base Nostr concept:
   the field primitives (`pubkey`/`eventId`/`signature`/`timestamp`/`kind`/`tags`/
@@ -108,19 +83,44 @@ collision-specific name suffixes.
   zostr.nip67.relayMessage.eose()])` to accept a NIP-67 `EOSE` alongside the
   other relay messages.
 
-### Changed — breaking runtime validation
+### Changed
+
+- **Breaking:** `zostr.nip01.clientMessage.req()` (was
+  `zostr.clientMessage.req()`, see _Removed_) requires **at least one** filter,
+  matching NIP-01's `REQ` grammar (`["REQ", <subscription_id>, <filters1>,
+  <filters2>...]`, where `<filters1>` is mandatory). A bare `["REQ", subId]` with
+  no filters is now rejected; to subscribe to everything, send a single empty
+  `{}` filter. This also tightens `zostr.nip01.clientMessage.any()`, which
+  includes the `REQ` message.
+
+  ```ts
+  // before → after
+  ["REQ", "sub"]  →  ["REQ", "sub", {}]
+  ```
 
 - **Breaking:** every NIP-01 event tag must now be a **non-empty** array of
   strings (its first element is the tag name). An empty tag `[]` is rejected;
   the outer `tags` array may still be empty. Applies to `event()`,
   `eventTemplate()`, `unsignedEvent()`, `textNote()`, and the messages that
   embed them.
+
+  ```ts
+  // before → after
+  { tags: [[]] }  →  { tags: [["e", id]] }
+  ```
+
 - **Breaking:** a `filter()`'s `ids`, `authors`, `kinds`, and each `"#<letter>"`
   tag filter must be **non-empty** when present — an empty array matches nothing,
   which NIP-01 expresses by omitting the field, not by sending `[]`. The empty
   filter object `{}` (match anything) is still valid. Applies wherever the filter
   is reused (`nip01.clientMessage.req()`/`any()`, `nip45.clientMessage.count()`,
   `nip50.filter()`/`clientMessage.req()`).
+
+  ```ts
+  // before → after
+  { kinds: [] }  →  { kinds: [1] } // or omit the field entirely
+  ```
+
 - **Breaking:** the event schemas (`event()`, `eventTemplate()`,
   `unsignedEvent()`, `textNote()`, `nip42.authEvent()`) and the NIP-45 COUNT
   response body (`nip45.count()`) now **reject** unknown keys instead of silently
@@ -130,9 +130,6 @@ collision-specific name suffixes.
   validated as a **URL** (NIP-11 defines it as "URL to the relay's software
   homepage"), instead of accepting any string. `contact` stays a plain string
   (it may be a bare email address).
-
-### Changed — breaking type-only changes
-
 - **Breaking (type-only):** the object schemas that preserve unknown keys now
   carry a `[key: string]: unknown` index signature in their inferred output type,
   reflecting that unknown keys are kept rather than stripped:
@@ -143,22 +140,22 @@ collision-specific name suffixes.
   already preserved unknown keys or, for NIP-19 pointers, only ever received the
   fixed decoded fields.
 
-### Migration
+### Removed
 
-```ts
-// message namespaces moved under nip01
-zostr.relayMessage.ok()            → zostr.nip01.relayMessage.ok()
-zostr.clientMessage.req()          → zostr.nip01.clientMessage.req()
+- **Breaking:** the root `zostr.relayMessage.*` and `zostr.clientMessage.*`
+  namespaces are removed. NIP-01 relay/client messages now live at
+  `zostr.nip01.relayMessage.*` and `zostr.nip01.clientMessage.*`. The unqualified
+  root names implied an aggregate of every supported NIP but only ever meant
+  NIP-01; the NIP-01-scoped path makes that explicit and leaves room for other
+  NIPs' messages (NIP-42/45/50/67) under their own namespaces. The curated root
+  aliases (`event`, `filter`, `npub`, …) are unaffected — they remain as direct
+  references into the canonical namespaces.
 
-// canonical paths (root aliases below still work for the curated set)
-zostr.event()                      // still valid — alias of zostr.nip01.event()
-zostr.npub()                       // still valid — alias of zostr.nip19.npub()
-
-// tighter validation — send data that matches the spec shape
-["REQ", "sub"]                     → ["REQ", "sub", {}]        // REQ needs ≥1 filter
-{ kinds: [] }                      → { kinds: [1] } or omit    // no empty arrays
-{ tags: [[]] }                     → { tags: [["e", id]] }     // no empty tags
-```
+  ```ts
+  // before → after
+  zostr.relayMessage.ok()    →  zostr.nip01.relayMessage.ok()
+  zostr.clientMessage.req()  →  zostr.nip01.clientMessage.req()
+  ```
 
 
 ## [0.4.0] - 2026-07-29
