@@ -523,6 +523,54 @@ zostr.nip45.count().parse({ count: 2044, hll: "01ef0705..." /* 512 hex chars */ 
 A relay refusing a `COUNT` request replies with NIP-01's `CLOSED` message
 (`zostr.relayMessage.closed()`), not a `COUNT`.
 
+## NIP-50 — search
+
+NIP-50 adds a `search` field to the `REQ` filter: a human-readable query string
+the relay interprets to return matching events.
+
+| function | wire shape |
+| --- | --- |
+| `zostr.nip50.filter()` | the NIP-01 filter plus an optional `search` string |
+| `zostr.nip50.req()` | `["REQ", subscriptionId, searchFilter, ...searchFilter[]]` |
+
+`nip50.filter()` is [`zostr.filter()`](#zostrfilter) extended with `search`; it
+inherits the base filter's fields and `"#<letter>"` tag-filter handling, so it
+tracks NIP-01 automatically. `search` is a plain optional string with no
+`.min`/recovery policy baked in — NIP-50 places no format constraint on it and
+doesn't forbid an empty string. A consumer requiring a non-empty query replaces
+the `search` field with a stricter schema; use `.safeExtend()` (not `.extend()`)
+because the object carries a filter-key check:
+
+```ts
+// classic
+const strict = zostr.nip50.filter().safeExtend({ search: z.string().min(1) });
+// mini
+// z.safeExtend(zostr.nip50.filter(), { search: z.string().check(z.minLength(1)) })
+```
+
+The `key:value` search extensions (`include:spam`,
+`domain:`, `language:`, ...) live **inside** the `search` string, not as extra
+filter fields, so they need no schema modeling. Ranking results by score and
+advertising support via `supported_nips` are relay concerns outside this schema.
+
+`nip50.req()` is an **intentional superset** of
+[`zostr.clientMessage.req()`](#zostrclientmessage): a search filter is a NIP-01
+filter plus optional `search`, so it also accepts plain filters, and it keeps
+the **at least one filter** requirement of NIP-01's `REQ` grammar.
+`zostr.clientMessage.req()`/`any()` stay NIP-01-only (they reject `search`), as
+does `zostr.nip45.countRequest()` — NIP-50 introduces `search` on `REQ`, not
+`COUNT`. To accept a NIP-50 `REQ` alongside the other client messages, compose a
+union:
+
+```ts
+zostr.nip50.filter().parse({ kinds: [1], search: "best nostr apps" });
+zostr.nip50.req().parse(["REQ", "sub1", { search: "orange" }, { kinds: [1] }]);
+
+// clientMessage.any() alone rejects a search filter:
+const clientMessage = z.union([zostr.clientMessage.any(), zostr.nip50.req()]);
+clientMessage.parse(["REQ", "sub1", { search: "purple" }]);
+```
+
 ## NIP-67 — EOSE completeness hint
 
 NIP-67 extends NIP-01's `EOSE` with an optional third element: an array of hint

@@ -916,4 +916,102 @@ describe("zostr (mini)", () => {
     const hints: string[] | undefined = eose.length === 3 ? eose[2] : undefined;
     expect(hints).toEqual(["finish"]);
   });
+
+  it("nip50.filter() accepts the NIP-01 filter extended with `search`", () => {
+    // A plain NIP-01 filter (no search) is still accepted — nip50.filter() is a
+    // superset of the base filter.
+    expect(z.parse(zostr.nip50.filter(), { kinds: [1] })).toEqual({
+      kinds: [1],
+    });
+    // The `search` string, alone and combined with other fields / tag filters.
+    expect(
+      z.parse(zostr.nip50.filter(), { search: "best nostr apps" }),
+    ).toEqual({ search: "best nostr apps" });
+    expect(
+      z.parse(zostr.nip50.filter(), {
+        kinds: [1],
+        search: "purple",
+        "#e": ["a"],
+      }),
+    ).toBeTruthy();
+    // Empty string is spec-valid (NIP-50 places no format constraint on it).
+    expect(z.parse(zostr.nip50.filter(), { search: "" })).toEqual({
+      search: "",
+    });
+  });
+
+  it("nip50.filter() rejects a non-string `search` and still rejects unknown keys", () => {
+    expect(() => z.parse(zostr.nip50.filter(), { search: 5 })).toThrow();
+    // `search` is a plain string, not the `string[]` a tag filter carries.
+    expect(() => z.parse(zostr.nip50.filter(), { search: ["x"] })).toThrow();
+    // The inherited tag-key check still rejects truly-unknown keys.
+    expect(() => z.parse(zostr.nip50.filter(), { foo: ["x"] })).toThrow();
+    // The base NIP-01 filter() keeps rejecting `search` (unchanged).
+    expect(() => z.parse(zostr.filter(), { search: "x" })).toThrow();
+  });
+
+  it("nip50.req() carries search filters and requires at least one filter", () => {
+    expect(
+      z.parse(zostr.nip50.req(), ["REQ", "sub1", { search: "orange" }]),
+    ).toBeTruthy();
+    // Several filters, mixing a search filter and a plain NIP-01 filter.
+    expect(
+      z.parse(zostr.nip50.req(), [
+        "REQ",
+        "sub1",
+        { search: "orange" },
+        { kinds: [1, 2] },
+      ]),
+    ).toBeTruthy();
+    // `search` may appear on a variadic rest filter, not only the first —
+    // NIP-50 allows several search filters. Guards the rest against reverting
+    // to the plain NIP-01 filter().
+    expect(
+      z.parse(zostr.nip50.req(), [
+        "REQ",
+        "sub1",
+        { kinds: [1] },
+        { search: "purple" },
+      ]),
+    ).toBeTruthy();
+    // A plain filter with no search is accepted (superset of clientMessage.req()).
+    expect(
+      z.parse(zostr.nip50.req(), ["REQ", "sub1", { kinds: [1] }]),
+    ).toBeTruthy();
+    // At least one filter is required (NIP-01 REQ grammar).
+    expect(() => z.parse(zostr.nip50.req(), ["REQ", "sub1"])).toThrow();
+  });
+
+  it("NIP-01 REQ/COUNT stay search-free; a composed union accepts NIP-50 REQ", () => {
+    // clientMessage.req()/any() and nip45.countRequest() reject `search`.
+    expect(() =>
+      z.parse(zostr.clientMessage.req(), ["REQ", "sub1", { search: "x" }]),
+    ).toThrow();
+    expect(() =>
+      z.parse(zostr.clientMessage.any(), ["REQ", "sub1", { search: "x" }]),
+    ).toThrow();
+    expect(() =>
+      z.parse(zostr.nip45.countRequest(), ["COUNT", "sub1", { search: "x" }]),
+    ).toThrow();
+    // The documented composition accepts both NIP-01 client messages and NIP-50 REQ.
+    const clientMessage = z.union([
+      zostr.clientMessage.any(),
+      zostr.nip50.req(),
+    ]);
+    expect(
+      z.parse(clientMessage, ["REQ", "sub1", { search: "x" }]),
+    ).toBeTruthy();
+    expect(z.parse(clientMessage, ["CLOSE", "sub1"])).toBeTruthy();
+  });
+
+  it("nip50.* infer precise output types", () => {
+    const f = z.parse(zostr.nip50.filter(), { search: "x" });
+    const search: string | undefined = f.search;
+    expect(search).toBe("x");
+
+    const req = z.parse(zostr.nip50.req(), ["REQ", "sub1", { search: "x" }]);
+    // req[2] is the required first filter (non-optional); its `search` is string.
+    const reqSearch: string | undefined = req[2].search;
+    expect(reqSearch).toBe("x");
+  });
 });

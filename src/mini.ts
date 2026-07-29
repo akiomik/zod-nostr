@@ -10,6 +10,7 @@ import * as nip11 from "./nip11.js";
 import * as nip19 from "./nip19.js";
 import * as nip42 from "./nip42.js";
 import * as nip45 from "./nip45.js";
+import * as nip50 from "./nip50.js";
 import * as nip67 from "./nip67.js";
 
 /**
@@ -185,6 +186,23 @@ export const zostr = {
         nip45.nip45.countRequest()._zod.def.rest,
       ),
     countResponse: () => z.tuple(nip45.nip45.countResponse()._zod.def.items),
+  },
+
+  // NIP-50 search: the `search`-extended REQ/COUNT filter and the REQ that carries it
+  nip50: {
+    filter: () => {
+      const f = nip50.nip50.filter();
+      return z
+        .catchall(
+          z.object(f._zod.def.shape),
+          f._zod.def.catchall as core.SomeType,
+        )
+        .check(nip01.filterTagKeysCheck(["search"]));
+    },
+    req: () => {
+      const r = nip50.nip50.req();
+      return z.tuple(r._zod.def.items, r._zod.def.rest);
+    },
   },
 
   // NIP-67 EOSE completeness hint (relay→client EOSE with an optional hints array)
