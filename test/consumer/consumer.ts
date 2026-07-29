@@ -3,11 +3,13 @@
 // tsconfig.json), and asserts the public type contract. Type-checked by
 // `npm run test:consumer`; it emits nothing and is never executed.
 
+import * as zMini from "zod/mini";
 import type { ProfileMetadata } from "zod-nostr";
 import { zostr } from "zod-nostr";
+import type { ProfileMetadata as MiniProfileMetadata } from "zod-nostr/mini";
 import { zostr as miniZostr } from "zod-nostr/mini";
 
-// Canonical spec-namespaced paths resolve.
+// Canonical owner paths resolve.
 zostr.nip01.event();
 zostr.nip01.relayMessage.ok();
 zostr.nip01.clientMessage.req();
@@ -57,8 +59,16 @@ zostr.nprofile().encode({ pubkey: pk, relays: [] });
 // @ts-expect-error extra keys are not part of the pointer shape
 zostr.nprofile().encode({ pubkey: pk, relays: [], extra: 1 });
 
-// Named type export and mini parity.
+// Named type export, exercised from both entry points, and classic/Mini parity.
 const profile: ProfileMetadata = { name: "alice", customField: 1 };
-void profile;
+const miniProfile: MiniProfileMetadata = profile; // classic assignable to mini
+const classicProfile: ProfileMetadata = miniProfile; // and back — same type
+void classicProfile;
+
+// Mini exposes the same canonical surface, driven by the functional API.
 miniZostr.nip01.event();
 miniZostr.event();
+zMini.parse(miniZostr.event(), signed);
+zMini.encode(miniZostr.nprofile(), { pubkey: pk, relays: [] });
+// @ts-expect-error the pointer shape is strict in the mini flavor too
+zMini.encode(miniZostr.nprofile(), { pubkey: pk, relays: [], extra: 1 });
