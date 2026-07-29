@@ -145,4 +145,50 @@ describe("metadataFields composition", () => {
     expect(zm.parse(schema, { name: "   " }).name).toBe("");
     expect(zm.parse(schema, { name: "alice" }).name).toBe("alice");
   });
+
+  // Recipe from API.md: tolerate an empty-string URL field losslessly (some
+  // clients write "" to clear a field instead of removing the key). Preserving
+  // "" adds no one-way transform, so the schema still round-trips through
+  // jsonCodec — see docs/API.md "Recipe: empty-string fields".
+  it("classic: empty-string field is accepted, preserved, and codec-safe", () => {
+    const f = classicZostr.nip01.metadataFields;
+    const schema = classicZostr.nip01
+      .metadata()
+      .extend({ website: f.website().or(zc.literal("")).optional() });
+
+    expect(schema.parse({ website: "" })).toEqual({ website: "" });
+    expect(schema.parse({ website: "https://example.com" })).toEqual({
+      website: "https://example.com",
+    });
+    // a non-empty invalid URL is still rejected
+    expect(() => schema.parse({ website: "not a url" })).toThrow();
+
+    const codec = classicZostr.jsonCodec(schema);
+    expect(codec.decode('{"website":""}')).toEqual({ website: "" });
+    expect(codec.encode({ website: "" })).toBe('{"website":""}');
+    expect(codec.encode({ website: "https://example.com" })).toBe(
+      '{"website":"https://example.com"}',
+    );
+  });
+
+  it("mini: empty-string field is accepted, preserved, and codec-safe", () => {
+    const f = miniZostr.nip01.metadataFields;
+    const schema = zm.extend(miniZostr.nip01.metadata(), {
+      website: zm.optional(zm.union([f.website(), zm.literal("")])),
+    });
+
+    expect(zm.parse(schema, { website: "" })).toEqual({ website: "" });
+    expect(zm.parse(schema, { website: "https://example.com" })).toEqual({
+      website: "https://example.com",
+    });
+    // a non-empty invalid URL is still rejected
+    expect(() => zm.parse(schema, { website: "not a url" })).toThrow();
+
+    const codec = miniZostr.jsonCodec(schema);
+    expect(zm.decode(codec, '{"website":""}')).toEqual({ website: "" });
+    expect(zm.encode(codec, { website: "" })).toBe('{"website":""}');
+    expect(zm.encode(codec, { website: "https://example.com" })).toBe(
+      '{"website":"https://example.com"}',
+    );
+  });
 });
