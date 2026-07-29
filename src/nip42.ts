@@ -144,7 +144,7 @@ function createdAtCheck(
   });
 }
 
-/** NIP-42 client-to-relay authentication (`AUTH`) messages, event, and opt-in verification checks */
+/** NIP-42 client-relay authentication (`AUTH`) handshake messages, event, and opt-in verification checks */
 export const nip42 = {
   /** Canonical authentication event (`kind: 22242`, structure only) */
   authEvent,

@@ -163,7 +163,7 @@ export const zostr = {
       z.object(nip11.nip11.relayInformationDocument()._zod.def.shape),
   },
 
-  // NIP-42 client-to-relay authentication (AUTH messages + auth event + opt-in checks)
+  // NIP-42 client-relay authentication (AUTH handshake messages + auth event + opt-in checks)
   nip42: {
     authEvent: () => z.object(nip42.nip42.authEvent()._zod.def.shape),
     authChallenge: () => z.tuple(nip42.nip42.authChallenge()._zod.def.items),
