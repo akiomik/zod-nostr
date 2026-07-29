@@ -92,29 +92,44 @@ function secretKeySchema(): core.$ZodType<Uint8Array, Uint8Array> {
   ]);
 }
 
+// The pointer schemas preserve unknown keys (catchall `unknown`) rather than
+// stripping them: the `ProfilePointer`/`EventPointer`/`AddressPointer`
+// interfaces carry an `[key: string]: unknown` index signature, so a value of
+// the declared type may hold extra keys — rejecting or silently dropping them
+// would contradict that type. The extra keys are inert (NIP-19's TLV encoding
+// only emits the known fields).
 function profilePointerSchema() {
-  return zodObject({
-    pubkey: hexStringSchema(64),
-    relays: zodOptional(zodArray(zodString())),
-  });
+  return zodObject(
+    {
+      pubkey: hexStringSchema(64),
+      relays: zodOptional(zodArray(zodString())),
+    },
+    { catchall: zodUnknown() },
+  );
 }
 
 function eventPointerSchema() {
-  return zodObject({
-    id: hexStringSchema(64),
-    relays: zodOptional(zodArray(zodString())),
-    author: zodOptional(hexStringSchema(64)),
-    kind: zodOptional(pointerKind()),
-  });
+  return zodObject(
+    {
+      id: hexStringSchema(64),
+      relays: zodOptional(zodArray(zodString())),
+      author: zodOptional(hexStringSchema(64)),
+      kind: zodOptional(pointerKind()),
+    },
+    { catchall: zodUnknown() },
+  );
 }
 
 function addressPointerSchema() {
-  return zodObject({
-    identifier: zodString(),
-    pubkey: hexStringSchema(64),
-    kind: pointerKind(),
-    relays: zodOptional(zodArray(zodString())),
-  });
+  return zodObject(
+    {
+      identifier: zodString(),
+      pubkey: hexStringSchema(64),
+      kind: pointerKind(),
+      relays: zodOptional(zodArray(zodString())),
+    },
+    { catchall: zodUnknown() },
+  );
 }
 
 export const npubCodec = makeCodec(bech32Schema("npub"), hexStringSchema(64), {

@@ -12,7 +12,38 @@ methods). With `zod/mini`, use the functional equivalents instead:
 `z.parse(schema, value)`, `schema.check(...)`, `z.encode(codec, value)`,
 `z.decode(codec, value)`.
 
+## Canonical paths and root aliases
+
+Every schema, codec, check, and utility has exactly one **canonical** path,
+namespaced by the NIP that defines it — `zostr.nip01.*`, `zostr.nip19.*`,
+`zostr.nip05.*`, and so on. A small, curated set of Nostr-wide concepts is also
+re-exposed at the **root** as an ergonomic alias:
+
+```ts
+zostr.event === zostr.nip01.event; // true — the alias is a direct reference
+zostr.npub === zostr.nip19.npub; // true
+```
+
+Because each alias is the _same factory_ as its canonical entry (not a separate
+wrapper), the two are identical in behavior and inferred types. The root aliases
+are: `pubkey`, `eventId`, `signature`, `timestamp`, `kind`, `tags`,
+`eventTemplate`, `unsignedEvent`, `event`, `signatureCheck`, `subscriptionId`,
+`filter` (→ `nip01`); `bech32`, `npub`, `nsec`, `note`, `nprofile`, `nevent`,
+`naddr` (→ `nip19`). `zostr.jsonCodec` is root-only (a cross-spec utility). The
+sections below document each API under its canonical name; a root alias is just
+the shorter spelling of the same thing.
+
+Message direction is carried by a `relayMessage`/`clientMessage` namespace under
+each NIP (e.g. `zostr.nip01.clientMessage.req()`,
+`zostr.nip42.relayMessage.auth()`), not by name suffixes.
+
 ## NIP-01 — events
+
+The primitives, event schemas, filter, and messages below live under
+`zostr.nip01.*`. The curated ones (`pubkey`, `event`, `filter`, …) are also
+available at the root as aliases (see [Canonical paths and root
+aliases](#canonical-paths-and-root-aliases)); the examples use the shorter root
+spelling.
 
 ### `zostr.pubkey()`
 
@@ -43,7 +74,9 @@ An integer schema for `kind`, constrained to `0`–`65535` as NIP-01 defines it
 
 ### `zostr.tags()`
 
-A `string[][]` schema for the `tags` field.
+A `string[][]` schema for the `tags` field. Every tag must be a **non-empty**
+array of strings — its first element is the tag name, so an empty `[]` tag is
+rejected. The outer array may be empty (an event can carry no tags).
 
 ### `zostr.eventTemplate()`
 
@@ -72,6 +105,10 @@ signature. Compose `zostr.signatureCheck()` when you need that:
 ```ts
 zostr.event().check(zostr.signatureCheck()).parse(event);
 ```
+
+The event shape is fixed: **unknown keys are rejected**, not silently stripped
+(the same for `eventTemplate()`, `unsignedEvent()`, `textNote()`, and
+`nip42.authEvent()`). Forward-compatible metadata belongs in `tags`.
 
 ### `zostr.signatureCheck()`
 
@@ -180,7 +217,10 @@ The NIP-01 `REQ`/`COUNT` filter object: `ids`, `authors`, `kinds`, `since`,
 `until`, `limit`, plus any number of `#<a-zA-Z>` tag-value filters (e.g.
 `#e`, `#p`). Unknown keys outside this set are rejected. `since`/`until` are
 integer timestamps and `limit` is a non-negative integer (an event count);
-non-integer, negative, and non-finite values are rejected.
+non-integer, negative, and non-finite values are rejected. `ids`, `authors`,
+`kinds`, and each `#<letter>` array must be **non-empty** when present — an empty
+array matches nothing, which NIP-01 expresses by omitting the field. The empty
+filter object `{}` (match anything) stays valid.
 
 ```ts
 zostr.filter().parse({
@@ -191,7 +231,7 @@ zostr.filter().parse({
 });
 ```
 
-### `zostr.relayMessage`
+### `zostr.nip01.relayMessage`
 
 Tuple schemas for NIP-01 relay→client messages. Each validates structure
 only — `event()` does not verify the embedded event's signature (compose
@@ -199,23 +239,23 @@ only — `event()` does not verify the embedded event's signature (compose
 
 | function | wire shape |
 | --- | --- |
-| `zostr.relayMessage.event()` | `["EVENT", subscriptionId, event]` |
-| `zostr.relayMessage.ok()` | `["OK", eventId, boolean, message]` |
-| `zostr.relayMessage.eose()` | `["EOSE", subscriptionId]` |
-| `zostr.relayMessage.closed()` | `["CLOSED", subscriptionId, message]` |
-| `zostr.relayMessage.notice()` | `["NOTICE", message]` |
-| `zostr.relayMessage.any()` | union of the five above |
+| `zostr.nip01.relayMessage.event()` | `["EVENT", subscriptionId, event]` |
+| `zostr.nip01.relayMessage.ok()` | `["OK", eventId, boolean, message]` |
+| `zostr.nip01.relayMessage.eose()` | `["EOSE", subscriptionId]` |
+| `zostr.nip01.relayMessage.closed()` | `["CLOSED", subscriptionId, message]` |
+| `zostr.nip01.relayMessage.notice()` | `["NOTICE", message]` |
+| `zostr.nip01.relayMessage.any()` | union of the five above |
 
 The `message` field of `ok()`/`closed()` is validated as a plain `string` by
 default; NIP-01's `<prefix>: <text>` convention is not enforced, since many
 relays don't follow it strictly.
 
 ```ts
-zostr.relayMessage.any().parse(["EOSE", "sub1"]);
-zostr.relayMessage.ok().parse(["OK", eventId, true, ""]);
+zostr.nip01.relayMessage.any().parse(["EOSE", "sub1"]);
+zostr.nip01.relayMessage.ok().parse(["OK", eventId, true, ""]);
 ```
 
-### `zostr.relayMessage.okMessagePrefixCheck()` / `zostr.relayMessage.closedMessagePrefixCheck()`
+### `zostr.nip01.relayMessage.okMessagePrefixCheck()` / `zostr.nip01.relayMessage.closedMessagePrefixCheck()`
 
 Opt-in [checks](https://zod.dev/api#checks) that enforce NIP-01's
 `"<prefix>: <message>"` shape for `OK`/`CLOSED` messages (a single-word
@@ -230,35 +270,35 @@ element `false`); NIP-01 allows the message to be an empty string when
 accepted. Compose explicitly, the same way as `signatureCheck()`:
 
 ```ts
-const ok = zostr.relayMessage.ok().check(zostr.relayMessage.okMessagePrefixCheck());
+const ok = zostr.nip01.relayMessage.ok().check(zostr.nip01.relayMessage.okMessagePrefixCheck());
 ok.parse(["OK", eventId, false, "duplicate: already have this event"]); // ok
 ok.parse(["OK", eventId, false, "nope"]); // throws — no prefix
 
-const closed = zostr.relayMessage
+const closed = zostr.nip01.relayMessage
   .closed()
-  .check(zostr.relayMessage.closedMessagePrefixCheck());
+  .check(zostr.nip01.relayMessage.closedMessagePrefixCheck());
 closed.parse(["CLOSED", "sub1", "error: could not connect to the database"]); // ok
 ```
 
-### `zostr.clientMessage`
+### `zostr.nip01.clientMessage`
 
 Tuple schemas for NIP-01 client→relay messages.
 
 | function | wire shape |
 | --- | --- |
-| `zostr.clientMessage.event()` | `["EVENT", event]` |
-| `zostr.clientMessage.req()` | `["REQ", subscriptionId, filter, ...filter[]]` |
-| `zostr.clientMessage.close()` | `["CLOSE", subscriptionId]` |
-| `zostr.clientMessage.any()` | union of the three above |
+| `zostr.nip01.clientMessage.event()` | `["EVENT", event]` |
+| `zostr.nip01.clientMessage.req()` | `["REQ", subscriptionId, filter, ...filter[]]` |
+| `zostr.nip01.clientMessage.close()` | `["CLOSE", subscriptionId]` |
+| `zostr.nip01.clientMessage.any()` | union of the three above |
 
 `req()` requires **at least one** filter, matching NIP-01's grammar
 (`<filters1>` then `<filters2>...`); to subscribe to everything, send a single
 empty `{}` filter.
 
 ```ts
-zostr.clientMessage.req().parse(["REQ", "sub1", { kinds: [1] }]);
-zostr.clientMessage.req().parse(["REQ", "sub1", {}]); // everything
-zostr.clientMessage.close().parse(["CLOSE", "sub1"]);
+zostr.nip01.clientMessage.req().parse(["REQ", "sub1", { kinds: [1] }]);
+zostr.nip01.clientMessage.req().parse(["REQ", "sub1", {}]); // everything
+zostr.nip01.clientMessage.close().parse(["CLOSE", "sub1"]);
 ```
 
 ## NIP-05 — identifiers
@@ -283,8 +323,9 @@ The `.well-known/nostr.json` document a NIP-05 domain serves in response to
 `GET /.well-known/nostr.json?name=<local-part>`: `names` (required — a
 mapping of local-part to lowercase 64-character hex pubkey) and `relays`
 (the spec's "recommended" optional attribute — a mapping of pubkey to an
-array of relay URLs). Unknown top-level keys are stripped rather than
-rejected, matching NIP-11's treatment of forward-compatible fields.
+array of relay URLs). Unknown top-level keys are **preserved** rather than
+stripped — the served document is forward-compatible and may carry extension
+fields, matching NIP-11's treatment.
 
 `names` keys use the same local-part character check as
 [`zostr.nip05.identifier()`](#zostrnip05identifier); `names` values and
@@ -323,16 +364,17 @@ The NIP-11 relay information document: `name`, `description`, `banner`,
 `terms_of_service`, `payments_url`, `limitation`, `fees`. Every field is
 optional, matching the spec ("Any field may be omitted, and clients MUST
 ignore any additional fields they do not understand") — unknown keys are
-stripped rather than rejected.
+**preserved** rather than stripped, at the top level and in the nested
+`limitation`/`fees` objects.
 
 `pubkey`/`self` are validated as 64-character lowercase hex strings (same as
 [`zostr.pubkey()`](#zostrpubkey)); `supported_nips` as an array of non-negative
-integers; `banner`/`icon`/`terms_of_service`/`payments_url` as URLs (any scheme,
-not just `http`/`https`); `limitation` and `fees` as nested objects with their
+integers; `banner`/`icon`/`terms_of_service`/`payments_url`/`software` as URLs
+(any scheme, not just `http`/`https`) — NIP-11 defines `software` as "URL to the
+relay's software homepage"; `limitation` and `fees` as nested objects with their
 own optional/required fields (`fees.*[].amount`/`.unit` are required,
-`.period`/`.kinds` are optional). `software`/`contact` are left as plain
-strings — `software` is documented as a URL but not always one in practice,
-and `contact` may be a bare email address rather than a URL.
+`.period`/`.kinds` are optional). `contact` is left as a plain string — it may be
+a bare email address rather than a URL.
 
 Numeric fields are validated to their spec-defined form. Count and length
 fields (`limitation.max_*`, `default_limit`, `min_pow_difficulty`,
@@ -357,6 +399,9 @@ zostr.nip11.relayInformationDocument().parse({
 ```
 
 ## NIP-19 — bech32 entities
+
+These live under `zostr.nip19.*` and are also aliased at the root (`zostr.npub`
+=== `zostr.nip19.npub`, etc.); the examples use the root spelling.
 
 ### `zostr.bech32(prefix)`
 
@@ -413,7 +458,10 @@ rather than an arbitrary choice specific to this library.
 `nprofile()`/`nevent()`/`naddr()` decode to plain objects reflecting exactly
 what `nostr-tools`' `nip19.decode()` returns, including default `relays: []`
 and `author: undefined` fields when the source bech32 string didn't encode
-them.
+them. These pointer objects **preserve** unknown keys (their output type carries
+a `[key: string]: unknown` index signature), matching the pointer interfaces'
+own index signature — the extra keys are inert, since only the fixed fields are
+encoded on the wire.
 
 ## NIP-42 — authentication
 
@@ -424,13 +472,14 @@ verification steps.
 | function | wire shape |
 | --- | --- |
 | `zostr.nip42.authEvent()` | canonical auth event `{ ..., kind: 22242 }` |
-| `zostr.nip42.authChallenge()` | `["AUTH", challenge]` (relay → client) |
-| `zostr.nip42.authRequest()` | `["AUTH", signedAuthEvent]` (client → relay) |
+| `zostr.nip42.relayMessage.auth()` | `["AUTH", challenge]` (relay → client) |
+| `zostr.nip42.clientMessage.auth()` | `["AUTH", signedAuthEvent]` (client → relay) |
 
 Both directions use the `AUTH` message name; they're distinguished by the
-payload — the relay sends a `challenge` string (`authChallenge`), the client
-replies with the signed `authEvent()` to request authentication
-(`authRequest`), and the relay answers that with an `OK` message.
+payload — the relay sends a `challenge` string
+(`nip42.relayMessage.auth`), the client replies with the signed `authEvent()`
+to request authentication (`nip42.clientMessage.auth`), and the relay answers
+that with an `OK` message.
 
 ### `zostr.nip42.authEvent()`
 
@@ -469,14 +518,14 @@ const verifiedAuth = zostr.nip42
   .check(zostr.nip42.relayTagCheck(relay))
   .check(zostr.nip42.createdAtCheck(nowInSeconds));
 
-zostr.nip42.authChallenge().parse(["AUTH", challenge]); // relay → client
-zostr.nip42.authRequest().parse(["AUTH", signedAuthEvent]); // client → relay
+zostr.nip42.relayMessage.auth().parse(["AUTH", challenge]); // relay → client
+zostr.nip42.clientMessage.auth().parse(["AUTH", signedAuthEvent]); // client → relay
 ```
 
 `AUTH` messages sent by clients are answered with the existing NIP-01 `OK`
-message (`zostr.relayMessage.ok()`); NIP-42's `auth-required:`/`restricted:`
+message (`zostr.nip01.relayMessage.ok()`); NIP-42's `auth-required:`/`restricted:`
 prefixes on `OK`/`CLOSED` are ordinary prefixes accepted by
-`zostr.relayMessage.okMessagePrefixCheck()`/`closedMessagePrefixCheck()`.
+`zostr.nip01.relayMessage.okMessagePrefixCheck()`/`closedMessagePrefixCheck()`.
 
 ## NIP-45 — event counts
 
@@ -485,8 +534,8 @@ object. Each validates structure only.
 
 | function | wire shape |
 | --- | --- |
-| `zostr.nip45.countRequest()` | `["COUNT", queryId, filter, ...filter[]]` |
-| `zostr.nip45.countResponse()` | `["COUNT", queryId, count]` |
+| `zostr.nip45.clientMessage.count()` | `["COUNT", queryId, filter, ...filter[]]` |
+| `zostr.nip45.relayMessage.count()` | `["COUNT", queryId, count]` |
 | `zostr.nip45.count()` | `{ count, approximate?, hll? }` |
 
 NIP-45 names the id `query_id` on the wire (its HLL section also calls it
@@ -495,7 +544,7 @@ subscription id — a non-empty string of at most 64 chars (see
 [`zostr.subscriptionId()`](#zostrsubscriptionid)) — which also lets a `CLOSED`
 refusal reuse the same constraints.
 
-`countRequest()` carries the same NIP-01 `REQ`/`COUNT` filters (see
+`nip45.clientMessage.count()` carries the same NIP-01 `REQ`/`COUNT` filters (see
 [`zostr.filter()`](#zostrfilter)), OR'd together. **At least one** filter is
 required, matching NIP-01's `REQ` grammar (`<filters1>` then `<filters2>...`);
 to count everything, send a single empty `{}` filter.
@@ -512,17 +561,18 @@ The COUNT response body object:
   registers concatenated). NIP-45 doesn't mandate lowercase, so upper/mixed
   case is accepted.
 
-Unknown keys are stripped (as in `zostr.event()` and the NIP-05/NIP-11
-documents), and no recovery policy (`.catch`/`.default`) is baked in.
+The COUNT response body is a fixed shape: **unknown keys are rejected** (as in
+`zostr.event()`), not silently stripped, and no recovery policy
+(`.catch`/`.default`) is baked in.
 
 ```ts
-zostr.nip45.countRequest().parse(["COUNT", "sub1", { kinds: [7], "#e": [id] }]);
-zostr.nip45.countResponse().parse(["COUNT", "sub1", { count: 93412452, approximate: true }]);
+zostr.nip45.clientMessage.count().parse(["COUNT", "sub1", { kinds: [7], "#e": [id] }]);
+zostr.nip45.relayMessage.count().parse(["COUNT", "sub1", { count: 93412452, approximate: true }]);
 zostr.nip45.count().parse({ count: 2044, hll: "01ef0705..." /* 512 hex chars */ });
 ```
 
 A relay refusing a `COUNT` request replies with NIP-01's `CLOSED` message
-(`zostr.relayMessage.closed()`), not a `COUNT`.
+(`zostr.nip01.relayMessage.closed()`), not a `COUNT`.
 
 ## NIP-50 — search
 
@@ -532,7 +582,7 @@ the relay interprets to return matching events.
 | function | wire shape |
 | --- | --- |
 | `zostr.nip50.filter()` | the NIP-01 filter plus an optional `search` string |
-| `zostr.nip50.req()` | `["REQ", subscriptionId, searchFilter, ...searchFilter[]]` |
+| `zostr.nip50.clientMessage.req()` | `["REQ", subscriptionId, searchFilter, ...searchFilter[]]` |
 
 `nip50.filter()` is [`zostr.filter()`](#zostrfilter) extended with `search`; it
 inherits the base filter's fields and `"#<letter>"` tag-filter handling, so it
@@ -554,21 +604,21 @@ The `key:value` search extensions (`include:spam`,
 filter fields, so they need no schema modeling. Ranking results by score and
 advertising support via `supported_nips` are relay concerns outside this schema.
 
-`nip50.req()` is an **intentional superset** of
-[`zostr.clientMessage.req()`](#zostrclientmessage): a search filter is a NIP-01
+`nip50.clientMessage.req()` is an **intentional superset** of
+[`zostr.nip01.clientMessage.req()`](#zostrnip01clientmessage): a search filter is a NIP-01
 filter plus optional `search`, so it also accepts plain filters, and it keeps
 the **at least one filter** requirement of NIP-01's `REQ` grammar.
-`zostr.clientMessage.req()`/`any()` stay NIP-01-only (they reject `search`), as
-does `zostr.nip45.countRequest()` — NIP-50 introduces `search` on `REQ`, not
+`zostr.nip01.clientMessage.req()`/`any()` stay NIP-01-only (they reject `search`), as
+does `zostr.nip45.clientMessage.count()` — NIP-50 introduces `search` on `REQ`, not
 `COUNT`. To accept a NIP-50 `REQ` alongside the other client messages, compose a
 union:
 
 ```ts
 zostr.nip50.filter().parse({ kinds: [1], search: "best nostr apps" });
-zostr.nip50.req().parse(["REQ", "sub1", { search: "orange" }, { kinds: [1] }]);
+zostr.nip50.clientMessage.req().parse(["REQ", "sub1", { search: "orange" }, { kinds: [1] }]);
 
 // clientMessage.any() alone rejects a search filter:
-const clientMessage = z.union([zostr.clientMessage.any(), zostr.nip50.req()]);
+const clientMessage = z.union([zostr.nip01.clientMessage.any(), zostr.nip50.clientMessage.req()]);
 clientMessage.parse(["REQ", "sub1", { search: "purple" }]);
 ```
 
@@ -579,7 +629,7 @@ strings.
 
 | function | wire shape |
 | --- | --- |
-| `zostr.nip67.eose()` | `["EOSE", subscriptionId]` or `["EOSE", subscriptionId, hints]` |
+| `zostr.nip67.relayMessage.eose()` | `["EOSE", subscriptionId]` or `["EOSE", subscriptionId, hints]` |
 
 `eose()` is a union of the exact two- and three-element wire shapes (not a tuple
 with an optional third item), so it accepts only the shapes that appear on the
@@ -596,18 +646,18 @@ leave completeness unknown, in which case NIP-67 says the client SHOULD paginate
 with `until` set to the oldest received event's `created_at`. Interpreting the
 hints is the consumer's job — the schema validates structure only.
 
-`zostr.nip67.eose()` is a strict superset of
-[`zostr.relayMessage.eose()`](#zostrrelaymessage) (it also accepts the bare
-two-element form). `zostr.relayMessage.any()` stays NIP-01-only — like the
+`zostr.nip67.relayMessage.eose()` is a strict superset of
+[`zostr.nip01.relayMessage.eose()`](#zostrnip01relaymessage) (it also accepts the bare
+two-element form). `zostr.nip01.relayMessage.any()` stays NIP-01-only — like the
 NIP-42/45 messages, it isn't folded in — so to accept a NIP-67 `EOSE` alongside
 the other relay messages, compose a union:
 
 ```ts
-zostr.nip67.eose().parse(["EOSE", "sub1"]); // bare NIP-01 form still accepted
-zostr.nip67.eose().parse(["EOSE", "sub1", ["finish"]]);
+zostr.nip67.relayMessage.eose().parse(["EOSE", "sub1"]); // bare NIP-01 form still accepted
+zostr.nip67.relayMessage.eose().parse(["EOSE", "sub1", ["finish"]]);
 
 // relayMessage.any() alone rejects the three-element form:
-const relayMessage = z.union([zostr.relayMessage.any(), zostr.nip67.eose()]);
+const relayMessage = z.union([zostr.nip01.relayMessage.any(), zostr.nip67.relayMessage.eose()]);
 relayMessage.parse(["EOSE", "sub1", ["more"]]);
 ```
 

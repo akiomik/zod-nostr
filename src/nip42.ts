@@ -41,7 +41,7 @@ function authEvent() {
  * Relay-to-client `AUTH` message: `["AUTH", challenge]`. The challenge is an
  * arbitrary relay-chosen string (NIP-42 places no format constraint on it).
  */
-function authChallenge() {
+function relayAuthMessage() {
   return zodTuple([zodLiteral("AUTH"), zodString()]);
 }
 
@@ -52,7 +52,7 @@ function authChallenge() {
  * only; compose `.check(signatureCheck())` on `authEvent()` to verify the
  * signature.
  */
-function authRequest() {
+function clientAuthMessage() {
   return zodTuple([zodLiteral("AUTH"), authEvent()]);
 }
 
@@ -148,10 +148,16 @@ function createdAtCheck(
 export const nip42 = {
   /** Canonical authentication event (`kind: 22242`, structure only) */
   authEvent,
-  /** Relay-to-client `["AUTH", challenge]` */
-  authChallenge,
-  /** Client-to-relay `["AUTH", signedAuthEvent]` */
-  authRequest,
+  /** Relay-to-client `AUTH` message */
+  relayMessage: {
+    /** Relay-to-client `["AUTH", challenge]` */
+    auth: relayAuthMessage,
+  },
+  /** Client-to-relay `AUTH` message */
+  clientMessage: {
+    /** Client-to-relay `["AUTH", signedAuthEvent]` */
+    auth: clientAuthMessage,
+  },
   /** Opt-in check: the `"challenge"` tag matches the relay's challenge */
   challengeTagCheck,
   /** Opt-in check: the `"relay"` tag matches the relay URL */

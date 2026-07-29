@@ -44,10 +44,17 @@ export function zodLiteral<T extends core.util.Literal>(
 
 export function zodArray<T extends core.SomeType>(
   element: T,
+  checks: core.$ZodCheck<unknown[]>[] = [],
 ): core.$ZodArray<T> {
-  const def = { type: "array", element };
+  const def = { type: "array", element, checks };
   // biome-ignore lint/suspicious/noExplicitAny: $constructor doesn't accept a typed def; the return type is asserted explicitly below.
   return new core.$ZodArray(def as any) as unknown as core.$ZodArray<T>;
+}
+
+export function zodNever(): core.$ZodNever {
+  const def = { type: "never" };
+  // biome-ignore lint/suspicious/noExplicitAny: $constructor doesn't accept a typed def; the return type is asserted explicitly below.
+  return new core.$ZodNever(def as any) as core.$ZodNever;
 }
 
 export function zodTuple<T extends core.SomeType[]>(
