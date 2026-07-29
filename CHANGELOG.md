@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-07-29
+
 This release reorganizes the public API around **canonical owner paths**. Every
 schema, codec, check, and utility now has exactly one canonical owner — usually
 its spec namespace (`zostr.nip19.npub`, `zostr.nip05.identifier`), a domain
@@ -439,7 +441,8 @@ under each NIP instead of by collision-specific name suffixes.
   `core.$ZodCodec` instead of being re-wrapped through the flavor's own
   constructor.
 
-[Unreleased]: https://github.com/akiomik/zod-nostr/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/akiomik/zod-nostr/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/akiomik/zod-nostr/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/akiomik/zod-nostr/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/akiomik/zod-nostr/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/akiomik/zod-nostr/compare/v0.2.0...v0.2.1
