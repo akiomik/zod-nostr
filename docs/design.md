@@ -125,6 +125,25 @@ Fields and schemas are named for the spec that defines them (e.g. `nip05`, and
 the NIP-24 / LUD-16 / LUD-06 metadata fields), so the public surface reflects
 provenance.
 
+### Naming
+
+Public names follow provenance and the protocol's own wire vocabulary:
+
+- **Object schemas** are named for what they model (`filter`, `event`, `count`,
+  `authEvent`); a NIP namespace drops the redundant prefix (`nip50.filter`, not
+  `nip50.searchFilter`).
+- **Protocol messages** are named for their wire-type token, lowercased verbatim
+  (`req`, `eose`, `ok`, `count`) — never expanded to English (`req`, not
+  `request`). A role/direction suffix is added *only* when one wire type carries
+  two messages that would otherwise collide, and the suffix is a full word:
+  `countRequest`/`countResponse` (COUNT both ways), `challengeMessage`/
+  `authMessage` (AUTH both ways). A single-message type stays bare (`nip67.eose`,
+  `nip50.req`). The suffix is a role word, not a token, so it is never
+  abbreviated (`countResponse`, not `countRes`).
+- A schema that is a **superset** of an existing one reuses the leaf name to
+  signal the relationship: `nip50.req` ⊃ `clientMessage.req`, `nip50.filter` ⊃
+  `filter`, `nip67.eose` ⊃ `relayMessage.eose`.
+
 ## Composition examples
 
 Compose strict atoms into an application schema. Minimal example (classic) — a

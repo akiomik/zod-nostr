@@ -230,10 +230,20 @@ const FILTER_KNOWN_KEYS = new Set([
 
 const FILTER_TAG_KEY = /^#[a-zA-Z]$/;
 
-export function filterTagKeysCheck(): core.$ZodCheck<Record<string, unknown>> {
+/**
+ * Rejects filter keys that are neither a known NIP-01 field nor a `"#<letter>"`
+ * tag filter. `extraKeys` additionally allows spec-extension fields defined by
+ * other NIPs (e.g. NIP-50's `"search"`), so the NIP-01 known-key set stays
+ * NIP-01 while a variant can widen it without duplicating this logic. The
+ * allowed set is materialized once at construction, not per parsed value.
+ */
+export function filterTagKeysCheck(
+  extraKeys: Iterable<string> = [],
+): core.$ZodCheck<Record<string, unknown>> {
+  const knownKeys = new Set([...FILTER_KNOWN_KEYS, ...extraKeys]);
   return makeCheck<Record<string, unknown>>((payload) => {
     for (const key of Object.keys(payload.value)) {
-      if (!FILTER_KNOWN_KEYS.has(key) && !FILTER_TAG_KEY.test(key)) {
+      if (!knownKeys.has(key) && !FILTER_TAG_KEY.test(key)) {
         payload.issues.push({
           code: "custom",
           input: payload.value,

@@ -39,6 +39,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   HyperLogLog registers). The `queryId` reuses the NIP-01 subscription-id format.
   Structure only; a relay refusing a `COUNT` replies with the existing NIP-01
   `CLOSED` message.
+- `zostr.nip50` — NIP-50 search. `zostr.nip50.filter()` is `zostr.filter()`
+  extended with an optional `search` string (a plain optional string, no
+  `.min`/recovery policy baked in; empty strings are spec-valid, and the
+  `key:value` search extensions live inside the string, not as extra fields). It
+  inherits the base filter's fields and `"#<letter>"` tag-filter handling, so it
+  tracks NIP-01 automatically. `zostr.nip50.req()` is the client-to-relay
+  `["REQ", subscriptionId, searchFilter, ...searchFilter[]]` message — an
+  intentional superset of `zostr.clientMessage.req()` (it also accepts plain
+  NIP-01 filters) that keeps the at-least-one-filter requirement of NIP-01's
+  `REQ` grammar. `zostr.clientMessage.req()`/`any()` stay NIP-01-only (they
+  reject `search`), as does `zostr.nip45.countRequest()` (NIP-50 adds `search`
+  to `REQ`, not `COUNT`), so compose `z.union([zostr.clientMessage.any(),
+  zostr.nip50.req()])` to accept a NIP-50 `REQ` alongside the other client
+  messages.
 - `zostr.nip67` — NIP-67 EOSE completeness hint. `nip67.eose()` is the
   relay-to-client `EOSE` message extended with an optional third element, an
   array of hint strings: `["EOSE", subscriptionId]` or `["EOSE", subscriptionId,
