@@ -131,8 +131,8 @@ An **object schema** for a parsed kind:0 profile. Every known field is
 list); unknown keys are **preserved** as `unknown` (a forward-compatible
 catchall), not stripped. No `.catch()`/fallback is baked in — a present-but-
 invalid field fails, so layer your own recovery policy on top (or reuse the
-field atoms from `metadataFields`). For the common case of a client that writes
-`""` to clear a field instead of removing the key, see
+field atoms from `metadataFields`). For clients that write `""` to clear a field
+instead of removing the key, see
 [Recipe: empty-string fields](#recipe-empty-string-fields).
 
 ```ts
@@ -244,6 +244,10 @@ removes or normalizes it after decoding, keeping that policy out of the schema.
 In zod/mini, compose the field the same way with the functional API:
 
 ```ts
+import * as z from "zod/mini";
+import { zostr } from "zod-nostr/mini";
+
+const f = zostr.nip01.metadataFields;
 const Metadata = z.extend(zostr.nip01.metadata(), {
   website: z.optional(z.union([f.website(), z.literal("")])),
 });

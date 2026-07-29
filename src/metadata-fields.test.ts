@@ -165,6 +165,9 @@ describe("metadataFields composition", () => {
 
     const codec = classicZostr.jsonCodec(schema);
     expect(codec.decode('{"website":""}')).toEqual({ website: "" });
+    expect(codec.decode('{"website":"https://example.com"}')).toEqual({
+      website: "https://example.com",
+    });
     expect(codec.encode({ website: "" })).toBe('{"website":""}');
     expect(codec.encode({ website: "https://example.com" })).toBe(
       '{"website":"https://example.com"}',
@@ -186,6 +189,9 @@ describe("metadataFields composition", () => {
 
     const codec = miniZostr.jsonCodec(schema);
     expect(zm.decode(codec, '{"website":""}')).toEqual({ website: "" });
+    expect(zm.decode(codec, '{"website":"https://example.com"}')).toEqual({
+      website: "https://example.com",
+    });
     expect(zm.encode(codec, { website: "" })).toBe('{"website":""}');
     expect(zm.encode(codec, { website: "https://example.com" })).toBe(
       '{"website":"https://example.com"}',
