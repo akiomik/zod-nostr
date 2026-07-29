@@ -8,11 +8,12 @@ import { zostr as miniZostr } from "./mini.js";
  * 1. A schema defined in a src/nipXX.ts module but never wired into
  *    classic.ts/mini.ts's exported `zostr` object (the original reason this file
  *    exists — zostr.nip05() once existed in source but was unreachable).
- * 2. The canonical-path / root-alias contract drifting: every public API has one
- *    canonical spec-namespaced path, a curated set of Nostr-wide concepts is
- *    re-exposed at the root as a **direct reference** to its canonical factory
- *    (so `zostr.event === zostr.nip01.event`), and classic and mini expose an
- *    identical key tree.
+ * 2. The canonical-owner / re-export contract drifting: every public API has one
+ *    canonical owner path, and every other appearance (a root alias, or an
+ *    in-catalog re-export like `nip01.metadataFields.nip05`) is a **direct
+ *    reference** to its canonical factory (so `zostr.event === zostr.nip01.event`
+ *    and `zostr.nip01.metadataFields.nip05 === zostr.nip05.identifier`); classic
+ *    and mini expose an identical key tree.
  *
  * The expected surface below IS the release contract: an intentional change to
  * it must be a deliberate edit here (and a CHANGELOG entry), not silent drift.

@@ -7,14 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-This release reorganizes the public API around **canonical, spec-namespaced
-paths**. Every schema, codec, check, and utility now has exactly one canonical
-home derived from the NIP that defines it (`zostr.nip01.*`, `zostr.nip19.*`, …).
-A small, curated set of Nostr-wide concepts is re-exposed at the root as an
-**ergonomic alias** that is a _direct reference_ to its canonical factory, so
-`zostr.event === zostr.nip01.event`. Message direction is now carried by a
-`relayMessage`/`clientMessage` namespace under each NIP instead of by
-collision-specific name suffixes.
+This release reorganizes the public API around **canonical owner paths**. Every
+schema, codec, check, and utility now has exactly one canonical owner — usually
+its spec namespace (`zostr.nip19.npub`, `zostr.nip05.identifier`), a domain
+namespace for a cross-spec catalog (`zostr.nip01.metadataFields.*`), or the root
+for a cross-spec utility (`zostr.jsonCodec`). A small, curated set of Nostr-wide
+concepts is re-exposed at the root as an **ergonomic alias** that is a _direct
+reference_ to its canonical factory, so `zostr.event === zostr.nip01.event`.
+Message direction is now carried by a `relayMessage`/`clientMessage` namespace
+under each NIP instead of by collision-specific name suffixes.
 
 ### Added
 

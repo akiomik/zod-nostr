@@ -26,7 +26,7 @@
     "format": "biome format --write .",
     "check": "biome check .",
     "check:write": "biome check --write .",
-    "test:consumer": "npm run build && tsc -p test/consumer/tsconfig.json",
+    "test:consumer": "node test/consumer/check.mjs",
     "prepublishOnly": "npm run typecheck && npm run check && npm test && npm run build && npm run test:consumer"
   },
   "keywords": [

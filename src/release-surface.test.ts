@@ -3,16 +3,26 @@ import { zostr as classicZostr } from "./classic.js";
 import { zostr as miniZostr } from "./mini.js";
 
 /**
- * Release-surface comparison gate. Compares the current public surface against
- * the last published release (v0.4.0) and requires every removed/renamed path to
- * be an explicitly-declared intentional breaking change. Additive paths (new
- * canonical namespaces, aliases) are always allowed; an *unclassified* removal
- * fails the build, so 0.5.0's breaking path changes can't drift silently and a
- * future release can't drop a path by accident.
+ * Release-surface comparison gate. Compares the current public runtime surface
+ * against the last published release (v0.4.0) and requires every removed/renamed
+ * path to be an explicitly-declared intentional breaking change. Additive paths
+ * (new canonical namespaces, aliases) are always allowed; an *unclassified*
+ * removal fails the build, so 0.5.0's breaking path changes can't drift silently
+ * and a future release can't drop a path by accident.
+ *
+ * Scope: this checks the runtime `zostr` key tree. The package's declared type
+ * contract — `package.json#exports` (`.` / `./mini`), the named type exports,
+ * and classic/Mini parity — is exercised by the packed-consumer compile gate
+ * (`test/consumer/`), which imports the tarball the way a real consumer does.
  */
 
-// The full public path set as published in v0.4.0 (namespace nodes and leaf
-// factories, dotted). This is release history — it does not change.
+// The full public path set as published in the last release, v0.4.0 (namespace
+// nodes and leaf factories, dotted). This is release history — it does not
+// change. It deliberately excludes NIP-42/45/50/67 and the NIP-10/NIP-19
+// namespaces: those did not exist in v0.4.0 (NIP-42/45/50/67 were added,
+// unreleased, on main and debut in 0.5.0 with canonical names; bech32/npub/...
+// were root-only in v0.4.0, and gain a `nip19` namespace in 0.5.0). All of that
+// is additive against v0.4.0, so it isn't part of this comparison.
 const V0_4_0_PATHS: string[] = [
   // root
   "pubkey",
@@ -71,27 +81,13 @@ const V0_4_0_PATHS: string[] = [
   "nip01.metadataFields.lud06",
   "nip11",
   "nip11.relayInformationDocument",
-  "nip42",
-  "nip42.authEvent",
-  "nip42.authChallenge",
-  "nip42.authRequest",
-  "nip42.challengeTagCheck",
-  "nip42.relayTagCheck",
-  "nip42.createdAtCheck",
-  "nip45",
-  "nip45.count",
-  "nip45.countRequest",
-  "nip45.countResponse",
-  "nip50",
-  "nip50.filter",
-  "nip50.req",
-  "nip67",
-  "nip67.eose",
 ];
 
 // Paths from v0.4.0 that 0.5.0 intentionally removes or renames. Every entry
 // must actually be gone (asserted below); anything removed but not listed here
-// is unexpected drift and fails.
+// is unexpected drift and fails. (The NIP-42/45/50/67 interim names —
+// authChallenge/countRequest/... — are NOT here: they never shipped in a
+// release, so renaming them is not a removal from v0.4.0.)
 const INTENTIONAL_REMOVALS: string[] = [
   // root relay/client message namespaces -> nip01.*
   "relayMessage",
@@ -110,13 +106,6 @@ const INTENTIONAL_REMOVALS: string[] = [
   "clientMessage.any",
   // textNote -> nip10.textNote (its NIP-10 canonical owner)
   "nip01.textNote",
-  // directional message renames
-  "nip42.authChallenge", // -> nip42.relayMessage.auth
-  "nip42.authRequest", // -> nip42.clientMessage.auth
-  "nip45.countRequest", // -> nip45.clientMessage.count
-  "nip45.countResponse", // -> nip45.relayMessage.count
-  "nip50.req", // -> nip50.clientMessage.req
-  "nip67.eose", // -> nip67.relayMessage.eose
 ];
 
 function currentPaths(zostr: object): Set<string> {

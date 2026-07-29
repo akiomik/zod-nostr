@@ -54,9 +54,11 @@ z.parse(zostr.event().check(zostr.signatureCheck()), someEvent);
 The `zostr` object exposes the identical set of functions from both entry
 points — only the import path and the ambient zod flavor differ.
 
-Every API has one **canonical**, NIP-namespaced path (`zostr.nip01.event()`,
-`zostr.nip19.npub()`, …). Frequently used Nostr-wide concepts are also re-exposed
-at the root as an ergonomic alias that is a direct reference to the same factory:
+Every API has one **canonical owner path** — usually its spec namespace
+(`zostr.nip19.npub()`), a domain namespace for a cross-spec catalog
+(`zostr.nip01.metadataFields.*`), or the root for a cross-spec utility
+(`zostr.jsonCodec()`). Frequently used Nostr-wide concepts are also re-exposed at
+the root as an ergonomic alias that is a direct reference to the same factory:
 
 ```ts
 zostr.event(); // alias of zostr.nip01.event()

@@ -2,10 +2,12 @@
   "comment": [
     "Compiles the fixture the way an external consumer would: it imports the",
     "package by its published specifiers ('zod-nostr' / 'zod-nostr/mini'),",
-    "which the `paths` mapping resolves to the BUILT declarations in dist/ — not",
-    "to src/. So this exercises the emitted .d.ts (the real public type surface),",
-    "catching type regressions that source-relative tests can't. Requires",
-    "`npm run build` first."
+    "resolved through node_modules — NOT via a paths mapping. `check.mjs` packs",
+    "the package with `npm pack` and extracts the tarball into",
+    "test/consumer/node_modules/zod-nostr first, so resolution goes through the",
+    "real package.json#exports and the tarball's `files` — catching a dropped",
+    "'./mini' export, a missing declaration, or a wrong entry point, on top of the",
+    "emitted-.d.ts type contract. Run it with `npm run test:consumer`."
   ],
   "compilerOptions": {
     "target": "ES2022",
@@ -15,11 +17,7 @@
     "noUncheckedIndexedAccess": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "noEmit": true,
-    "paths": {
-      "zod-nostr": ["../../dist/classic.d.ts"],
-      "zod-nostr/mini": ["../../dist/mini.d.ts"]
-    }
+    "noEmit": true
   },
   "include": ["consumer.ts"]
 }

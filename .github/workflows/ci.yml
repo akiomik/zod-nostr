@@ -34,5 +34,5 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: External consumer compile
-        run: npx tsc -p test/consumer/tsconfig.json
+      - name: External consumer compile (packed tarball)
+        run: npm run test:consumer
