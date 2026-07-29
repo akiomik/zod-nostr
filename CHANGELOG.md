@@ -224,6 +224,21 @@ under each NIP instead of by collision-specific name suffixes.
 
 ## [0.3.0] - 2026-07-28
 
+### Added
+
+- `zostr.nip01.metadataContent()`: codec between a kind:0 `content` string and
+  the `metadata()` profile object (same decode/encode behavior as
+  `zostr.jsonCodec(zostr.nip01.metadata())`).
+- `ProfileMetadata` type export (the output type of `zostr.nip01.metadata()`):
+  optional known fields plus an `unknown`-typed catchall for extra keys.
+- Generic JSON codec: `zostr.jsonCodec(schema)`. Decodes a JSON string through
+  the given schema (`JSON.parse` + schema; invalid JSON or a schema mismatch is
+  a Zod issue, not a raw throw). Encodes a value back to a JSON string when the
+  schema is backward-encodable (schema + `JSON.stringify`; a one-way
+  `.transform()` throws per zod's codec rules, while `JSON.stringify`'s own raw
+  errors and a top-level `undefined` become Zod issues). Additive; decode
+  composes with any output schema.
+
 ### Changed
 
 - **Breaking:** `zostr.nip01.metadata()` now returns an **object schema** for a
@@ -264,21 +279,6 @@ under each NIP instead of by collision-specific name suffixes.
   It previously accepted uppercase (e.g. `Bob@example.com`); those are now
   rejected. This also tightens `.well-known/nostr.json` `names` key validation
   (`zostr.nip05.nostrJsonDocument()`), which shares the same rule.
-
-### Added
-
-- `zostr.nip01.metadataContent()`: codec between a kind:0 `content` string and
-  the `metadata()` profile object (same decode/encode behavior as
-  `zostr.jsonCodec(zostr.nip01.metadata())`).
-- `ProfileMetadata` type export (the output type of `zostr.nip01.metadata()`):
-  optional known fields plus an `unknown`-typed catchall for extra keys.
-- Generic JSON codec: `zostr.jsonCodec(schema)`. Decodes a JSON string through
-  the given schema (`JSON.parse` + schema; invalid JSON or a schema mismatch is
-  a Zod issue, not a raw throw). Encodes a value back to a JSON string when the
-  schema is backward-encodable (schema + `JSON.stringify`; a one-way
-  `.transform()` throws per zod's codec rules, while `JSON.stringify`'s own raw
-  errors and a top-level `undefined` become Zod issues). Additive; decode
-  composes with any output schema.
 
 ## [0.2.1] - 2026-07-28
 
@@ -406,6 +406,16 @@ under each NIP instead of by collision-specific name suffixes.
   using an `NPM_TOKEN` repository secret (trusted publishing isn't set up
   yet). A matching `prepublishOnly` script provides the same safety net for
   local `npm publish`.
+- `src/api-surface.test.ts`: asserts the exact set of public keys on `zostr`
+  (and `zostr.nip01`) for both entry points, and that classic/mini expose
+  identical key sets. Regression coverage for schemas/functions that exist
+  internally but are never wired into the public `zostr` object.
+- `src/classic.test.ts` / `src/mini.test.ts`: assert every event schema and
+  codec exposes its flavor's native `.check()`, and (classic only) every
+  codec exposes native `.decode()`/`.encode()`. Regression coverage for
+  `zostr` members that accidentally return an unwrapped `core.$ZodType`/
+  `core.$ZodCodec` instead of being re-wrapped through the flavor's own
+  constructor.
 
 ### Fixed
 
@@ -427,19 +437,6 @@ under each NIP instead of by collision-specific name suffixes.
 - Added a `workflow_dispatch` trigger to `publish.yml` so a failed publish
   can be retried by re-running the workflow against the existing tag, without
   having to delete and recreate the GitHub Release.
-
-### Testing
-
-- `src/api-surface.test.ts`: asserts the exact set of public keys on `zostr`
-  (and `zostr.nip01`) for both entry points, and that classic/mini expose
-  identical key sets. Regression coverage for schemas/functions that exist
-  internally but are never wired into the public `zostr` object.
-- `src/classic.test.ts` / `src/mini.test.ts`: assert every event schema and
-  codec exposes its flavor's native `.check()`, and (classic only) every
-  codec exposes native `.decode()`/`.encode()`. Regression coverage for
-  `zostr` members that accidentally return an unwrapped `core.$ZodType`/
-  `core.$ZodCodec` instead of being re-wrapped through the flavor's own
-  constructor.
 
 [Unreleased]: https://github.com/akiomik/zod-nostr/compare/v0.5.0...HEAD
 [0.5.0]: https://github.com/akiomik/zod-nostr/compare/v0.4.0...v0.5.0
