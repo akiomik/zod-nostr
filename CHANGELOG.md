@@ -20,10 +20,15 @@ collision-specific name suffixes.
 
 - **`zostr.nip01`** is now the canonical home for every base Nostr concept:
   the field primitives (`pubkey`/`eventId`/`signature`/`timestamp`/`kind`/`tags`/
-  `subscriptionId`), the event schemas (`eventTemplate`/`unsignedEvent`/`event`/
-  `textNote`), `signatureCheck`, the REQ/COUNT `filter`, the relay/client
-  message namespaces, and the kind:0 profile content
-  (`metadata`/`metadataContent`/`metadataFields.*`).
+  `subscriptionId`), the event schemas (`eventTemplate`/`unsignedEvent`/`event`),
+  `signatureCheck`, the REQ/COUNT `filter`, the relay/client message namespaces,
+  and the kind:0 profile content (`metadata`/`metadataContent`/
+  `metadataFields.*`). `metadataFields.nip05` is a direct reference to the
+  canonical `nip05.identifier`.
+- **`zostr.nip10`** is the canonical home for the kind:1 text note:
+  `nip10.textNote()` (moved from `nip01.textNote`, see _Removed_) — NIP-10
+  defines kind 1 as a plaintext note. Structure only, same as `event()`; it does
+  not model NIP-10's reply/thread tag conventions.
 - **`zostr.nip19`** is now the canonical home for the bech32 entities:
   `bech32`, `npub`, `nsec`, `note`, `nprofile`, `nevent`, `naddr`.
 - **Root ergonomic aliases** (unchanged names, now direct references into the
@@ -166,6 +171,15 @@ collision-specific name suffixes.
   // before → after
   zostr.relayMessage.ok()    →  zostr.nip01.relayMessage.ok()
   zostr.clientMessage.req()  →  zostr.nip01.clientMessage.req()
+  ```
+
+- **Breaking:** `zostr.nip01.textNote()` is removed; the kind:1 text note now
+  lives at `zostr.nip10.textNote()` (its canonical owner — NIP-10 defines kind 1
+  as a plaintext note), see _Added_. Behavior is unchanged.
+
+  ```ts
+  // before → after
+  zostr.nip01.textNote()  →  zostr.nip10.textNote()
   ```
 
 

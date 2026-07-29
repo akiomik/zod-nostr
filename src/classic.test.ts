@@ -205,7 +205,7 @@ describe("zostr (classic)", () => {
       () => zostr.event(),
       () => zostr.unsignedEvent(),
       () => zostr.eventTemplate(),
-      () => zostr.nip01.textNote(),
+      () => zostr.nip10.textNote(),
       () => zostr.npub(),
       () => zostr.nsec(),
       () => zostr.note(),
@@ -261,7 +261,7 @@ describe("zostr (classic)", () => {
     }
   });
 
-  it("nip01.textNote() enforces kind === 1", () => {
+  it("nip10.textNote() enforces kind === 1", () => {
     const sk = generateSecretKey();
     const note = finalizeEvent(
       { kind: 1, created_at: 0, tags: [], content: "hi" },
@@ -272,8 +272,8 @@ describe("zostr (classic)", () => {
       sk,
     );
 
-    expect(zostr.nip01.textNote().parse(note)).toBeTruthy();
-    expect(() => zostr.nip01.textNote().parse(reaction)).toThrow();
+    expect(zostr.nip10.textNote().parse(note)).toBeTruthy();
+    expect(() => zostr.nip10.textNote().parse(reaction)).toThrow();
   });
 
   it("subscriptionId() enforces a non-empty string of at most 64 chars", () => {

@@ -72,7 +72,6 @@ const NIP01: Surface = {
   clientMessage: CLIENT_MESSAGE,
   metadata: FN,
   metadataContent: FN,
-  textNote: FN,
   metadataFields: METADATA_FIELDS,
 };
 
@@ -93,6 +92,7 @@ const EXPECTED_SURFACE: Surface = {
   nip01: NIP01,
   nip19: NIP19,
   nip05: { identifier: FN, nostrJsonDocument: FN, formatIdentifier: FN },
+  nip10: { textNote: FN },
   nip11: { relayInformationDocument: FN },
   nip42: {
     authEvent: FN,
@@ -199,6 +199,14 @@ describe.each([
     for (const key of NIP19_ALIASES) {
       expect(root[key], `zostr.${key} === zostr.nip19.${key}`).toBe(nip19[key]);
     }
+  });
+
+  it("the kind:0 profile `nip05` field is a direct reference to nip05.identifier", () => {
+    const root = zostr as AnyRecord;
+    const metadataFields = (root.nip01 as AnyRecord)
+      .metadataFields as AnyRecord;
+    const nip05 = root.nip05 as AnyRecord;
+    expect(metadataFields.nip05).toBe(nip05.identifier);
   });
 });
 

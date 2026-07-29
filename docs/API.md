@@ -14,10 +14,12 @@ methods). With `zod/mini`, use the functional equivalents instead:
 
 ## Canonical paths and root aliases
 
-Every schema, codec, check, and utility has exactly one **canonical** path,
-namespaced by the NIP that defines it — `zostr.nip01.*`, `zostr.nip19.*`,
-`zostr.nip05.*`, and so on. A small, curated set of Nostr-wide concepts is also
-re-exposed at the **root** as an ergonomic alias:
+Every schema, codec, check, and utility has exactly one **canonical owner
+path** — usually its spec namespace (`zostr.nip01.*`, `zostr.nip19.*`,
+`zostr.nip05.*`, …). A cross-spec catalog is owned by its domain namespace (the
+kind:0 profile-field atoms live under `zostr.nip01.metadataFields.*`), and a
+cross-spec utility by the root (`zostr.jsonCodec`). A small, curated set of
+Nostr-wide concepts is also re-exposed at the **root** as an ergonomic alias:
 
 ```ts
 zostr.event === zostr.nip01.event; // true — the alias is a direct reference
@@ -107,7 +109,7 @@ zostr.event().check(zostr.signatureCheck()).parse(event);
 ```
 
 The event shape is fixed: **unknown keys are rejected**, not silently stripped
-(the same for `eventTemplate()`, `unsignedEvent()`, `textNote()`, and
+(the same for `eventTemplate()`, `unsignedEvent()`, `nip10.textNote()`, and
 `nip42.authEvent()`). Forward-compatible metadata belongs in `tags`.
 
 ### `zostr.signatureCheck()`
@@ -162,10 +164,12 @@ dropping them.
 
 ### `zostr.nip01.metadataFields`
 
-Field-level schemas for kind:0 profile metadata, grouped by NIP/LUD origin.
-Use these to compose your **own** profile schema (add per-field fallbacks,
-reuse a subset, or tighten a field) — from scratch or by extending
-[`metadata()`](#zostrnip01metadata).
+The canonical catalog of field-level schemas for kind:0 profile metadata. The
+value formats come from several specs (`origin` below); that provenance is an
+attribute, not a path — the catalog is owned here because it composes one
+consumer domain (the profile). Use these to compose your **own** profile schema
+(add per-field fallbacks, reuse a subset, or tighten a field) — from scratch or
+by extending [`metadata()`](#zostrnip01metadata).
 
 | factory | origin | validates |
 | --- | --- | --- |
@@ -180,6 +184,11 @@ reuse a subset, or tighten a field) — from scratch or by extending
 | `metadataFields.nip05()` | NIP-05 | NIP-05 identifier |
 | `metadataFields.lud16()` | LUD-16 | `<username>[+<tag>]@<domain>` lightning address |
 | `metadataFields.lud06()` | LUD-06 | bech32 `lnurl` string (checksum + data words) |
+
+`metadataFields.nip05()` is a **direct reference** to
+[`zostr.nip05.identifier()`](#zostrnip05identifier) (the NIP-05 identifier's
+canonical home) — the profile field and the general schema are the same factory,
+not two copies.
 
 Each schema is **strict and non-optional** — a deliberate choice so you can add
 `optional`/`catch`/`default` yourself (a pre-weakened field can't be recovered).
@@ -198,12 +207,6 @@ const Profile = z.object({
 
 In zod/mini, compose with the functional API instead
 (`z._default(z.catch(f.name(), ""), "")`).
-
-### `zostr.nip01.textNote()`
-
-Same shape as `zostr.event()`, with `kind` constrained to the literal value
-`1`. Structure only, same as `event()` — compose `.check(zostr.signatureCheck())`
-if you need signature verification.
 
 ### `zostr.subscriptionId()`
 
@@ -357,6 +360,21 @@ root-identifier prefix, per [NIP-05](https://github.com/nostr-protocol/nips/blob
 ```ts
 zostr.nip05.formatIdentifier("_@example.com"); // "example.com"
 zostr.nip05.formatIdentifier("bob@example.com"); // "bob@example.com"
+```
+
+## NIP-10 — text notes
+
+### `zostr.nip10.textNote()`
+
+The kind:1 text note: the same shape as `zostr.event()` with `kind` constrained
+to `1` (the definition of kind 1 as a plaintext note belongs to NIP-10). It
+validates the minimum **structural** form only — like `event()` it does not
+verify the signature (compose `.check(zostr.signatureCheck())`), and it does
+**not** validate NIP-10's reply/thread `e`/`p` tag conventions. Unknown keys are
+rejected, the same as `event()`.
+
+```ts
+zostr.nip10.textNote().parse(signedKind1Event);
 ```
 
 ## NIP-11 — relay information document

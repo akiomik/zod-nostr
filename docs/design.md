@@ -36,27 +36,36 @@ Validation logic is defined once against `zod/v4/core` and exposed through both
 the classic and zod/mini entry points as each flavor's native schema. Neither
 flavor is the source of truth; both re-wrap the shared core.
 
-### Canonical spec paths, with direct-reference ergonomic aliases
+### Canonical owner paths, with direct-reference re-exports
 
-Every public schema, codec, check, and utility has exactly one **canonical**
-path, namespaced by the specification that defines it (`nip01.*`, `nip19.*`,
-`nip05.*`, …). The canonical path is the documentation and compatibility source
-of truth.
+Every public schema, codec, check, and utility has exactly one **canonical
+owner path** — the single documentation and compatibility source of truth for
+it. Ownership follows the public API's shape, not a mechanical read of every
+spec a schema touches:
 
-A small, curated set of Nostr-wide concepts is additionally re-exposed at the
-**root** as an ergonomic alias. An alias is a **direct reference** to the same
-canonical factory — never a separate wrapper — so identity holds
-(`zostr.event === zostr.nip01.event`) and the two cannot drift in behavior or
-inferred type. An alias must not delegate through a wrapper, add or omit checks,
-change types, carry its own behavior docs, or become the source the canonical
-path is implemented from.
+- a spec-specific protocol concept is normally owned by its spec namespace
+  (`nip50.filter`, `nip19.npub`, `nip05.identifier`);
+- a cross-spec catalog that composes one consumer domain can be owned by that
+  domain's namespace (`nip01.metadataFields.*` owns the kind:0 profile-field
+  catalog, whose values draw on NIP-01/NIP-24/LUD);
+- a cross-spec utility can be owned by the root (`jsonCodec`).
 
-The root alias set is a deliberately curated product surface (Nostr-wide
-primitives and the globally unique NIP-19 entities), not the output of an
-eligibility algorithm; adding one is an explicit API decision. Message
-namespaces and kind-specific content (`metadata`, `textNote`, …) are not
-aliased. The one root-only member is `jsonCodec`, a cross-spec utility rather
-than an alias.
+Provenance — which spec defines a value's format — is recorded as an attribute
+in the API docs, spec evidence, and tests, **not** encoded into the path.
+Otherwise the surface would grow a namespace per standards body (a `lud`
+namespace beside `nip24`, and so on) just to display provenance.
+
+Every other appearance of an API is a **direct reference** to its canonical
+factory — never a separate wrapper — so identity holds and the two cannot drift
+in behavior or inferred type. This covers both the ergonomic **root aliases**
+(`zostr.event === zostr.nip01.event`; a curated set of Nostr-wide primitives and
+the globally unique NIP-19 entities) and any **in-catalog re-export**
+(`nip01.metadataFields.nip05` is a direct reference to the canonical
+`nip05.identifier`). A re-export must not delegate through a wrapper, add or omit
+checks, change types, carry its own behavior docs, or become the source the
+canonical path is implemented from. Adding a root alias is an explicit API
+decision, not the output of an eligibility algorithm; message namespaces and
+kind-specific content (`metadata`, `textNote`, …) are not aliased at the root.
 
 ### Expose strict atoms
 
@@ -87,13 +96,12 @@ per-value recovery fallback. The choice is always one of two, never a silent
   fields (a forward-compatible document or content). Kept via a `catchall`
   `unknown`, so the output type carries a `[key: string]: unknown` index
   signature. Examples: `nip01.metadata()`, `nip05.nostrJsonDocument()`,
-  `nip11.relayInformationDocument()` (and its nested objects), the NIP-19 pointer
-  outputs.
+  `nip11.relayInformationDocument()` (and its nested objects).
 - **reject** — the object is a fixed protocol shape where an unknown key is not
   part of the represented value and could change its meaning. Enforced with a
   `catchall` of `never`. Examples: the event schemas (`event`, `eventTemplate`,
-  `unsignedEvent`, `textNote`, `nip42.authEvent`) and the `nip45.count` response
-  body.
+  `unsignedEvent`, `nip10.textNote`, `nip42.authEvent`), the `nip45.count`
+  response body, and the NIP-19 pointer outputs.
 
 Silent strip is avoided because it discards data without signaling it — a
 forward-compatible field vanishes on a round-trip, and a malformed key passes
@@ -159,13 +167,14 @@ which layer it extends.
 - **Convenience codecs** — a specific transport + shape assembled for a common
   case (`nip01.metadataContent()`, built on `jsonCodec(nip01.metadata())`).
 
-Fields and schemas are named for the spec that defines them (e.g. `nip05`, and
-the NIP-24 / LUD-16 / LUD-06 metadata fields), so the public surface reflects
-provenance.
+Fields and schemas live under their canonical owner path (see *Canonical owner
+paths*); their spec provenance is recorded in the docs and tests rather than
+forced into the path (e.g. the NIP-24 / LUD-16 / LUD-06 profile fields live in
+the `nip01.metadataFields` catalog, with their defining spec noted per field).
 
 ### Naming
 
-Public names follow provenance and the protocol's own wire vocabulary:
+Public names follow ownership and the protocol's own wire vocabulary:
 
 - **Object schemas** are named for what they model (`filter`, `event`, `count`,
   `authEvent`); a NIP namespace drops the redundant prefix (`nip50.filter`, not
@@ -252,11 +261,20 @@ A public API addition ships with:
 - runtime tests in **both** flavors, including a preserve-or-reject assertion for
   every object schema (no silent strip);
 - input/output **type** tests (precise-inference assertions in both flavors);
+- passing the release gates below;
 - updated `API.md` and `CHANGELOG.md`.
 
-*Not yet enforced:* a compile fixture that imports the packed package the way an
-external consumer would, and an automated release-surface comparison against the
-last published version.
+Two release gates run in CI:
+
+- **External consumer compile** (`npm run test:consumer`, `test/consumer/`) —
+  compiles a fixture that imports the package by its published specifiers
+  (`zod-nostr` / `zod-nostr/mini`), resolved to the built declarations in
+  `dist/`, so it exercises the emitted `.d.ts` a consumer actually sees rather
+  than source-relative types.
+- **Release-surface comparison** (`src/release-surface.test.ts`) — diffs the
+  current public path set against the last published release and requires every
+  removed/renamed path to be listed in an intentional-breaking manifest;
+  additive paths are always allowed, an unclassified removal fails.
 
 ## Decision records
 

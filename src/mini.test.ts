@@ -155,7 +155,7 @@ describe("zostr (mini)", () => {
     expect(metadata.name).toBe("bob");
   });
 
-  it("nip01.textNote() enforces kind === 1", () => {
+  it("nip10.textNote() enforces kind === 1", () => {
     const sk = generateSecretKey();
     const note = finalizeEvent(
       { kind: 1, created_at: 0, tags: [], content: "hi" },
@@ -166,8 +166,8 @@ describe("zostr (mini)", () => {
       sk,
     );
 
-    expect(z.parse(zostr.nip01.textNote(), note)).toBeTruthy();
-    expect(() => z.parse(zostr.nip01.textNote(), reaction)).toThrow();
+    expect(z.parse(zostr.nip10.textNote(), note)).toBeTruthy();
+    expect(() => z.parse(zostr.nip10.textNote(), reaction)).toThrow();
   });
 
   it("every wrapped event schema and codec exposes mini's native .check() (regression: raw core schemas lack it)", () => {
@@ -175,7 +175,7 @@ describe("zostr (mini)", () => {
       () => zostr.event(),
       () => zostr.unsignedEvent(),
       () => zostr.eventTemplate(),
-      () => zostr.nip01.textNote(),
+      () => zostr.nip10.textNote(),
       () => zostr.npub(),
       () => zostr.nsec(),
       () => zostr.note(),

@@ -4,9 +4,9 @@
 [![CI](https://github.com/akiomik/zod-nostr/actions/workflows/ci.yml/badge.svg)](https://github.com/akiomik/zod-nostr/actions/workflows/ci.yml)
 
 Zod schemas and codecs for [Nostr](https://nostr.com) — NIP-01 events, NIP-05
-identifiers, NIP-11 relay information documents, NIP-19 bech32 entities, NIP-42
-authentication, NIP-45 event counts, NIP-50 search, and NIP-67 EOSE completeness
-hints.
+identifiers, NIP-10 text notes, NIP-11 relay information documents, NIP-19 bech32
+entities, NIP-42 authentication, NIP-45 event counts, NIP-50 search, and NIP-67
+EOSE completeness hints.
 
 Validation logic is written once against `zod/v4/core` and re-exposed through
 two entry points, so the exact same rules work with both
@@ -131,12 +131,13 @@ aliased at the root (`zostr.event`, `zostr.npub`, …).
 - **NIP-01** — event structure (`nip01.event`, `nip01.unsignedEvent`,
   `nip01.eventTemplate`), signature verification (`nip01.signatureCheck`), kind:0
   profile metadata (object schema `nip01.metadata`, content codec
-  `nip01.metadataContent`, field-level schemas `nip01.metadataFields.*`), kind:1
-  text notes (`nip01.textNote`), the `REQ`/`COUNT` filter object (`nip01.filter`),
-  and relay/client protocol messages (`nip01.relayMessage.*`,
-  `nip01.clientMessage.*`)
+  `nip01.metadataContent`, field-level schemas `nip01.metadataFields.*`), the
+  `REQ`/`COUNT` filter object (`nip01.filter`), and relay/client protocol
+  messages (`nip01.relayMessage.*`, `nip01.clientMessage.*`)
 - **NIP-05** — identifier format validation (`nip05.identifier`) and
   `.well-known/nostr.json` document validation (`nip05.nostrJsonDocument`)
+- **NIP-10** — kind:1 text notes (`nip10.textNote`, structure only; thread tag
+  conventions not modeled)
 - **NIP-11** — relay information document (`nip11.relayInformationDocument`)
 - **NIP-19** — bech32 entities (`nip19.npub`, `nip19.nsec`, `nip19.note`,
   `nip19.nprofile`, `nip19.nevent`, `nip19.naddr`)

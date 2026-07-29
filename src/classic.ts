@@ -6,6 +6,7 @@ import * as nip01 from "./nip01.js";
 export type { ProfileMetadata } from "./nip01.js";
 
 import * as nip05 from "./nip05.js";
+import * as nip10 from "./nip10.js";
 import * as nip11 from "./nip11.js";
 import * as nip19 from "./nip19.js";
 import * as nip42 from "./nip42.js";
@@ -73,6 +74,14 @@ function classicOpenObject<Shape extends core.$ZodShape>(
     .catchall(coreObject._zod.def.catchall as core.SomeType);
 }
 
+// NIP-05 identifiers. Defined ahead of nip01 so the kind:0 profile's `nip05`
+// field can be a direct reference to the canonical `nip05.identifier`.
+const nip05Namespace = {
+  identifier: () => classicSchema(z.ZodString, nip05.nip05.identifier()),
+  nostrJsonDocument: () => classicOpenObject(nip05.nip05.nostrJsonDocument()),
+  formatIdentifier: nip05.nip05.formatIdentifier,
+};
+
 // NIP-01: primitives, event schemas, the REQ/COUNT filter, relay/client
 // messages, and kind:0 profile content — the canonical home for every base
 // Nostr concept. The root ergonomic aliases below are direct references into
@@ -138,10 +147,13 @@ const nip01Namespace = {
   metadata: () => classicOpenObject(nip01.nip01.metadata()),
   // Codec: kind:0 content string <-> the metadata() profile object.
   metadataContent: () => classicCodec(nip01.nip01.metadataContent()),
-  textNote: () => classicStrictObject(nip01.nip01.textNote()),
 
   // Field-level schemas for kind:0 profile metadata (strict, non-optional;
-  // compose your own optional/catch/default on top).
+  // compose your own optional/catch/default on top). This is the canonical
+  // owner of the profile-field catalog; the value formats come from several
+  // specs (NIP-01/NIP-24/LUD), tracked in the docs, not the path. The one
+  // exception is `nip05`, a general concept whose canonical home is
+  // `nip05.identifier` — here it is a direct reference to it.
   metadataFields: {
     name: () => classicSchema(z.ZodString, nip01.metadataFields.name()),
     about: () => classicSchema(z.ZodString, nip01.metadataFields.about()),
@@ -152,7 +164,7 @@ const nip01Namespace = {
     banner: () => classicSchema(z.ZodURL, nip01.metadataFields.banner()),
     bot: () => classicSchema(z.ZodBoolean, nip01.metadataFields.bot()),
     birthday: () => classicOpenObject(nip01.metadataFields.birthday()),
-    nip05: () => classicSchema(z.ZodString, nip01.metadataFields.nip05()),
+    nip05: nip05Namespace.identifier,
     lud16: () => classicSchema(z.ZodString, nip01.metadataFields.lud16()),
     lud06: () => classicSchema(z.ZodString, nip01.metadataFields.lud06()),
   },
@@ -184,10 +196,11 @@ export const zostr = {
   nip19: nip19Namespace,
 
   // NIP-05
-  nip05: {
-    identifier: () => classicSchema(z.ZodString, nip05.nip05.identifier()),
-    nostrJsonDocument: () => classicOpenObject(nip05.nip05.nostrJsonDocument()),
-    formatIdentifier: nip05.nip05.formatIdentifier,
+  nip05: nip05Namespace,
+
+  // NIP-10 text notes (kind:1 structure; thread tag semantics not modeled)
+  nip10: {
+    textNote: () => classicStrictObject(nip10.nip10.textNote()),
   },
 
   // NIP-11 relay information document

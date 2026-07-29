@@ -13,6 +13,7 @@ zostr.nip01.relayMessage.ok();
 zostr.nip01.clientMessage.req();
 zostr.nip19.npub();
 zostr.nip05.identifier();
+zostr.nip10.textNote();
 zostr.nip11.relayInformationDocument();
 zostr.nip42.relayMessage.auth();
 zostr.nip42.clientMessage.auth();
@@ -32,6 +33,8 @@ void aliasIdentity;
 zostr.relayMessage;
 // @ts-expect-error root clientMessage was removed (now zostr.nip01.clientMessage)
 zostr.clientMessage;
+// @ts-expect-error textNote moved to its NIP-10 canonical owner
+zostr.nip01.textNote;
 
 // An event embedded in a message infers a strict object (no unknown index
 // access), matching its runtime rejection of unknown keys.

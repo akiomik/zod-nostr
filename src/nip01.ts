@@ -175,18 +175,6 @@ export function signatureCheck(): core.$ZodCheck<NostrEventLike> {
   return coreSignatureCheck(verifyEvent);
 }
 
-function kindLiteralCheck(value: number): core.$ZodCheck<number> {
-  return makeCheck<number>((payload) => {
-    if (payload.value !== value) {
-      payload.issues.push({
-        code: "custom",
-        input: payload.value,
-        message: `Invalid kind (expected ${value})`,
-      });
-    }
-  });
-}
-
 /**
  * Field-level schemas for kind:0 profile metadata, grouped by NIP/LUD origin.
  * Each is strict and non-optional so consumers can layer their own
@@ -438,20 +426,6 @@ export const nip01 = {
   metadata: () => metadataObjectSchema(),
   /** Codec for kind:0 `content` (JSON string) <-> the `metadata()` profile object */
   metadataContent: () => jsonCodec(metadataObjectSchema()),
-  /** Event schema fixed to kind:1 (structure only; compose `.check(signatureCheck())` for the signature) */
-  textNote: () =>
-    zodObject(
-      {
-        id: eventId(),
-        pubkey: pubkey(),
-        created_at: timestamp(),
-        kind: zodNumber([kindLiteralCheck(1)]),
-        tags: tags(),
-        content: zodString(),
-        sig: signature(),
-      },
-      { catchall: zodNever() },
-    ),
 };
 
 export type { NostrEventLike };
