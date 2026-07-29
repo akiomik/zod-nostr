@@ -1,0 +1,24 @@
+{
+  "comment": [
+    "Compiles the fixture the way an external consumer would: it imports the",
+    "package by its published specifiers ('zod-nostr' / 'zod-nostr/mini'),",
+    "resolved through node_modules — NOT via a paths mapping. `check.mjs` copies",
+    "this fixture into an OS temp dir (outside the package, so package",
+    "self-reference can't bypass the tarball), extracts the `npm pack` tarball",
+    "into <temp>/node_modules/zod-nostr, and compiles there — so resolution goes",
+    "through the real package.json#exports and the tarball's `files`, catching a",
+    "dropped './mini' export, a missing declaration, or a wrong entry point, on",
+    "top of the emitted-.d.ts type contract. Run it with `npm run test:consumer`."
+  ],
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "noEmit": true
+  },
+  "include": ["consumer.ts"]
+}

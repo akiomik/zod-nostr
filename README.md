@@ -4,9 +4,9 @@
 [![CI](https://github.com/akiomik/zod-nostr/actions/workflows/ci.yml/badge.svg)](https://github.com/akiomik/zod-nostr/actions/workflows/ci.yml)
 
 Zod schemas and codecs for [Nostr](https://nostr.com) — NIP-01 events, NIP-05
-identifiers, NIP-11 relay information documents, NIP-19 bech32 entities, NIP-42
-authentication, NIP-45 event counts, NIP-50 search, and NIP-67 EOSE completeness
-hints.
+identifiers, NIP-10 text notes, NIP-11 relay information documents, NIP-19 bech32
+entities, NIP-42 authentication, NIP-45 event counts, NIP-50 search, and NIP-67
+EOSE completeness hints.
 
 Validation logic is written once against `zod/v4/core` and re-exposed through
 two entry points, so the exact same rules work with both
@@ -53,6 +53,17 @@ z.parse(zostr.event().check(zostr.signatureCheck()), someEvent);
 
 The `zostr` object exposes the identical set of functions from both entry
 points — only the import path and the ambient zod flavor differ.
+
+Every API has one **canonical owner path** — usually its spec namespace
+(`zostr.nip19.npub()`), a domain namespace for a cross-spec catalog
+(`zostr.nip01.metadataFields.*`), or the root for a cross-spec utility
+(`zostr.jsonCodec()`). Frequently used Nostr-wide concepts are also re-exposed at
+the root as an ergonomic alias that is a direct reference to the same factory:
+
+```ts
+zostr.event(); // alias of zostr.nip01.event()
+zostr.event === zostr.nip01.event; // true
+```
 
 ## Design notes
 
@@ -116,30 +127,36 @@ rather than inventing a bespoke `.verified()`-style chain method.
 
 ## Supported NIPs
 
-- **NIP-01** — event structure (`event`, `unsignedEvent`, `eventTemplate`),
-  signature verification (`signatureCheck`), kind:0 profile metadata (object
-  schema `nip01.metadata`, content codec `nip01.metadataContent`, field-level
-  schemas `nip01.metadataFields.*`), kind:1 text notes (`nip01.textNote`), the
-  `REQ`/`COUNT` filter object (`filter`), and relay/client protocol messages
-  (`relayMessage.*`, `clientMessage.*`)
+Canonical paths below are `zostr.nipXX.*`; the curated Nostr-wide ones are also
+aliased at the root (`zostr.event`, `zostr.npub`, …).
+
+- **NIP-01** — event structure (`nip01.event`, `nip01.unsignedEvent`,
+  `nip01.eventTemplate`), signature verification (`nip01.signatureCheck`), kind:0
+  profile metadata (object schema `nip01.metadata`, content codec
+  `nip01.metadataContent`, field-level schemas `nip01.metadataFields.*`), the
+  `REQ`/`COUNT` filter object (`nip01.filter`), and relay/client protocol
+  messages (`nip01.relayMessage.*`, `nip01.clientMessage.*`)
 - **NIP-05** — identifier format validation (`nip05.identifier`) and
   `.well-known/nostr.json` document validation (`nip05.nostrJsonDocument`)
+- **NIP-10** — kind:1 text notes (`nip10.textNote`, structure only; thread tag
+  conventions not modeled)
 - **NIP-11** — relay information document (`nip11.relayInformationDocument`)
-- **NIP-19** — bech32 entities: `npub`, `nsec`, `note`, `nprofile`, `nevent`,
-  `naddr`
+- **NIP-19** — bech32 entities (`nip19.npub`, `nip19.nsec`, `nip19.note`,
+  `nip19.nprofile`, `nip19.nevent`, `nip19.naddr`)
 - **NIP-42** — authentication (`AUTH`): the `kind: 22242` auth event
   (`nip42.authEvent`), the relay/client `AUTH` messages
-  (`nip42.authChallenge`, `nip42.authRequest`), and opt-in verification
-  checks (`nip42.challengeTagCheck`, `nip42.relayTagCheck`,
+  (`nip42.relayMessage.auth`, `nip42.clientMessage.auth`), and opt-in
+  verification checks (`nip42.challengeTagCheck`, `nip42.relayTagCheck`,
   `nip42.createdAtCheck`)
 - **NIP-45** — event counts (`COUNT`): request/response messages
-  (`nip45.countRequest`, `nip45.countResponse`) and the response body object
-  (`nip45.count`)
+  (`nip45.clientMessage.count`, `nip45.relayMessage.count`) and the response body
+  object (`nip45.count`)
 - **NIP-50** — search: the filter extended with a `search` string
-  (`nip50.filter`) and the `REQ` that carries it (`nip50.req`), an intentional
-  superset of `clientMessage.req`
+  (`nip50.filter`) and the `REQ` that carries it (`nip50.clientMessage.req`), an
+  intentional superset of `nip01.clientMessage.req`
 - **NIP-67** — EOSE completeness hint: `EOSE` extended with an optional hints
-  array (`nip67.eose`), a strict superset of `relayMessage.eose`
+  array (`nip67.relayMessage.eose`), a strict superset of
+  `nip01.relayMessage.eose`
 
 See [docs/API.md](docs/API.md) for the full API reference.
 

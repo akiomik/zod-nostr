@@ -66,6 +66,25 @@ export function nonNegativeNumberCheck(label: string): core.$ZodCheck<number> {
   });
 }
 
+/**
+ * Check factory for a non-empty array (at least one element). NIP-01 requires
+ * every tag to carry at least its tag name, and a filter's `ids`/`authors`/
+ * `kinds`/`"#<letter>"` arrays to list at least one value when the field is
+ * present (an empty array would match nothing, which is expressed by omitting
+ * the field, not by sending `[]`). `label` names the field in the error message.
+ */
+export function nonEmptyArrayCheck(label: string): core.$ZodCheck<unknown[]> {
+  return makeCheck<unknown[]>((payload) => {
+    if (payload.value.length === 0) {
+      payload.issues.push({
+        code: "custom",
+        input: payload.value,
+        message: `Invalid ${label} (expected a non-empty array)`,
+      });
+    }
+  });
+}
+
 export interface NostrEventLike {
   id: string;
   pubkey: string;

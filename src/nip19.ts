@@ -5,6 +5,7 @@ import { makeCodec } from "./core/codecs.js";
 import { hexStringSchema } from "./core/hex.js";
 import {
   zodArray,
+  zodNever,
   zodNumber,
   zodObject,
   zodOptional,
@@ -32,13 +33,11 @@ export type Bech32Prefix =
   | "naddr";
 
 export interface ProfilePointer {
-  [key: string]: unknown;
   pubkey: string;
   relays?: string[];
 }
 
 export interface EventPointer {
-  [key: string]: unknown;
   id: string;
   relays?: string[];
   author?: string;
@@ -46,7 +45,6 @@ export interface EventPointer {
 }
 
 export interface AddressPointer {
-  [key: string]: unknown;
   identifier: string;
   pubkey: string;
   kind: number;
@@ -92,29 +90,44 @@ function secretKeySchema(): core.$ZodType<Uint8Array, Uint8Array> {
   ]);
 }
 
+// The pointer schemas reject unknown keys (catchall `never`). A NIP-19 pointer
+// is a fixed TLV shape: decode only ever produces the known fields, and encode
+// cannot carry an extra object key onto the wire (the TLV encoder emits only the
+// known fields). Preserving unknown keys would be a lie — they would silently
+// vanish on a decode(encode(x)) round-trip — so an unknown key is rejected
+// instead, and the output type carries no index signature.
 function profilePointerSchema() {
-  return zodObject({
-    pubkey: hexStringSchema(64),
-    relays: zodOptional(zodArray(zodString())),
-  });
+  return zodObject(
+    {
+      pubkey: hexStringSchema(64),
+      relays: zodOptional(zodArray(zodString())),
+    },
+    { catchall: zodNever() },
+  );
 }
 
 function eventPointerSchema() {
-  return zodObject({
-    id: hexStringSchema(64),
-    relays: zodOptional(zodArray(zodString())),
-    author: zodOptional(hexStringSchema(64)),
-    kind: zodOptional(pointerKind()),
-  });
+  return zodObject(
+    {
+      id: hexStringSchema(64),
+      relays: zodOptional(zodArray(zodString())),
+      author: zodOptional(hexStringSchema(64)),
+      kind: zodOptional(pointerKind()),
+    },
+    { catchall: zodNever() },
+  );
 }
 
 function addressPointerSchema() {
-  return zodObject({
-    identifier: zodString(),
-    pubkey: hexStringSchema(64),
-    kind: pointerKind(),
-    relays: zodOptional(zodArray(zodString())),
-  });
+  return zodObject(
+    {
+      identifier: zodString(),
+      pubkey: hexStringSchema(64),
+      kind: pointerKind(),
+      relays: zodOptional(zodArray(zodString())),
+    },
+    { catchall: zodNever() },
+  );
 }
 
 export const npubCodec = makeCodec(bech32Schema("npub"), hexStringSchema(64), {

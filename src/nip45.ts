@@ -4,6 +4,7 @@ import { hexStringSchema } from "./core/hex.js";
 import {
   zodBoolean,
   zodLiteral,
+  zodNever,
   zodNumber,
   zodObject,
   zodOptional,
@@ -28,15 +29,19 @@ function hll(): core.$ZodString<string> {
  * estimate, but it is still an event count, so fractional, negative, and
  * non-finite values are rejected. `approximate` flags a probabilistic count and
  * `hll` carries the HyperLogLog registers; both are optional (a relay MAY omit
- * them) and no recovery policy is baked in. Unknown keys are stripped (the
- * default), matching how `event()` and the NIP-05/NIP-11 documents treat them.
+ * them) and no recovery policy is baked in. The COUNT response body is a fixed
+ * shape, so unknown keys are rejected (`catchall: never`) rather than silently
+ * stripped, the same as `event()`.
  */
 function count() {
-  return zodObject({
-    count: zodNumber([nonNegativeIntegerCheck("count")]),
-    approximate: zodOptional(zodBoolean()),
-    hll: zodOptional(hll()),
-  });
+  return zodObject(
+    {
+      count: zodNumber([nonNegativeIntegerCheck("count")]),
+      approximate: zodOptional(zodBoolean()),
+      hll: zodOptional(hll()),
+    },
+    { catchall: zodNever() },
+  );
 }
 
 /**
@@ -55,7 +60,7 @@ function countRequestMessage() {
 /**
  * Relay-to-client COUNT response: `["COUNT", queryId, count()]`
  * (structure only). A relay refusing the request replies with NIP-01's
- * `CLOSED` message instead (`zostr.relayMessage.closed()`).
+ * `CLOSED` message instead (`zostr.nip01.relayMessage.closed()`).
  */
 function countResponseMessage() {
   return zodTuple([zodLiteral("COUNT"), subscriptionId(), count()]);
@@ -65,8 +70,14 @@ function countResponseMessage() {
 export const nip45 = {
   /** Object schema for a COUNT response body (`{ count, approximate?, hll? }`) */
   count,
-  /** Client-to-relay `["COUNT", queryId, filter, ...filter[]]` */
-  countRequest: countRequestMessage,
-  /** Relay-to-client `["COUNT", queryId, count()]` */
-  countResponse: countResponseMessage,
+  /** Client-to-relay `COUNT` message */
+  clientMessage: {
+    /** Client-to-relay `["COUNT", queryId, filter, ...filter[]]` */
+    count: countRequestMessage,
+  },
+  /** Relay-to-client `COUNT` message */
+  relayMessage: {
+    /** Relay-to-client `["COUNT", queryId, count()]` */
+    count: countResponseMessage,
+  },
 };

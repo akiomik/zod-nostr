@@ -7,65 +7,182 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-
-- **Breaking:** `zostr.clientMessage.req()` now requires **at least one** filter,
-  matching NIP-01's `REQ` grammar (`["REQ", <subscription_id>, <filters1>,
-  <filters2>...]`, where `<filters1>` is mandatory). A bare `["REQ", subId]` with
-  no filters is now rejected; to subscribe to everything, send a single empty
-  `{}` filter. This also tightens `zostr.clientMessage.any()`, which includes the
-  `REQ` message. (`zostr.nip45.countRequest()` already enforced this for `COUNT`.)
+This release reorganizes the public API around **canonical owner paths**. Every
+schema, codec, check, and utility now has exactly one canonical owner — usually
+its spec namespace (`zostr.nip19.npub`, `zostr.nip05.identifier`), a domain
+namespace for a cross-spec catalog (`zostr.nip01.metadataFields.*`), or the root
+for a cross-spec utility (`zostr.jsonCodec`). A small, curated set of Nostr-wide
+concepts is re-exposed at the root as an **ergonomic alias** that is a _direct
+reference_ to its canonical factory, so `zostr.event === zostr.nip01.event`.
+Message direction is now carried by a `relayMessage`/`clientMessage` namespace
+under each NIP instead of by collision-specific name suffixes.
 
 ### Added
 
+- **`zostr.nip01`** is now the canonical home for every base Nostr concept:
+  the field primitives (`pubkey`/`eventId`/`signature`/`timestamp`/`kind`/`tags`/
+  `subscriptionId`), the event schemas (`eventTemplate`/`unsignedEvent`/`event`),
+  `signatureCheck`, the REQ/COUNT `filter`, the relay/client message namespaces,
+  and the kind:0 profile content (`metadata`/`metadataContent`/
+  `metadataFields.*`). `metadataFields.nip05` is a direct reference to the
+  canonical `nip05.identifier`.
+- **`zostr.nip10`** is the canonical home for the kind:1 text note:
+  `nip10.textNote()` (moved from `nip01.textNote`, see _Removed_) — NIP-10
+  defines kind 1 as a plaintext note. Structure only, same as `event()`; it does
+  not model NIP-10's reply/thread tag conventions.
+- **`zostr.nip19`** is now the canonical home for the bech32 entities:
+  `bech32`, `npub`, `nsec`, `note`, `nprofile`, `nevent`, `naddr`.
+- **Root ergonomic aliases** (unchanged names, now direct references into the
+  canonical namespaces, so identity holds — e.g. `zostr.event ===
+  zostr.nip01.event`): `pubkey`, `eventId`, `signature`, `timestamp`, `kind`,
+  `tags`, `eventTemplate`, `unsignedEvent`, `event`, `signatureCheck`,
+  `subscriptionId`, `filter` (from `nip01`); `bech32`, `npub`, `nsec`, `note`,
+  `nprofile`, `nevent`, `naddr` (from `nip19`). `zostr.jsonCodec` stays root-only
+  (it is a cross-spec utility, not a NIP concept). No message namespace or
+  kind-specific content (`metadata`, `textNote`, …) is aliased at the root.
 - `zostr.nip42` — NIP-42 authentication (`AUTH`). `nip42.authEvent()` is the
   canonical ephemeral auth event fixed to `kind: 22242` (structure only, like
-  `event()`); `nip42.authChallenge()` is the relay-to-client `["AUTH",
-  challenge]` and `nip42.authRequest()` is the client-to-relay `["AUTH",
+  `event()`); `nip42.relayMessage.auth()` is the relay-to-client `["AUTH",
+  challenge]` and `nip42.clientMessage.auth()` is the client-to-relay `["AUTH",
   signedAuthEvent]` (answered by an `OK` message). The relay-side verification
-  steps are opt-in checks composed
-  onto `authEvent()`, the same way as `signatureCheck()`:
-  `nip42.challengeTagCheck(challenge)` (the `"challenge"` tag matches),
-  `nip42.relayTagCheck(relayUrl)` (the `"relay"` tag matches, exact string),
-  and `nip42.createdAtCheck(now, toleranceSeconds?)` (`created_at` within
-  `toleranceSeconds`, default 600, of `now`). The signature is verified with the
-  existing `zostr.signatureCheck()`.
-- `zostr.nip45` — NIP-45 event counts (`COUNT`). `nip45.countRequest()` is the
-  client-to-relay `["COUNT", queryId, filter, ...filter[]]` message, carrying the
-  same NIP-01 `REQ`/`COUNT` filters (at least one required, matching REQ's
-  grammar; count-everything sends a single empty `{}`); `nip45.countResponse()`
-  is the relay-to-client `["COUNT", queryId, count]` message; and `nip45.count()`
-  is the response body object schema — `count` (non-negative integer), optional
-  `approximate` (boolean), and optional `hll` (512-char hex, either case, the 256
-  HyperLogLog registers). The `queryId` reuses the NIP-01 subscription-id format.
-  Structure only; a relay refusing a `COUNT` replies with the existing NIP-01
-  `CLOSED` message.
+  steps are opt-in checks composed onto `authEvent()`, the same way as
+  `signatureCheck()`: `nip42.challengeTagCheck(challenge)` (the `"challenge"` tag
+  matches), `nip42.relayTagCheck(relayUrl)` (the `"relay"` tag matches, exact
+  string), and `nip42.createdAtCheck(now, toleranceSeconds?)` (`created_at`
+  within `toleranceSeconds`, default 600, of `now`). The signature is verified
+  with the existing `zostr.signatureCheck()`.
+- `zostr.nip45` — NIP-45 event counts (`COUNT`). `nip45.clientMessage.count()` is
+  the client-to-relay `["COUNT", queryId, filter, ...filter[]]` message, carrying
+  the same NIP-01 `REQ`/`COUNT` filters (at least one required, matching REQ's
+  grammar; count-everything sends a single empty `{}`);
+  `nip45.relayMessage.count()` is the relay-to-client `["COUNT", queryId, count]`
+  message; and `nip45.count()` is the response body object schema — `count`
+  (non-negative integer), optional `approximate` (boolean), and optional `hll`
+  (512-char hex, either case, the 256 HyperLogLog registers). The `queryId`
+  reuses the NIP-01 subscription-id format. Structure only; a relay refusing a
+  `COUNT` replies with the existing NIP-01 `CLOSED` message.
 - `zostr.nip50` — NIP-50 search. `zostr.nip50.filter()` is `zostr.filter()`
   extended with an optional `search` string (a plain optional string, no
   `.min`/recovery policy baked in; empty strings are spec-valid, and the
   `key:value` search extensions live inside the string, not as extra fields). It
   inherits the base filter's fields and `"#<letter>"` tag-filter handling, so it
-  tracks NIP-01 automatically. `zostr.nip50.req()` is the client-to-relay
-  `["REQ", subscriptionId, searchFilter, ...searchFilter[]]` message — an
-  intentional superset of `zostr.clientMessage.req()` (it also accepts plain
-  NIP-01 filters) that keeps the at-least-one-filter requirement of NIP-01's
-  `REQ` grammar. `zostr.clientMessage.req()`/`any()` stay NIP-01-only (they
-  reject `search`), as does `zostr.nip45.countRequest()` (NIP-50 adds `search`
-  to `REQ`, not `COUNT`), so compose `z.union([zostr.clientMessage.any(),
-  zostr.nip50.req()])` to accept a NIP-50 `REQ` alongside the other client
-  messages.
-- `zostr.nip67` — NIP-67 EOSE completeness hint. `nip67.eose()` is the
-  relay-to-client `EOSE` message extended with an optional third element, an
+  tracks NIP-01 automatically. `zostr.nip50.clientMessage.req()` is the
+  client-to-relay `["REQ", subscriptionId, searchFilter, ...searchFilter[]]`
+  message — an intentional superset of `zostr.nip01.clientMessage.req()` (it also
+  accepts plain NIP-01 filters) that keeps the at-least-one-filter requirement of
+  NIP-01's `REQ` grammar. `zostr.nip01.clientMessage.req()`/`any()` stay
+  NIP-01-only (they reject `search`), as does `zostr.nip45.clientMessage.count()`
+  (NIP-50 adds `search` to `REQ`, not `COUNT`), so compose
+  `z.union([zostr.nip01.clientMessage.any(), zostr.nip50.clientMessage.req()])`
+  to accept a NIP-50 `REQ` alongside the other client messages.
+- `zostr.nip67` — NIP-67 EOSE completeness hint. `nip67.relayMessage.eose()` is
+  the relay-to-client `EOSE` message extended with an optional third element, an
   array of hint strings: `["EOSE", subscriptionId]` or `["EOSE", subscriptionId,
   hints]`. It's a union of the exact two- and three-element wire shapes (so an
   explicit `undefined` third element is rejected) and infers `["EOSE", string] |
   ["EOSE", string, string[]]`. The hints are plain strings — NIP-67 defines
   `"finish"` and `"more"` but requires clients to accept unknown values, so no
   enum is baked in; interpreting them is the consumer's job.
-  `zostr.nip67.eose()` is a strict superset of `zostr.relayMessage.eose()`;
-  `zostr.relayMessage.any()` stays NIP-01-only, so compose
-  `z.union([zostr.relayMessage.any(), zostr.nip67.eose()])` to accept a NIP-67
-  `EOSE` alongside the other relay messages.
+  `zostr.nip67.relayMessage.eose()` is a strict superset of
+  `zostr.nip01.relayMessage.eose()`; `zostr.nip01.relayMessage.any()` stays
+  NIP-01-only, so compose `z.union([zostr.nip01.relayMessage.any(),
+  zostr.nip67.relayMessage.eose()])` to accept a NIP-67 `EOSE` alongside the
+  other relay messages.
+
+### Changed
+
+- **Breaking:** `zostr.nip01.clientMessage.req()` (was
+  `zostr.clientMessage.req()`, see _Removed_) requires **at least one** filter,
+  matching NIP-01's `REQ` grammar (`["REQ", <subscription_id>, <filters1>,
+  <filters2>...]`, where `<filters1>` is mandatory). A bare `["REQ", subId]` with
+  no filters is now rejected; to subscribe to everything, send a single empty
+  `{}` filter. This also tightens `zostr.nip01.clientMessage.any()`, which
+  includes the `REQ` message.
+
+  ```ts
+  // before → after
+  ["REQ", "sub"]  →  ["REQ", "sub", {}]
+  ```
+
+- **Breaking:** every NIP-01 event tag must now be a **non-empty** array of
+  strings (its first element is the tag name). An empty tag `[]` is rejected;
+  the outer `tags` array may still be empty. Applies to `event()`,
+  `eventTemplate()`, `unsignedEvent()`, `textNote()`, and the messages that
+  embed them.
+
+  ```ts
+  // before → after
+  { tags: [[]] }  →  { tags: [["e", id]] }
+  ```
+
+- **Breaking:** a `filter()`'s `ids`, `authors`, `kinds`, and each `"#<letter>"`
+  tag filter must be **non-empty** when present, matching NIP-01's grammar (an
+  array field, when present, lists at least one value). A previously-accepted
+  empty array `[]` is now rejected. The empty filter object `{}` (match anything)
+  is still valid. Applies wherever the filter is reused
+  (`nip01.clientMessage.req()`/`any()`, `nip45.clientMessage.count()`,
+  `nip50.filter()`/`clientMessage.req()`).
+
+  There is no drop-in replacement for an empty array, because it never had a
+  defined meaning — migrate by intent: to place **no** constraint on that
+  dimension, **omit the field** (this widens the match, so do it deliberately);
+  to select **nothing**, there is no single-filter form — remove that filter from
+  the `REQ`/`COUNT` (if it is one OR-branch among several) or don't send the
+  request at all (if it is the only filter).
+
+- **Breaking:** the event schemas (`event()`, `eventTemplate()`,
+  `unsignedEvent()`, `textNote()`, `nip42.authEvent()`), the NIP-45 COUNT
+  response body (`nip45.count()`), and the NIP-19 pointer schemas (the
+  `nprofile`/`nevent`/`naddr` codecs' value side) now **reject** unknown keys
+  instead of silently stripping them — they are fixed protocol shapes. For the
+  NIP-19 pointers this also means `encode()` throws on an extra object key rather
+  than dropping it, since the TLV encoding can only carry the known fields.
+  Forward-compatible event metadata belongs in `tags`.
+- **Breaking:** `nip11.relayInformationDocument()`'s `software` field is now
+  validated as a **URL** (NIP-11 defines it as "URL to the relay's software
+  homepage"), instead of accepting any string. `contact` stays a plain string
+  (it may be a bare email address).
+- **Breaking (type-only):** the object schemas that preserve unknown keys now
+  carry a `[key: string]: unknown` index signature in their inferred output type,
+  reflecting that unknown keys are kept rather than stripped:
+  `nip05.nostrJsonDocument()`, `nip11.relayInformationDocument()` (and its nested
+  `limitation`/`fees` objects), and `nip01.metadataFields.birthday()`.
+  (`nip01.metadata()` already carried this.) No runtime change for these — they
+  already preserved unknown keys.
+- **Breaking (type-only):** object schemas that reject unknown keys now infer a
+  **strict** output type (no index signature), including when embedded in a
+  message tuple/union. Previously an embedded event/count element (e.g.
+  `nip01.relayMessage.event()[2]`, `nip45.relayMessage.count()[2]`, the NIP-19
+  pointer codecs' decoded value) inferred an open `Record<string, unknown>`, so
+  unknown-key access type-checked even though it was rejected at runtime; the
+  inferred type now matches the runtime contract.
+
+### Removed
+
+- **Breaking:** the root `zostr.relayMessage.*` and `zostr.clientMessage.*`
+  namespaces are removed. NIP-01 relay/client messages now live at
+  `zostr.nip01.relayMessage.*` and `zostr.nip01.clientMessage.*`. The unqualified
+  root names implied an aggregate of every supported NIP but only ever meant
+  NIP-01; the NIP-01-scoped path makes that explicit and leaves room for other
+  NIPs' messages (NIP-42/45/50/67) under their own namespaces. The curated root
+  aliases (`event`, `filter`, `npub`, …) are unaffected — they remain as direct
+  references into the canonical namespaces.
+
+  ```ts
+  // before → after
+  zostr.relayMessage.ok()    →  zostr.nip01.relayMessage.ok()
+  zostr.clientMessage.req()  →  zostr.nip01.clientMessage.req()
+  ```
+
+- **Breaking:** `zostr.nip01.textNote()` is removed; the kind:1 text note now
+  lives at `zostr.nip10.textNote()` (its canonical owner — NIP-10 defines kind 1
+  as a plaintext note), see _Added_. Behavior is unchanged.
+
+  ```ts
+  // before → after
+  zostr.nip01.textNote()  →  zostr.nip10.textNote()
+  ```
+
 
 ## [0.4.0] - 2026-07-29
 

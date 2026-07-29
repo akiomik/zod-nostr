@@ -7,6 +7,7 @@ import {
   zodOptional,
   zodRecord,
   zodString,
+  zodUnknown,
 } from "./core/primitives.js";
 import { isInternetIdentifierDomain } from "./internet-identifier.js";
 
@@ -71,14 +72,20 @@ function nip05NameSchema(): core.$ZodString<string> {
  * to `GET /.well-known/nostr.json?name=<local-part>`. `names` is required
  * per spec (local-part -> lowercase 64-char hex pubkey); `relays` is the
  * spec's "recommended" optional attribute (pubkey -> relay URL list).
- * Unknown top-level keys are stripped silently, matching NIP-11's treatment
- * of forward-compatible fields.
+ * Unknown top-level keys are preserved (catchall `unknown`), matching NIP-11's
+ * forward-compatible document treatment — the served document may carry
+ * extension fields, and they are never silently stripped.
  */
 export function nostrJsonDocumentSchema() {
-  return zodObject({
-    names: zodRecord(nip05NameSchema(), hexStringSchema(64)),
-    relays: zodOptional(zodRecord(hexStringSchema(64), zodArray(zodString()))),
-  });
+  return zodObject(
+    {
+      names: zodRecord(nip05NameSchema(), hexStringSchema(64)),
+      relays: zodOptional(
+        zodRecord(hexStringSchema(64), zodArray(zodString())),
+      ),
+    },
+    { catchall: zodUnknown() },
+  );
 }
 
 export const nip05 = {

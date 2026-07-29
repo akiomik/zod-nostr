@@ -4,6 +4,7 @@ import {
   signatureCheck as coreSignatureCheck,
   makeCheck,
   type NostrEventLike,
+  nonEmptyArrayCheck,
   nonNegativeIntegerCheck,
 } from "./core/checks.js";
 import { hexStringSchema } from "./core/hex.js";
@@ -11,6 +12,7 @@ import {
   zodArray,
   zodBoolean,
   zodLiteral,
+  zodNever,
   zodNumber,
   zodObject,
   zodOptional,
@@ -90,10 +92,15 @@ function limit(): core.$ZodNumber<number> {
   return zodNumber([nonNegativeIntegerCheck("limit")]);
 }
 
+/**
+ * NIP-01 event tags: an array of tags, where every tag is a non-empty array of
+ * strings (its first element is the tag name — an empty `[]` tag has no name and
+ * is invalid). The outer array MAY be empty (an event can carry no tags).
+ */
 export function tags(): core.$ZodArray<
   core.$ZodArray<core.$ZodString<string>>
 > {
-  return zodArray(zodArray(zodString()));
+  return zodArray(zodArray(zodString(), [nonEmptyArrayCheck("tag")]));
 }
 
 /** Arbitrary, non-empty string of max length 64 chars, identifying a REQ/EVENT/EOSE/CLOSED subscription */
@@ -112,55 +119,60 @@ export function subscriptionId(): core.$ZodString<string> {
   ]);
 }
 
+/**
+ * NIP-01 defines the event object as a fixed set of fields, so the event
+ * schemas reject unknown keys (`catchall: never`) rather than silently
+ * stripping them: an unrecognized key is not part of the event shape and could
+ * change its meaning (e.g. a mistyped or injected field). Forward-compatible
+ * metadata belongs in `tags`, which is already open-ended.
+ */
+
 /** Before signing, only kind/content/tags/created_at (equivalent to nostr-tools' EventTemplate) */
 export function eventTemplate() {
-  return zodObject({
-    created_at: timestamp(),
-    kind: kind(),
-    tags: tags(),
-    content: zodString(),
-  });
+  return zodObject(
+    {
+      created_at: timestamp(),
+      kind: kind(),
+      tags: tags(),
+      content: zodString(),
+    },
+    { catchall: zodNever() },
+  );
 }
 
 /** Before signing, + pubkey (equivalent to nostr-tools' UnsignedEvent) */
 export function unsignedEvent() {
-  return zodObject({
-    pubkey: pubkey(),
-    created_at: timestamp(),
-    kind: kind(),
-    tags: tags(),
-    content: zodString(),
-  });
+  return zodObject(
+    {
+      pubkey: pubkey(),
+      created_at: timestamp(),
+      kind: kind(),
+      tags: tags(),
+      content: zodString(),
+    },
+    { catchall: zodNever() },
+  );
 }
 
 /** Validates structure only; does not verify the signature (compose `.check(signatureCheck())` for that) */
 export function event() {
-  return zodObject({
-    id: eventId(),
-    pubkey: pubkey(),
-    created_at: timestamp(),
-    kind: kind(),
-    tags: tags(),
-    content: zodString(),
-    sig: signature(),
-  });
+  return zodObject(
+    {
+      id: eventId(),
+      pubkey: pubkey(),
+      created_at: timestamp(),
+      kind: kind(),
+      tags: tags(),
+      content: zodString(),
+      sig: signature(),
+    },
+    { catchall: zodNever() },
+  );
 }
 
 /** Signature verification check bound to nostr-tools' verifyEvent */
 export function signatureCheck(): core.$ZodCheck<NostrEventLike> {
   return coreSignatureCheck(verifyEvent);
-}
-
-function kindLiteralCheck(value: number): core.$ZodCheck<number> {
-  return makeCheck<number>((payload) => {
-    if (payload.value !== value) {
-      payload.issues.push({
-        code: "custom",
-        input: payload.value,
-        message: `Invalid kind (expected ${value})`,
-      });
-    }
-  });
 }
 
 /**
@@ -254,19 +266,28 @@ export function filterTagKeysCheck(
   });
 }
 
-/** REQ/COUNT filter object (structure only; does not enforce `since <= until`) */
+/**
+ * REQ/COUNT filter object (structure only; does not enforce `since <= until`).
+ *
+ * `ids`/`authors`/`kinds` and every `"#<letter>"` tag filter are non-empty when
+ * present — an empty array matches nothing, which NIP-01 expresses by omitting
+ * the field, not by sending `[]`. The empty filter object `{}` (match anything)
+ * stays valid because every field is optional. Unknown keys are rejected by
+ * `filterTagKeysCheck()` (only known fields and `"#<letter>"` tag filters are
+ * allowed), so nothing is silently stripped.
+ */
 export function filter() {
   return zodObject(
     {
-      ids: zodOptional(zodArray(eventId())),
-      authors: zodOptional(zodArray(pubkey())),
-      kinds: zodOptional(zodArray(kind())),
+      ids: zodOptional(zodArray(eventId(), [nonEmptyArrayCheck("ids")])),
+      authors: zodOptional(zodArray(pubkey(), [nonEmptyArrayCheck("authors")])),
+      kinds: zodOptional(zodArray(kind(), [nonEmptyArrayCheck("kinds")])),
       since: zodOptional(timestamp()),
       until: zodOptional(timestamp()),
       limit: zodOptional(limit()),
     },
     {
-      catchall: zodArray(zodString()),
+      catchall: zodArray(zodString(), [nonEmptyArrayCheck("tag filter")]),
       checks: [filterTagKeysCheck()],
     },
   );
@@ -368,7 +389,7 @@ export const relayMessage = {
     ]),
   // Opt-in checks: NIP-01's machine-readable message prefix isn't enforced by
   // ok()/closed() themselves since many relays don't follow it strictly.
-  // Compose explicitly: zostr.relayMessage.ok().check(zostr.relayMessage.okMessagePrefixCheck())
+  // Compose explicitly: zostr.nip01.relayMessage.ok().check(zostr.nip01.relayMessage.okMessagePrefixCheck())
   okMessagePrefixCheck,
   closedMessagePrefixCheck,
 };
@@ -405,17 +426,6 @@ export const nip01 = {
   metadata: () => metadataObjectSchema(),
   /** Codec for kind:0 `content` (JSON string) <-> the `metadata()` profile object */
   metadataContent: () => jsonCodec(metadataObjectSchema()),
-  /** Event schema fixed to kind:1 (structure only; compose `.check(signatureCheck())` for the signature) */
-  textNote: () =>
-    zodObject({
-      id: eventId(),
-      pubkey: pubkey(),
-      created_at: timestamp(),
-      kind: zodNumber([kindLiteralCheck(1)]),
-      tags: tags(),
-      content: zodString(),
-      sig: signature(),
-    }),
 };
 
 export type { NostrEventLike };

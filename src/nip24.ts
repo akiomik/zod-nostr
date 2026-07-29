@@ -5,6 +5,7 @@ import {
   zodObject,
   zodOptional,
   zodString,
+  zodUnknown,
   zodUrl,
 } from "./core/primitives.js";
 
@@ -28,11 +29,18 @@ export function bot(): core.$ZodBoolean<boolean> {
   return zodBoolean();
 }
 
-/** NIP-24 birthday object (year/month/day, each optional) */
+/**
+ * NIP-24 birthday object (year/month/day, each optional). Part of forward-
+ * compatible kind:0 profile content, so unknown keys are preserved (catchall
+ * `unknown`), the same as the enclosing `metadata()` object — never stripped.
+ */
 export function birthday() {
-  return zodObject({
-    year: zodOptional(zodNumber()),
-    month: zodOptional(zodNumber()),
-    day: zodOptional(zodNumber()),
-  });
+  return zodObject(
+    {
+      year: zodOptional(zodNumber()),
+      month: zodOptional(zodNumber()),
+      day: zodOptional(zodNumber()),
+    },
+    { catchall: zodUnknown() },
+  );
 }

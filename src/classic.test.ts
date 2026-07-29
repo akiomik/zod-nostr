@@ -205,7 +205,7 @@ describe("zostr (classic)", () => {
       () => zostr.event(),
       () => zostr.unsignedEvent(),
       () => zostr.eventTemplate(),
-      () => zostr.nip01.textNote(),
+      () => zostr.nip10.textNote(),
       () => zostr.npub(),
       () => zostr.nsec(),
       () => zostr.note(),
@@ -261,7 +261,7 @@ describe("zostr (classic)", () => {
     }
   });
 
-  it("nip01.textNote() enforces kind === 1", () => {
+  it("nip10.textNote() enforces kind === 1", () => {
     const sk = generateSecretKey();
     const note = finalizeEvent(
       { kind: 1, created_at: 0, tags: [], content: "hi" },
@@ -272,8 +272,8 @@ describe("zostr (classic)", () => {
       sk,
     );
 
-    expect(zostr.nip01.textNote().parse(note)).toBeTruthy();
-    expect(() => zostr.nip01.textNote().parse(reaction)).toThrow();
+    expect(zostr.nip10.textNote().parse(note)).toBeTruthy();
+    expect(() => zostr.nip10.textNote().parse(reaction)).toThrow();
   });
 
   it("subscriptionId() enforces a non-empty string of at most 64 chars", () => {
@@ -343,22 +343,26 @@ describe("zostr (classic)", () => {
     );
 
     expect(
-      zostr.relayMessage.event().parse(["EVENT", "sub1", signed]),
+      zostr.nip01.relayMessage.event().parse(["EVENT", "sub1", signed]),
     ).toBeTruthy();
     expect(
-      zostr.relayMessage.ok().parse(["OK", signed.id, true, ""]),
+      zostr.nip01.relayMessage.ok().parse(["OK", signed.id, true, ""]),
     ).toBeTruthy();
-    expect(zostr.relayMessage.eose().parse(["EOSE", "sub1"])).toBeTruthy();
     expect(
-      zostr.relayMessage.closed().parse(["CLOSED", "sub1", "reason"]),
+      zostr.nip01.relayMessage.eose().parse(["EOSE", "sub1"]),
     ).toBeTruthy();
-    expect(zostr.relayMessage.notice().parse(["NOTICE", "hello"])).toBeTruthy();
+    expect(
+      zostr.nip01.relayMessage.closed().parse(["CLOSED", "sub1", "reason"]),
+    ).toBeTruthy();
+    expect(
+      zostr.nip01.relayMessage.notice().parse(["NOTICE", "hello"]),
+    ).toBeTruthy();
 
     expect(() =>
-      zostr.relayMessage.event().parse(["NOTICE", "sub1", signed]),
+      zostr.nip01.relayMessage.event().parse(["NOTICE", "sub1", signed]),
     ).toThrow();
 
-    const any = zostr.relayMessage.any();
+    const any = zostr.nip01.relayMessage.any();
     expect(any.parse(["EOSE", "sub1"])).toBeTruthy();
     expect(() => any.parse(["REQ", "sub1"])).toThrow();
   });
@@ -370,17 +374,27 @@ describe("zostr (classic)", () => {
       sk,
     );
 
-    expect(zostr.clientMessage.event().parse(["EVENT", signed])).toBeTruthy();
     expect(
-      zostr.clientMessage.req().parse(["REQ", "sub1", { kinds: [1] }, {}]),
+      zostr.nip01.clientMessage.event().parse(["EVENT", signed]),
+    ).toBeTruthy();
+    expect(
+      zostr.nip01.clientMessage
+        .req()
+        .parse(["REQ", "sub1", { kinds: [1] }, {}]),
     ).toBeTruthy();
     // Request-everything sends a single empty {} filter.
-    expect(zostr.clientMessage.req().parse(["REQ", "sub1", {}])).toBeTruthy();
+    expect(
+      zostr.nip01.clientMessage.req().parse(["REQ", "sub1", {}]),
+    ).toBeTruthy();
     // At least one filter is required (matching NIP-01's REQ grammar).
-    expect(() => zostr.clientMessage.req().parse(["REQ", "sub1"])).toThrow();
-    expect(zostr.clientMessage.close().parse(["CLOSE", "sub1"])).toBeTruthy();
+    expect(() =>
+      zostr.nip01.clientMessage.req().parse(["REQ", "sub1"]),
+    ).toThrow();
+    expect(
+      zostr.nip01.clientMessage.close().parse(["CLOSE", "sub1"]),
+    ).toBeTruthy();
 
-    const any = zostr.clientMessage.any();
+    const any = zostr.nip01.clientMessage.any();
     expect(any.parse(["CLOSE", "sub1"])).toBeTruthy();
     expect(any.parse(["REQ", "sub1", {}])).toBeTruthy();
     // any() also enforces REQ's at-least-one-filter rule.
@@ -397,19 +411,21 @@ describe("zostr (classic)", () => {
     const kinds: number[] | undefined = f.kinds;
     expect(kinds).toEqual([1]);
 
-    const ok = zostr.relayMessage.ok().parse(["OK", "a".repeat(64), true, ""]);
+    const ok = zostr.nip01.relayMessage
+      .ok()
+      .parse(["OK", "a".repeat(64), true, ""]);
     const accepted: boolean = ok[2];
     const message: string = ok[3];
     expect(accepted).toBe(true);
     expect(message).toBe("");
 
-    const any = zostr.relayMessage.any().parse(["EOSE", "sub1"]);
+    const any = zostr.nip01.relayMessage.any().parse(["EOSE", "sub1"]);
     if (any[0] === "EOSE") {
       const subId: string = any[1];
       expect(subId).toBe("sub1");
     }
 
-    const req = zostr.clientMessage
+    const req = zostr.nip01.clientMessage
       .req()
       .parse(["REQ", "sub1", { kinds: [1] }]);
     // req[2] is the required first filter (no `?.`) — pins that the third
@@ -420,13 +436,13 @@ describe("zostr (classic)", () => {
 
   it("relayMessage.okMessagePrefixCheck() is opt-in and only enforced when the event is rejected", () => {
     const eventId = "a".repeat(64);
-    const checked = zostr.relayMessage
+    const checked = zostr.nip01.relayMessage
       .ok()
-      .check(zostr.relayMessage.okMessagePrefixCheck());
+      .check(zostr.nip01.relayMessage.okMessagePrefixCheck());
 
     // Not composed by default: an unprefixed rejection message parses fine.
     expect(
-      zostr.relayMessage.ok().parse(["OK", eventId, false, "nope"]),
+      zostr.nip01.relayMessage.ok().parse(["OK", eventId, false, "nope"]),
     ).toBeTruthy();
 
     // Accepted (true): message MAY be empty/unprefixed per NIP-01.
@@ -442,13 +458,13 @@ describe("zostr (classic)", () => {
   });
 
   it("relayMessage.closedMessagePrefixCheck() enforces the '<prefix>: <message>' format, prefix isn't restricted to NIP-01's standardized list", () => {
-    const checked = zostr.relayMessage
+    const checked = zostr.nip01.relayMessage
       .closed()
-      .check(zostr.relayMessage.closedMessagePrefixCheck());
+      .check(zostr.nip01.relayMessage.closedMessagePrefixCheck());
 
     // Not composed by default: an unprefixed reason parses fine.
     expect(
-      zostr.relayMessage.closed().parse(["CLOSED", "sub1", "nope"]),
+      zostr.nip01.relayMessage.closed().parse(["CLOSED", "sub1", "nope"]),
     ).toBeTruthy();
 
     expect(
@@ -500,7 +516,7 @@ describe("zostr (classic)", () => {
     ).toThrow();
   });
 
-  it("nip05.nostrJsonDocument() validates names keys as local-part characters and strips unknown top-level keys", () => {
+  it("nip05.nostrJsonDocument() validates names keys as local-part characters and preserves unknown top-level keys", () => {
     const pubkey = getPublicKey(generateSecretKey());
     expect(() =>
       zostr.nip05.nostrJsonDocument().parse({ names: { "bob!": pubkey } }),
@@ -510,11 +526,13 @@ describe("zostr (classic)", () => {
       zostr.nip05.nostrJsonDocument().parse({ names: { Bob: pubkey } }),
     ).toThrow();
 
+    // The served document is forward-compatible: unknown top-level keys are
+    // preserved, never silently stripped.
     expect(
       zostr.nip05
         .nostrJsonDocument()
         .parse({ names: { bob: pubkey }, extra: "y" }),
-    ).toEqual({ names: { bob: pubkey } });
+    ).toEqual({ names: { bob: pubkey }, extra: "y" });
   });
 
   it("nip11.relayInformationDocument() validates a full document", () => {
@@ -547,11 +565,13 @@ describe("zostr (classic)", () => {
     expect(zostr.nip11.relayInformationDocument().parse(doc)).toEqual(doc);
   });
 
-  it("nip11.relayInformationDocument() treats every field as optional and strips unknown keys", () => {
+  it("nip11.relayInformationDocument() treats every field as optional and preserves unknown keys", () => {
     expect(zostr.nip11.relayInformationDocument().parse({})).toEqual({});
+    // NIP-11 is forward-compatible ("clients MUST ignore any additional fields
+    // they do not understand"): unknown keys are preserved, not stripped.
     expect(
       zostr.nip11.relayInformationDocument().parse({ name: "x", extra: "y" }),
-    ).toEqual({ name: "x" });
+    ).toEqual({ name: "x", extra: "y" });
   });
 
   it("nip11.relayInformationDocument() validates pubkey/self as 64-char hex", () => {
@@ -672,33 +692,43 @@ describe("zostr (classic)", () => {
     expect(names).toEqual({ bob: pubkey });
   });
 
-  it("nip45.countRequest() validates a NIP-45 COUNT request tuple", () => {
+  it("nip45.clientMessage.count() validates a NIP-45 COUNT request tuple", () => {
     expect(
-      zostr.nip45.countRequest().parse(["COUNT", "sub1", { kinds: [1] }, {}]),
+      zostr.nip45.clientMessage
+        .count()
+        .parse(["COUNT", "sub1", { kinds: [1] }, {}]),
     ).toBeTruthy();
     // Count-everything sends a single empty {} filter.
     expect(
-      zostr.nip45.countRequest().parse(["COUNT", "sub1", {}]),
+      zostr.nip45.clientMessage.count().parse(["COUNT", "sub1", {}]),
     ).toBeTruthy();
     // At least one filter is required (matching NIP-01's REQ grammar).
-    expect(() => zostr.nip45.countRequest().parse(["COUNT", "sub1"])).toThrow();
+    expect(() =>
+      zostr.nip45.clientMessage.count().parse(["COUNT", "sub1"]),
+    ).toThrow();
 
-    expect(() => zostr.nip45.countRequest().parse(["REQ", "sub1"])).toThrow();
-    expect(() => zostr.nip45.countRequest().parse(["COUNT", "", {}])).toThrow();
+    expect(() =>
+      zostr.nip45.clientMessage.count().parse(["REQ", "sub1"]),
+    ).toThrow();
+    expect(() =>
+      zostr.nip45.clientMessage.count().parse(["COUNT", "", {}]),
+    ).toThrow();
     // Filters are still validated (unknown filter key rejected).
     expect(() =>
-      zostr.nip45.countRequest().parse(["COUNT", "sub1", { foo: ["x"] }]),
+      zostr.nip45.clientMessage
+        .count()
+        .parse(["COUNT", "sub1", { foo: ["x"] }]),
     ).toThrow();
   });
 
-  it("nip45.countResponse()/count() validate a NIP-45 COUNT response", () => {
+  it("nip45.relayMessage.count()/count() validate a NIP-45 COUNT response", () => {
     expect(
-      zostr.nip45.countResponse().parse(["COUNT", "sub1", { count: 0 }]),
+      zostr.nip45.relayMessage.count().parse(["COUNT", "sub1", { count: 0 }]),
     ).toBeTruthy();
     const hll = "0".repeat(512);
     expect(
-      zostr.nip45
-        .countResponse()
+      zostr.nip45.relayMessage
+        .count()
         .parse(["COUNT", "sub1", { count: 2044, approximate: true, hll }]),
     ).toBeTruthy();
 
@@ -722,23 +752,24 @@ describe("zostr (classic)", () => {
     expect(() =>
       zostr.nip45.count().parse({ count: 1, hll: "z".repeat(512) }),
     ).toThrow();
-    // Unknown keys are stripped.
-    expect(zostr.nip45.count().parse({ count: 1, extra: true })).toEqual({
-      count: 1,
-    });
+    // The COUNT response body is a fixed shape: unknown keys are rejected, not
+    // silently stripped.
+    expect(() =>
+      zostr.nip45.count().parse({ count: 1, extra: true }),
+    ).toThrow();
   });
 
   it("nip45.* infer precise output types", () => {
-    const res = zostr.nip45
-      .countResponse()
+    const res = zostr.nip45.relayMessage
+      .count()
       .parse(["COUNT", "sub1", { count: 5 }]);
     const c: number = res[2].count;
     const approximate: boolean | undefined = res[2].approximate;
     expect(c).toBe(5);
     expect(approximate).toBeUndefined();
 
-    const req = zostr.nip45
-      .countRequest()
+    const req = zostr.nip45.clientMessage
+      .count()
       .parse(["COUNT", "sub1", { kinds: [1] }]);
     // req[2] is the required first filter (no `?.`) — pins that the third
     // tuple element is non-optional, not just `filter | undefined`.
@@ -748,55 +779,67 @@ describe("zostr (classic)", () => {
 
   it("nip67.eose() accepts the two- and three-element EOSE wire shapes", () => {
     // The bare NIP-01 form (a NIP-67 relay still sends it).
-    expect(zostr.nip67.eose().parse(["EOSE", "sub1"])).toEqual([
+    expect(zostr.nip67.relayMessage.eose().parse(["EOSE", "sub1"])).toEqual([
       "EOSE",
       "sub1",
     ]);
     // Defined hints.
-    expect(zostr.nip67.eose().parse(["EOSE", "sub1", ["finish"]])).toEqual([
-      "EOSE",
-      "sub1",
-      ["finish"],
-    ]);
-    expect(zostr.nip67.eose().parse(["EOSE", "sub1", ["more"]])).toBeTruthy();
-    // The array MAY be empty and MAY carry multiple hints.
-    expect(zostr.nip67.eose().parse(["EOSE", "sub1", []])).toBeTruthy();
     expect(
-      zostr.nip67.eose().parse(["EOSE", "sub1", ["finish", "more"]]),
+      zostr.nip67.relayMessage.eose().parse(["EOSE", "sub1", ["finish"]]),
+    ).toEqual(["EOSE", "sub1", ["finish"]]);
+    expect(
+      zostr.nip67.relayMessage.eose().parse(["EOSE", "sub1", ["more"]]),
+    ).toBeTruthy();
+    // The array MAY be empty and MAY carry multiple hints.
+    expect(
+      zostr.nip67.relayMessage.eose().parse(["EOSE", "sub1", []]),
+    ).toBeTruthy();
+    expect(
+      zostr.nip67.relayMessage
+        .eose()
+        .parse(["EOSE", "sub1", ["finish", "more"]]),
     ).toBeTruthy();
     // Unknown hint values are accepted as plain strings (no enum baked in).
-    expect(zostr.nip67.eose().parse(["EOSE", "sub1", ["future"]])).toBeTruthy();
+    expect(
+      zostr.nip67.relayMessage.eose().parse(["EOSE", "sub1", ["future"]]),
+    ).toBeTruthy();
   });
 
   it("nip67.eose() rejects non-wire and malformed shapes", () => {
     // The hints must be an array of strings, not a bare string...
     expect(() =>
-      zostr.nip67.eose().parse(["EOSE", "sub1", "finish"]),
+      zostr.nip67.relayMessage.eose().parse(["EOSE", "sub1", "finish"]),
     ).toThrow();
     // ...nor an array containing non-strings.
-    expect(() => zostr.nip67.eose().parse(["EOSE", "sub1", [1]])).toThrow();
+    expect(() =>
+      zostr.nip67.relayMessage.eose().parse(["EOSE", "sub1", [1]]),
+    ).toThrow();
     // An explicit `undefined` third element is not a JSON wire shape (the union
     // of exact tuples rejects it, unlike an optional-tuple item would).
     expect(() =>
-      zostr.nip67.eose().parse(["EOSE", "sub1", undefined]),
+      zostr.nip67.relayMessage.eose().parse(["EOSE", "sub1", undefined]),
     ).toThrow();
     // No fourth element.
     expect(() =>
-      zostr.nip67.eose().parse(["EOSE", "sub1", ["finish"], "extra"]),
+      zostr.nip67.relayMessage
+        .eose()
+        .parse(["EOSE", "sub1", ["finish"], "extra"]),
     ).toThrow();
     // The subscription id still applies (non-empty).
-    expect(() => zostr.nip67.eose().parse(["EOSE", "", ["finish"]])).toThrow();
+    expect(() =>
+      zostr.nip67.relayMessage.eose().parse(["EOSE", "", ["finish"]]),
+    ).toThrow();
   });
 
   it("NIP-01 relayMessage.any() rejects a NIP-67 EOSE; a composed union accepts it", () => {
     // relayMessage.any() is NIP-01-only, so the three-element form is rejected.
     expect(() =>
-      zostr.relayMessage.any().parse(["EOSE", "sub1", ["finish"]]),
+      zostr.nip01.relayMessage.any().parse(["EOSE", "sub1", ["finish"]]),
     ).toThrow();
     // The documented composition accepts both NIP-01 messages and NIP-67 EOSE.
     const relayMessage = z.union([
-      zostr.relayMessage.any(),
-      zostr.nip67.eose(),
+      zostr.nip01.relayMessage.any(),
+      zostr.nip67.relayMessage.eose(),
     ]);
     expect(relayMessage.parse(["EOSE", "sub1"])).toBeTruthy();
     expect(relayMessage.parse(["EOSE", "sub1", ["finish"]])).toBeTruthy();
@@ -804,7 +847,9 @@ describe("zostr (classic)", () => {
   });
 
   it("nip67.eose() infers the precise two-/three-element union type", () => {
-    const eose = zostr.nip67.eose().parse(["EOSE", "sub1", ["finish"]]);
+    const eose = zostr.nip67.relayMessage
+      .eose()
+      .parse(["EOSE", "sub1", ["finish"]]);
     // The hints (when present) are string[].
     const hints: string[] | undefined = eose.length === 3 ? eose[2] : undefined;
     expect(hints).toEqual(["finish"]);
@@ -834,7 +879,7 @@ describe("zostr (classic)", () => {
     expect(() => zostr.nip42.authEvent().parse(wrongKind)).toThrow();
   });
 
-  it("nip42.authChallenge()/authRequest() validate AUTH tuples", () => {
+  it("nip42.relayMessage.auth()/clientMessage.auth() validate AUTH tuples", () => {
     const sk = generateSecretKey();
     const authEvent = finalizeEvent(
       {
@@ -847,24 +892,28 @@ describe("zostr (classic)", () => {
     );
 
     expect(
-      zostr.nip42.authChallenge().parse(["AUTH", "challengestringhere"]),
+      zostr.nip42.relayMessage.auth().parse(["AUTH", "challengestringhere"]),
     ).toBeTruthy();
-    expect(zostr.nip42.authRequest().parse(["AUTH", authEvent])).toBeTruthy();
+    expect(
+      zostr.nip42.clientMessage.auth().parse(["AUTH", authEvent]),
+    ).toBeTruthy();
 
     // The two directions carry different payloads (string vs. event) and don't
     // validate as each other.
     expect(() =>
-      zostr.nip42.authRequest().parse(["AUTH", "challengestringhere"]),
+      zostr.nip42.clientMessage.auth().parse(["AUTH", "challengestringhere"]),
     ).toThrow();
     expect(() =>
-      zostr.nip42.authChallenge().parse(["AUTH", authEvent]),
+      zostr.nip42.relayMessage.auth().parse(["AUTH", authEvent]),
     ).toThrow();
-    // authRequest rejects a non-22242 event.
+    // clientMessage.auth rejects a non-22242 event.
     const note = finalizeEvent(
       { kind: 1, created_at: 0, tags: [], content: "hi" },
       sk,
     );
-    expect(() => zostr.nip42.authRequest().parse(["AUTH", note])).toThrow();
+    expect(() =>
+      zostr.nip42.clientMessage.auth().parse(["AUTH", note]),
+    ).toThrow();
   });
 
   it("nip42 opt-in checks verify signature, challenge/relay tags, and created_at recency", () => {
@@ -928,7 +977,7 @@ describe("zostr (classic)", () => {
   });
 
   it("nip42.* infer precise output types", () => {
-    const challenge = zostr.nip42.authChallenge().parse(["AUTH", "abc"]);
+    const challenge = zostr.nip42.relayMessage.auth().parse(["AUTH", "abc"]);
     // challenge[1] is the challenge string (no `?.`).
     const c: string = challenge[1];
     expect(c).toBe("abc");
@@ -938,7 +987,7 @@ describe("zostr (classic)", () => {
       { kind: 22242, created_at: 0, tags: [], content: "" },
       sk,
     );
-    const auth = zostr.nip42.authRequest().parse(["AUTH", signed]);
+    const auth = zostr.nip42.clientMessage.auth().parse(["AUTH", signed]);
     // auth[1] is the auth event object; kind infers as the literal 22242.
     const kind: 22242 = auth[1].kind;
     expect(kind).toBe(22242);
@@ -971,11 +1020,13 @@ describe("zostr (classic)", () => {
 
   it("nip50.req() carries search filters and requires at least one filter", () => {
     expect(
-      zostr.nip50.req().parse(["REQ", "sub1", { search: "orange" }]),
+      zostr.nip50.clientMessage
+        .req()
+        .parse(["REQ", "sub1", { search: "orange" }]),
     ).toBeTruthy();
     // Several filters, mixing a search filter and a plain NIP-01 filter.
     expect(
-      zostr.nip50
+      zostr.nip50.clientMessage
         .req()
         .parse(["REQ", "sub1", { search: "orange" }, { kinds: [1, 2] }]),
     ).toBeTruthy();
@@ -983,33 +1034,37 @@ describe("zostr (classic)", () => {
     // NIP-50 allows several search filters. Guards the rest against reverting
     // to the plain NIP-01 filter().
     expect(
-      zostr.nip50
+      zostr.nip50.clientMessage
         .req()
         .parse(["REQ", "sub1", { kinds: [1] }, { search: "purple" }]),
     ).toBeTruthy();
     // A plain filter with no search is accepted (superset of clientMessage.req()).
     expect(
-      zostr.nip50.req().parse(["REQ", "sub1", { kinds: [1] }]),
+      zostr.nip50.clientMessage.req().parse(["REQ", "sub1", { kinds: [1] }]),
     ).toBeTruthy();
     // At least one filter is required (NIP-01 REQ grammar).
-    expect(() => zostr.nip50.req().parse(["REQ", "sub1"])).toThrow();
+    expect(() =>
+      zostr.nip50.clientMessage.req().parse(["REQ", "sub1"]),
+    ).toThrow();
   });
 
   it("NIP-01 REQ/COUNT stay search-free; a composed union accepts NIP-50 REQ", () => {
-    // clientMessage.req()/any() and nip45.countRequest() reject `search`.
+    // nip01.clientMessage.req()/any() and nip45.clientMessage.count() reject `search`.
     expect(() =>
-      zostr.clientMessage.req().parse(["REQ", "sub1", { search: "x" }]),
+      zostr.nip01.clientMessage.req().parse(["REQ", "sub1", { search: "x" }]),
     ).toThrow();
     expect(() =>
-      zostr.clientMessage.any().parse(["REQ", "sub1", { search: "x" }]),
+      zostr.nip01.clientMessage.any().parse(["REQ", "sub1", { search: "x" }]),
     ).toThrow();
     expect(() =>
-      zostr.nip45.countRequest().parse(["COUNT", "sub1", { search: "x" }]),
+      zostr.nip45.clientMessage
+        .count()
+        .parse(["COUNT", "sub1", { search: "x" }]),
     ).toThrow();
     // The documented composition accepts both NIP-01 client messages and NIP-50 REQ.
     const clientMessage = z.union([
-      zostr.clientMessage.any(),
-      zostr.nip50.req(),
+      zostr.nip01.clientMessage.any(),
+      zostr.nip50.clientMessage.req(),
     ]);
     expect(clientMessage.parse(["REQ", "sub1", { search: "x" }])).toBeTruthy();
     expect(clientMessage.parse(["CLOSE", "sub1"])).toBeTruthy();
@@ -1020,9 +1075,124 @@ describe("zostr (classic)", () => {
     const search: string | undefined = f.search;
     expect(search).toBe("x");
 
-    const req = zostr.nip50.req().parse(["REQ", "sub1", { search: "x" }]);
+    const req = zostr.nip50.clientMessage
+      .req()
+      .parse(["REQ", "sub1", { search: "x" }]);
     // req[2] is the required first filter (non-optional); its `search` is string.
     const reqSearch: string | undefined = req[2].search;
     expect(reqSearch).toBe("x");
+  });
+
+  it("event schemas require every tag to be a non-empty array of strings", () => {
+    const base = {
+      id: "a".repeat(64),
+      pubkey: "b".repeat(64),
+      created_at: 0,
+      kind: 1,
+      content: "hi",
+      sig: "c".repeat(128),
+    };
+    // A tag with at least one string (its tag name) is accepted.
+    expect(
+      zostr.event().parse({ ...base, tags: [["e", "id"], ["p"]] }),
+    ).toBeTruthy();
+    // An empty inner tag has no tag name and is rejected.
+    expect(() => zostr.event().parse({ ...base, tags: [[]] })).toThrow();
+    // The outer tags array MAY be empty (an event can carry no tags).
+    expect(zostr.event().parse({ ...base, tags: [] })).toBeTruthy();
+  });
+
+  it("filter() rejects empty ids/authors/kinds/#<letter> arrays but keeps {} valid", () => {
+    expect(zostr.filter().parse({})).toEqual({});
+    expect(() => zostr.filter().parse({ ids: [] })).toThrow();
+    expect(() => zostr.filter().parse({ authors: [] })).toThrow();
+    expect(() => zostr.filter().parse({ kinds: [] })).toThrow();
+    expect(() => zostr.filter().parse({ "#e": [] })).toThrow();
+    // A present array with at least one value is accepted.
+    expect(zostr.filter().parse({ kinds: [1], "#e": ["id"] })).toEqual({
+      kinds: [1],
+      "#e": ["id"],
+    });
+  });
+
+  it("event schemas reject unknown keys (fixed event shape, never stripped)", () => {
+    const signed = finalizeEvent(
+      { kind: 1, created_at: 0, tags: [], content: "hi" },
+      generateSecretKey(),
+    );
+    expect(() => zostr.event().parse({ ...signed, extra: "x" })).toThrow();
+    expect(() =>
+      zostr.eventTemplate().parse({
+        kind: 1,
+        created_at: 0,
+        tags: [],
+        content: "hi",
+        extra: "x",
+      }),
+    ).toThrow();
+    expect(() =>
+      zostr.nip42.authEvent().parse({ ...signed, kind: 22242, extra: "x" }),
+    ).toThrow();
+  });
+
+  it("metadata() preserves unknown keys; NIP-19 pointers reject them", () => {
+    // kind:0 profile content is forward-compatible: unknown keys survive a
+    // metadata() parse (and a metadataContent() round-trip).
+    expect(
+      zostr.nip01.metadata().parse({ name: "alice", custom_field: 1 }),
+    ).toEqual({ name: "alice", custom_field: 1 });
+
+    // A NIP-19 pointer is a fixed TLV shape: an unknown key can't be carried on
+    // the wire, so encode rejects it rather than silently dropping it on the
+    // decode(encode(x)) round-trip.
+    const pk = getPublicKey(generateSecretKey());
+    expect(zostr.nprofile().encode({ pubkey: pk, relays: [] })).toMatch(
+      /^nprofile1/,
+    );
+    expect(() =>
+      // @ts-expect-error extra keys are not part of the pointer shape
+      zostr.nprofile().encode({ pubkey: pk, relays: [], extra: "x" }),
+    ).toThrow();
+  });
+
+  it("an event embedded in a message rejects unknown keys at runtime and in the inferred type", () => {
+    const signed = finalizeEvent(
+      { kind: 1, created_at: 0, tags: [], content: "hi" },
+      generateSecretKey(),
+    );
+    // runtime: the embedded event is the reject schema, so a message carrying an
+    // event with an extra key is rejected.
+    expect(() =>
+      zostr.nip01.relayMessage
+        .event()
+        .parse(["EVENT", "sub", { ...signed, extra: 1 }]),
+    ).toThrow();
+
+    // type: the embedded event element infers a strict object (no unknown index
+    // access), matching the runtime contract. Regression for the loose default
+    // `$ZodObjectConfig` leaking through a tuple/union that isn't re-wrapped.
+    const relayed = zostr.nip01.relayMessage
+      .event()
+      .parse(["EVENT", "sub", signed]);
+    // @ts-expect-error embedded event output is strict
+    relayed[2].extension;
+
+    const counted = zostr.nip45.relayMessage
+      .count()
+      .parse(["COUNT", "sub", { count: 1 }]);
+    // @ts-expect-error embedded count output is strict
+    counted[2].extension;
+  });
+
+  it("nip11.relayInformationDocument() validates software as a URL", () => {
+    expect(
+      zostr.nip11
+        .relayInformationDocument()
+        .parse({ software: "https://example.com/relay" }),
+    ).toEqual({ software: "https://example.com/relay" });
+    // NIP-11 defines `software` as a URL; a bare name is rejected.
+    expect(() =>
+      zostr.nip11.relayInformationDocument().parse({ software: "my-relay" }),
+    ).toThrow();
   });
 });

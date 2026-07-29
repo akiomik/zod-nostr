@@ -26,7 +26,8 @@
     "format": "biome format --write .",
     "check": "biome check .",
     "check:write": "biome check --write .",
-    "prepublishOnly": "npm run typecheck && npm run check && npm test && npm run build"
+    "test:consumer": "node test/consumer/check.mjs",
+    "prepublishOnly": "npm run typecheck && npm run check && npm test && npm run build && npm run test:consumer"
   },
   "keywords": [
     "nostr",

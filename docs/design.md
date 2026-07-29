@@ -36,6 +36,37 @@ Validation logic is defined once against `zod/v4/core` and exposed through both
 the classic and zod/mini entry points as each flavor's native schema. Neither
 flavor is the source of truth; both re-wrap the shared core.
 
+### Canonical owner paths, with direct-reference re-exports
+
+Every public schema, codec, check, and utility has exactly one **canonical
+owner path** — the single documentation and compatibility source of truth for
+it. Ownership follows the public API's shape, not a mechanical read of every
+spec a schema touches:
+
+- a spec-specific protocol concept is normally owned by its spec namespace
+  (`nip50.filter`, `nip19.npub`, `nip05.identifier`);
+- a cross-spec catalog that composes one consumer domain can be owned by that
+  domain's namespace (`nip01.metadataFields.*` owns the kind:0 profile-field
+  catalog, whose values draw on NIP-01/NIP-24/LUD);
+- a cross-spec utility can be owned by the root (`jsonCodec`).
+
+Provenance — which spec defines a value's format — is recorded as an attribute
+in the API docs, spec evidence, and tests, **not** encoded into the path.
+Otherwise the surface would grow a namespace per standards body (a `lud`
+namespace beside `nip24`, and so on) just to display provenance.
+
+Every other appearance of an API is a **direct reference** to its canonical
+factory — never a separate wrapper — so identity holds and the two cannot drift
+in behavior or inferred type. This covers both the ergonomic **root aliases**
+(`zostr.event === zostr.nip01.event`; a curated set of Nostr-wide primitives and
+the globally unique NIP-19 entities) and any **in-catalog re-export**
+(`nip01.metadataFields.nip05` is a direct reference to the canonical
+`nip05.identifier`). A re-export must not delegate through a wrapper, add or omit
+checks, change types, carry its own behavior docs, or become the source the
+canonical path is implemented from. Adding a root alias is an explicit API
+decision, not the output of an eligibility algorithm; message namespaces and
+kind-specific content (`metadata`, `textNote`, …) are not aliased at the root.
+
 ### Expose strict atoms
 
 Field-level schemas are exposed non-optional, with no `.catch`/fallback.
@@ -54,15 +85,29 @@ fallbacks — is never embedded in a base schema. The base fails on invalid
 input; the consumer decides what to do about it. (Unknown-key handling is a
 separate, structural concern — see below.)
 
-### Unknown-key handling is an explicit structural choice
+### Unknown keys are preserved or rejected, never silently stripped
 
-How an object schema treats unknown keys — `strip`, `preserve`, or `reject` —
-is part of its structural contract, chosen deliberately from the spec and its
-forward-compatibility needs, not a per-value recovery fallback. For example
-`nip05.nostrJsonDocument()` and `nip11.relayInformationDocument()` strip
-unknown keys, matching each spec's treatment of forward-compatible fields. The
-choice is documented in the API and covered by tests, and changing it is
-runtime-breaking (see [Compatibility and versioning](#compatibility-and-versioning)).
+How an object schema treats unknown keys is part of its structural contract,
+chosen deliberately from the spec and its forward-compatibility needs — not a
+per-value recovery fallback. The choice is always one of two, never a silent
+`strip`:
+
+- **preserve** — the spec permits extension or consumers must accept unknown
+  fields (a forward-compatible document or content). Kept via a `catchall`
+  `unknown`, so the output type carries a `[key: string]: unknown` index
+  signature. Examples: `nip01.metadata()`, `nip05.nostrJsonDocument()`,
+  `nip11.relayInformationDocument()` (and its nested objects).
+- **reject** — the object is a fixed protocol shape where an unknown key is not
+  part of the represented value and could change its meaning. Enforced with a
+  `catchall` of `never`. Examples: the event schemas (`event`, `eventTemplate`,
+  `unsignedEvent`, `nip10.textNote`, `nip42.authEvent`), the `nip45.count`
+  response body, and the NIP-19 pointer outputs.
+
+Silent strip is avoided because it discards data without signaling it — a
+forward-compatible field vanishes on a round-trip, and a malformed key passes
+unnoticed. The choice is documented in the API and covered by tests in both
+flavors, and changing it is breaking (see
+[Compatibility and versioning](#compatibility-and-versioning)).
 
 ### Checks beyond the structural contract are opt-in
 
@@ -71,7 +116,7 @@ exposed as composable, opt-in `.check()`s rather than baked in. This covers
 advisory conventions (spec "SHOULD"s) and separately-requested semantic or
 cryptographic verification. Examples: signature verification
 (`signatureCheck`) and the NIP-01 OK/CLOSED message-prefix convention
-(`relayMessage.okMessagePrefixCheck` / `closedMessagePrefixCheck`). Cost may
+(`nip01.relayMessage.okMessagePrefixCheck` / `closedMessagePrefixCheck`). Cost may
 justify moving a check to a separate layer, but cost alone does not override a
 required invariant — a MUST-level structural rule stays in the base.
 
@@ -85,7 +130,8 @@ unit.
 
 *(Applied to kind:0 profile metadata: the `metadataFields` atoms, the generic
 `jsonCodec(schema)` transport, the `metadata()` object schema, and the
-`metadataContent()` convenience codec — see the metadata worked example below.)*
+`metadataContent()` convenience codec — see
+[decision 0001](./decisions/0001-metadata-shape-and-transport.md).)*
 
 ### Put guarantees in schemas
 
@@ -121,34 +167,33 @@ which layer it extends.
 - **Convenience codecs** — a specific transport + shape assembled for a common
   case (`nip01.metadataContent()`, built on `jsonCodec(nip01.metadata())`).
 
-Fields and schemas are named for the spec that defines them (e.g. `nip05`, and
-the NIP-24 / LUD-16 / LUD-06 metadata fields), so the public surface reflects
-provenance.
+Fields and schemas live under their canonical owner path (see *Canonical owner
+paths*); their spec provenance is recorded in the docs and tests rather than
+forced into the path (e.g. the NIP-24 / LUD-16 / LUD-06 profile fields live in
+the `nip01.metadataFields` catalog, with their defining spec noted per field).
 
 ### Naming
 
-Public names follow provenance and the protocol's own wire vocabulary:
+Public names follow ownership and the protocol's own wire vocabulary:
 
 - **Object schemas** are named for what they model (`filter`, `event`, `count`,
   `authEvent`); a NIP namespace drops the redundant prefix (`nip50.filter`, not
   `nip50.searchFilter`).
-- **Protocol messages** are named from the lowercased wire token, and protocol
-  abbreviations are not expanded (`req`, not `request`; `eose`, `ok`).
-  Collisions are judged **within a namespace**: a token that appears in only one
-  message schema in its namespace stays bare (`nip50.req`, `nip67.eose`), and
-  the same bare token may recur across namespaces without conflict —
-  `clientMessage.event()` (`["EVENT", event]`) and `relayMessage.event()`
-  (`["EVENT", subscriptionId, event]`) are both bare `event`. When two message
-  schemas sharing a token would collide **within the same namespace**, keep the
-  token as the base and append a full-word role/direction to it rather than
-  switching to a content-role name — so the wire token is always recoverable
-  from the public name. The precedents are `countRequest`/`countResponse` (COUNT
-  both ways in `nip45`) and `authChallenge`/`authRequest` (in `nip42`, the
-  relay's `["AUTH", challenge]` and the client's `["AUTH", signedAuthEvent]`,
-  which requests authentication and is answered by `OK`).
+- **Protocol messages** live under a `relayMessage`/`clientMessage` namespace
+  that carries the **direction**, and the leaf is the lowercased wire token, with
+  protocol abbreviations not expanded (`req`, not `request`; `eose`, `ok`,
+  `auth`, `count`). Direction in the namespace means a token that would otherwise
+  collide across directions no longer needs a suffix: the relay's and client's
+  `["AUTH", …]` are `nip42.relayMessage.auth` / `nip42.clientMessage.auth`, and
+  COUNT both ways is `nip45.clientMessage.count` / `nip45.relayMessage.count` —
+  the wire token stays recoverable from the leaf without inventing
+  `authChallenge`/`countResponse`-style names. The same bare leaf recurs freely
+  across namespaces: `clientMessage.event()` (`["EVENT", event]`) and
+  `relayMessage.event()` (`["EVENT", subscriptionId, event]`).
 - A schema that is a **superset** of an existing one reuses the leaf name, when
-  unambiguous, to signal the relationship: `nip50.req` ⊃ `clientMessage.req`,
-  `nip50.filter` ⊃ `filter`, `nip67.eose` ⊃ `relayMessage.eose`.
+  unambiguous, to signal the relationship: `nip50.clientMessage.req` ⊃
+  `nip01.clientMessage.req`, `nip50.filter` ⊃ `nip01.filter`,
+  `nip67.relayMessage.eose` ⊃ `nip01.relayMessage.eose`.
 
 ## Composition examples
 
@@ -195,7 +240,7 @@ A change is breaking if it is either:
 
 - **Runtime breaking** — it changes observable behavior: renaming or removing a
   public name; tightening validation so previously-accepted values are now
-  rejected; changing object semantics (e.g. unknown-key strip vs. preserve); a
+  rejected; changing object semantics (e.g. unknown-key preserve vs. reject); a
   codec that previously encoded/decoded a value now failing.
 - **Type-only breaking** — runtime behavior is unchanged but an inferred
   input/output type changes incompatibly. These are called out as
@@ -210,55 +255,32 @@ A public API addition ships with:
 
 - a single core implementation (against `zod/v4/core`), wired into **both** the
   classic and mini entry points;
-- exact public-surface parity between the two flavors (asserted by the
+- exact public-surface parity between the two flavors, and — for a root alias —
+  its direct-reference identity to the canonical factory (asserted by the
   API-surface test);
-- runtime tests in **both** flavors;
+- runtime tests in **both** flavors, including a preserve-or-reject assertion for
+  every object schema (no silent strip);
+- input/output **type** tests (precise-inference assertions in both flavors);
+- passing the release gates below;
 - updated `API.md` and `CHANGELOG.md`.
 
-*Intended, being introduced alongside the 0.3.0 work (not yet enforced):*
-input/output **type** tests, and a compile fixture that imports the package the
-way an external consumer would.
+Two release gates run in CI:
 
-## Metadata API worked example
+- **External consumer compile** (`npm run test:consumer`, `test/consumer/`) —
+  compiles a fixture that imports the package by its published specifiers
+  (`zod-nostr` / `zod-nostr/mini`), resolved to the built declarations in
+  `dist/`, so it exercises the emitted `.d.ts` a consumer actually sees rather
+  than source-relative types.
+- **Release-surface comparison** (`src/release-surface.test.ts`) — diffs the
+  current public path set against the last published release and requires every
+  removed/renamed path to be listed in an intentional-breaking manifest;
+  additive paths are always allowed, an unclassified removal fails.
 
-The kind:0 metadata API is the worked example these principles were derived
-from. (When `docs/decisions/` is introduced, this is expected to become its
-first record.)
+## Decision records
 
-**Context.** The original `nip01.metadata()` was a single codec (JSON string ⇄
-an all-required `{ name, display_name, picture, nip05 }` object). Real consumers
-couldn't reuse the shape, reuse individual fields, or apply their own fallbacks,
-so they re-implemented the profile schema by hand — the codec exposed the
-least-composable form and hid the most-composable one.
+Longer-form records of specific past decisions live in
+[decisions/](./decisions/), separate from this rule set:
 
-**Decision.** Separate the concerns into distinct, composable layers
-(*separate shape from transport*, *expose strict atoms*):
-
-- `nip01.metadataFields` — strict, non-optional field atoms (0.2.1).
-- `nip01.metadata()` — an object schema: known fields optional and strictly
-  validated, no baked-in recovery policy, unknown keys preserved as `unknown`.
-- `jsonCodec(schema)` — the generic JSON transport.
-- `nip01.metadataContent()` — the convenience codec, `jsonCodec(metadata())`.
-
-**Alternatives not chosen.**
-
-- *Expose only the codec's `.out` schema* — classic's `.out` is a public
-  property, but it holds a raw core schema without the flavor-native object API
-  (`.parse`/`.extend`/`.pick`), and zod/mini doesn't expose `.out` as an
-  instance property at all — so it isn't an equivalent, composable object
-  surface across both flavors.
-- *Compose via intersection only* — can't relax or override an existing field's
-  validation, only add.
-- *Bake fallbacks (`.catch`/`.default`) into the base* — irreversible; a
-  consumer can't recover the strict behavior (*recovery-policy asymmetry*).
-- *`catchall(z.json())` for unknown keys* — its inferred type conflicts with the
-  optional known fields (an index signature can't hold `undefined`), so the
-  schema would reject a value it itself produces; `unknown` avoids this.
-- *Recursive `preflight` in the codec's encode* — chases a general
-  "is-this-JSON-serializable" problem that belongs in the schema, not a
-  serializer; the encode contract stays `JSON.stringify` semantics instead.
-
-**Consequences.** Consumers compose freely (relax, tighten, reuse a subset,
-per-field fallbacks) and unknown fields survive a round-trip; in exchange, the
-JSON-serializability guarantee of a composed schema is the consumer's to express
-in that schema, not something the transport enforces.
+- [0001 — Separate kind:0 metadata shape from its transport](./decisions/0001-metadata-shape-and-transport.md)
+  — the worked example the *separate shape from transport* and *expose strict
+  atoms* principles were derived from.

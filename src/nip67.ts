@@ -31,11 +31,12 @@ import { subscriptionId } from "./nip01.js";
  * oldest received event's `created_at`. Interpreting the hints is the
  * consumer's responsibility — this schema validates structure only.
  *
- * This is a strict superset of `zostr.relayMessage.eose()`: it also accepts the
- * bare two-element form a NIP-67 relay still sends. `zostr.relayMessage.any()`
- * stays NIP-01-only (like the NIP-42/NIP-45 messages, it isn't folded in); a
- * consumer wanting NIP-67 EOSE alongside the other relay messages composes
- * `z.union([zostr.relayMessage.any(), zostr.nip67.eose()])`.
+ * This is a strict superset of `zostr.nip01.relayMessage.eose()`: it also
+ * accepts the bare two-element form a NIP-67 relay still sends.
+ * `zostr.nip01.relayMessage.any()` stays NIP-01-only (like the NIP-42/NIP-45
+ * messages, it isn't folded in); a consumer wanting NIP-67 EOSE alongside the
+ * other relay messages composes
+ * `z.union([zostr.nip01.relayMessage.any(), zostr.nip67.relayMessage.eose()])`.
  */
 function eoseMessage() {
   return zodUnion([
@@ -46,6 +47,9 @@ function eoseMessage() {
 
 /** NIP-67 EOSE completeness-hint message */
 export const nip67 = {
-  /** Relay-to-client `["EOSE", subscriptionId]` or `["EOSE", subscriptionId, hints]` */
-  eose: eoseMessage,
+  /** Relay-to-client `EOSE` message with an optional completeness-hint array */
+  relayMessage: {
+    /** Relay-to-client `["EOSE", subscriptionId]` or `["EOSE", subscriptionId, hints]` */
+    eose: eoseMessage,
+  },
 };

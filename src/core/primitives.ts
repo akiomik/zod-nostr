@@ -44,10 +44,17 @@ export function zodLiteral<T extends core.util.Literal>(
 
 export function zodArray<T extends core.SomeType>(
   element: T,
+  checks: core.$ZodCheck<unknown[]>[] = [],
 ): core.$ZodArray<T> {
-  const def = { type: "array", element };
+  const def = { type: "array", element, checks };
   // biome-ignore lint/suspicious/noExplicitAny: $constructor doesn't accept a typed def; the return type is asserted explicitly below.
   return new core.$ZodArray(def as any) as unknown as core.$ZodArray<T>;
+}
+
+export function zodNever(): core.$ZodNever {
+  const def = { type: "never" };
+  // biome-ignore lint/suspicious/noExplicitAny: $constructor doesn't accept a typed def; the return type is asserted explicitly below.
+  return new core.$ZodNever(def as any) as core.$ZodNever;
 }
 
 export function zodTuple<T extends core.SomeType[]>(
@@ -89,6 +96,34 @@ export function zodRecord<
   >;
 }
 
+/**
+ * Maps an object's `catchall` schema to the `$ZodObjectConfig` that drives its
+ * inferred output type: a `never` catchall rejects unknown keys, so the output
+ * is `$strict` (no index signature); any other catchall preserves unknown keys
+ * typed as its output. Without this, `$ZodObject`'s config defaults to `$loose`,
+ * so even a `never`-catchall object would infer an open `Record<string, unknown>`
+ * output — which leaks through when the object is embedded in a tuple/union (a
+ * message schema) and isn't re-wrapped through a flavor-native strict object.
+ */
+type ObjectConfig<Catchall extends core.SomeType> =
+  Catchall extends core.$ZodNever ? core.$strict : core.$catchall<Catchall>;
+
+export function zodObject<Shape extends core.$ZodShape>(
+  shape: Shape,
+  options?: {
+    checks?: core.$ZodCheck<Record<string, unknown>>[];
+  },
+): core.$ZodObject<Shape, core.$strip>;
+export function zodObject<
+  Shape extends core.$ZodShape,
+  Catchall extends core.SomeType,
+>(
+  shape: Shape,
+  options: {
+    catchall: Catchall;
+    checks?: core.$ZodCheck<Record<string, unknown>>[];
+  },
+): core.$ZodObject<Shape, ObjectConfig<Catchall>>;
 export function zodObject<Shape extends core.$ZodShape>(
   shape: Shape,
   options: {

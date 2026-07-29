@@ -47,18 +47,19 @@ function searchFilter() {
 /**
  * NIP-50 client-to-relay `REQ` carrying search filters: `["REQ",
  * subscriptionId, searchFilter, ...searchFilter[]]`. An **intentional superset**
- * of `zostr.clientMessage.req()` — a NIP-50 search filter is a NIP-01 filter
- * plus optional `search`, so this also accepts plain NIP-01 filters (a filter
- * with no `search`).
+ * of `zostr.nip01.clientMessage.req()` — a NIP-50 search filter is a NIP-01
+ * filter plus optional `search`, so this also accepts plain NIP-01 filters (a
+ * filter with no `search`).
  *
  * At least one filter is required, matching NIP-01's `REQ` grammar (`<filters1>`
  * then `<filters2>...`); the same single search-filter schema validates both the
  * required first filter and the variadic rest.
  *
- * `zostr.clientMessage.req()`/`any()` stay NIP-01-only (they reject `search`),
- * as does `zostr.nip45.countRequest()` — NIP-50 introduces `search` on `REQ`,
- * not `COUNT`. A consumer wanting a NIP-50 `REQ` alongside the other client
- * messages composes `z.union([clientMessage.any(), nip50.req()])`.
+ * `zostr.nip01.clientMessage.req()`/`any()` stay NIP-01-only (they reject
+ * `search`), as does `zostr.nip45.clientMessage.count()` — NIP-50 introduces
+ * `search` on `REQ`, not `COUNT`. A consumer wanting a NIP-50 `REQ` alongside
+ * the other client messages composes
+ * `z.union([nip01.clientMessage.any(), nip50.clientMessage.req()])`.
  */
 function reqMessage() {
   const searchFilter_ = searchFilter();
@@ -72,6 +73,9 @@ function reqMessage() {
 export const nip50 = {
   /** NIP-01 filter extended with an optional `search` string */
   filter: searchFilter,
-  /** Client-to-relay `["REQ", subscriptionId, searchFilter, ...searchFilter[]]` */
-  req: reqMessage,
+  /** Client-to-relay `REQ` message carrying search filters */
+  clientMessage: {
+    /** Client-to-relay `["REQ", subscriptionId, searchFilter, ...searchFilter[]]` */
+    req: reqMessage,
+  },
 };
