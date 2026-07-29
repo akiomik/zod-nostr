@@ -537,8 +537,18 @@ the relay interprets to return matching events.
 inherits the base filter's fields and `"#<letter>"` tag-filter handling, so it
 tracks NIP-01 automatically. `search` is a plain optional string with no
 `.min`/recovery policy baked in — NIP-50 places no format constraint on it and
-doesn't forbid an empty string, so a consumer requiring a non-empty query
-composes `.min(1)`. The `key:value` search extensions (`include:spam`,
+doesn't forbid an empty string. A consumer requiring a non-empty query replaces
+the `search` field with a stricter schema; use `.safeExtend()` (not `.extend()`)
+because the object carries a filter-key check:
+
+```ts
+// classic
+const strict = zostr.nip50.filter().safeExtend({ search: z.string().min(1) });
+// mini
+// z.safeExtend(zostr.nip50.filter(), { search: z.string().check(z.minLength(1)) })
+```
+
+The `key:value` search extensions (`include:spam`,
 `domain:`, `language:`, ...) live **inside** the `search` string, not as extra
 filter fields, so they need no schema modeling. Ranking results by score and
 advertising support via `supported_nips` are relay concerns outside this schema.

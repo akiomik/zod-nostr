@@ -963,6 +963,17 @@ describe("zostr (mini)", () => {
         { kinds: [1, 2] },
       ]),
     ).toBeTruthy();
+    // `search` may appear on a variadic rest filter, not only the first —
+    // NIP-50 allows several search filters. Guards the rest against reverting
+    // to the plain NIP-01 filter().
+    expect(
+      z.parse(zostr.nip50.req(), [
+        "REQ",
+        "sub1",
+        { kinds: [1] },
+        { search: "purple" },
+      ]),
+    ).toBeTruthy();
     // A plain filter with no search is accepted (superset of clientMessage.req()).
     expect(
       z.parse(zostr.nip50.req(), ["REQ", "sub1", { kinds: [1] }]),

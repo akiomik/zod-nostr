@@ -247,7 +247,7 @@ export function filterTagKeysCheck(
         payload.issues.push({
           code: "custom",
           input: payload.value,
-          message: `Invalid filter key (expected a NIP-01 field or "#<letter>" tag filter): ${key}`,
+          message: `Invalid filter key (expected an allowed filter field or "#<letter>" tag filter): ${key}`,
         });
       }
     }

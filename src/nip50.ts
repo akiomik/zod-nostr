@@ -21,7 +21,9 @@ import { filter, filterTagKeysCheck, subscriptionId } from "./nip01.js";
  *
  * `search` is a plain optional string with no `.min`/recovery policy baked in:
  * NIP-50 places no format constraint on it and does not forbid an empty string,
- * and a consumer wanting to require a non-empty query composes `.min(1)`. The
+ * and a consumer wanting a stronger constraint (e.g. a non-empty query) replaces
+ * the `search` field with a stricter schema (via `safeExtend`, since the object
+ * carries a filter-key check). The
  * `key:value` search extensions (`include:spam`, `domain:`, `language:`, ...)
  * live *inside* the `search` string, not as extra filter fields, so they need no
  * schema modeling; a relay ignores extensions it doesn't support. Ranking search
