@@ -610,8 +610,10 @@ decode/validate (`nostr:`, `NOSTR:`, mixed case), per
 [RFC 3986 §3.1](https://www.rfc-editor.org/rfc/rfc3986#section-3.1); `encode`
 always emits the lowercase canonical `nostr:`. The URI must be exactly the
 scheme plus one bech32 entity — leading/trailing/internal whitespace, a query,
-a fragment, a trailing suffix, and a doubled scheme are all rejected. The bech32
-body itself is validated by NIP-19 unchanged.
+a fragment, a trailing suffix, and a doubled scheme are all rejected. The entity
+must be **lowercase** (NIP-19's canonical form): an all-uppercase body is
+rejected even though bech32 itself is case-insensitive, so case-folding applies
+to the scheme only.
 
 ### `zostr.nip21.uri(prefix?)`
 

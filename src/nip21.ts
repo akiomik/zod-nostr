@@ -106,6 +106,16 @@ export function uriSchema(prefix?: Nip21Prefix): core.$ZodString<string> {
         invalidUri(payload, "Invalid NIP-21 URI (expected a nostr: URI)");
         return;
       }
+      // NIP-19 entities are lowercase bech32. `nip19.decode` also accepts an
+      // all-uppercase body, so reject any non-lowercase body up front — before
+      // the secret pre-reject and before decoding. This both enforces the
+      // lowercase-canonical entity and keeps the secret pre-reject effective
+      // for an uppercase HRP (e.g. `nostr:NSEC1…`), which would otherwise slip
+      // past isSecretHrp and materialize the secret key in nip19.decode.
+      if (bare !== bare.toLowerCase()) {
+        invalidUri(payload, "Invalid NIP-21 URI (entity must be lowercase)");
+        return;
+      }
       if (isSecretHrp(bare)) {
         invalidUri(
           payload,
