@@ -170,6 +170,102 @@ describe("zostr (mini)", () => {
     expect(() => z.parse(zostr.nip10.textNote(), reaction)).toThrow();
   });
 
+  it("nip10.eTag()/qTag() validate marked reply/quote tags", () => {
+    const id = "a".repeat(64);
+    const pk = "b".repeat(64);
+
+    expect(
+      z.parse(zostr.nip10.eTag(), ["e", id, "wss://r", "reply", pk]),
+    ).toBeTruthy();
+    // unmarked ("" placeholder) reference carrying a pubkey
+    expect(
+      z.parse(zostr.nip10.eTag(), ["e", id, "wss://r", "", pk]),
+    ).toBeTruthy();
+    expect(() =>
+      z.parse(zostr.nip10.eTag(), ["e", id, "wss://r", "mention"]),
+    ).toThrow();
+    expect(() => z.parse(zostr.nip10.eTag(), ["e", id])).toThrow();
+
+    expect(z.parse(zostr.nip10.qTag(), ["q", id, ""])).toBeTruthy();
+    expect(
+      z.parse(zostr.nip10.qTag(), ["q", `30023:${pk}:slug`, "wss://r"]),
+    ).toBeTruthy();
+    // normal replaceable: accepted only with an empty identifier
+    expect(z.parse(zostr.nip10.qTag(), ["q", `10002:${pk}:`, ""])).toBeTruthy();
+    expect(() => z.parse(zostr.nip10.qTag(), ["q", "garbage", ""])).toThrow();
+    // regular kind and replaceable-with-identifier are not event addresses
+    expect(() => z.parse(zostr.nip10.qTag(), ["q", `1:${pk}:`, ""])).toThrow();
+    expect(() =>
+      z.parse(zostr.nip10.qTag(), ["q", `10002:${pk}:x`, ""]),
+    ).toThrow();
+    // a coordinate must not carry a trailing pubkey
+    expect(() =>
+      z.parse(zostr.nip10.qTag(), ["q", `30023:${pk}:slug`, "wss://r", pk]),
+    ).toThrow();
+  });
+
+  it("nip10.threadCheck()/participantsCheck() compose onto textNote()", () => {
+    const sk = generateSecretKey();
+    const a1 = "1".repeat(64);
+    const id = "a".repeat(64);
+    const id2 = "c".repeat(64);
+    const note = (tags: string[][]) =>
+      finalizeEvent({ kind: 1, created_at: 0, tags, content: "hi" }, sk);
+
+    const thread = zostr.nip10.textNote().check(zostr.nip10.threadCheck());
+    expect(
+      z.parse(
+        thread,
+        note([
+          ["e", id, "", "root"],
+          ["e", id2, "", "reply"],
+        ]),
+      ),
+    ).toBeTruthy();
+    expect(() =>
+      z.parse(
+        thread,
+        note([
+          ["e", id, "", "root"],
+          ["e", id2, "", "root"],
+        ]),
+      ),
+    ).toThrow();
+    // reply-before-root ordering is rejected
+    expect(() =>
+      z.parse(
+        thread,
+        note([
+          ["e", id, "", "reply"],
+          ["e", id2, "", "root"],
+        ]),
+      ),
+    ).toThrow();
+
+    const participants = zostr.nip10
+      .textNote()
+      .check(zostr.nip10.participantsCheck([a1]));
+    expect(z.parse(participants, note([["p", a1]]))).toBeTruthy();
+    expect(() => z.parse(participants, note([]))).toThrow();
+  });
+
+  it("nip10.eTag()/qTag() infer precise output types", () => {
+    const id = "a".repeat(64);
+    const pk = "b".repeat(64);
+
+    const e = z.parse(zostr.nip10.eTag(), ["e", id, "", "root", pk]);
+    const eName: "e" = e[0];
+    const eId: string = e[1];
+    const marker: "" | "root" | "reply" | undefined = e[3];
+    const author: string | undefined = e[4];
+    expect([eName, eId, marker, author]).toEqual(["e", id, "root", pk]);
+
+    const q = z.parse(zostr.nip10.qTag(), ["q", id, "", pk]);
+    const qName: "q" = q[0];
+    const ref: string = q[1];
+    expect([qName, ref]).toEqual(["q", id]);
+  });
+
   it("every wrapped event schema and codec exposes mini's native .check() (regression: raw core schemas lack it)", () => {
     const wrappedSchemas: Array<() => { check: unknown }> = [
       () => zostr.event(),

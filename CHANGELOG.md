@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **NIP-10 reply/thread tag support.** `zostr.nip10` now models NIP-10's
+  threading conventions beyond the kind:1 event shape:
+  - `zostr.nip10.eTag()` — schema for the marked `e` reply tag
+    (`["e", id, relay, marker?, pubkey?]`, marker `"root"` / `"reply"` / `""`).
+  - `zostr.nip10.qTag()` — schema for the `q` citation tag, a union of a
+    regular-event branch (`["q", event-id, relay, pubkey?]`) and an
+    event-address branch (`["q", "<kind>:<pubkey>:<d>", relay]`) that accepts
+    only addressable (`30000..39999`) and normal replaceable (`0`, `3`,
+    `10000..19999`, empty `<d>`) kinds.
+  - `zostr.nip10.threadCheck()` — opt-in check enforcing the marked `e`-tag
+    conventions (only `"root"`/`"reply"` markers; at most one of each; `"root"`
+    before `"reply"`).
+  - `zostr.nip10.participantsCheck(expected)` — opt-in check that the note's
+    `p` tags include every expected participant pubkey.
+
 ## [0.5.0] - 2026-07-29
 
 This release reorganizes the public API around **canonical owner paths**. Every

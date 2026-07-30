@@ -93,7 +93,13 @@ const EXPECTED_SURFACE: Surface = {
   nip01: NIP01,
   nip19: NIP19,
   nip05: { identifier: FN, nostrJsonDocument: FN, formatIdentifier: FN },
-  nip10: { textNote: FN },
+  nip10: {
+    textNote: FN,
+    eTag: FN,
+    qTag: FN,
+    threadCheck: FN,
+    participantsCheck: FN,
+  },
   nip11: { relayInformationDocument: FN },
   nip42: {
     authEvent: FN,
