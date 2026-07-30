@@ -106,6 +106,25 @@ describe.each(FLAVORS)("zostr.nip13.powCheck ($name)", ({ zostr, z }) => {
     expect(z.parse(withPow(8), eventWith(ID_8, []))).toBeTruthy();
   });
 
+  it("fails (does not throw) when composed on an id-less schema", () => {
+    // TypeScript blocks composing an id-requiring check on an id-less schema
+    // (powCheck expects a NostrEventLike). This @ts-expect-error exercises the
+    // untyped JS consumer path: the base parse of eventTemplate() succeeds, so
+    // the check runs with id === undefined and must return {success:false},
+    // never throw (zod's safeParse contract).
+    const schema = zostr
+      .eventTemplate()
+      // @ts-expect-error — id-less schema, simulating the untyped JS path
+      .check(zostr.nip13.powCheck(8));
+    const result = z.safeParse(schema, {
+      kind: 1,
+      created_at: 0,
+      tags: [],
+      content: "x",
+    });
+    expect(result.success).toBe(false);
+  });
+
   it.each([
     ["NaN", Number.NaN],
     ["a negative", -1],

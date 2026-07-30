@@ -111,12 +111,16 @@ function assertDifficulty(fnName: string, minDifficulty: number): void {
  * `zostr.event().check(zostr.nip13.powCheck(20))`.
  *
  * `minDifficulty` fails closed (see {@link assertDifficulty}). `0` is valid and
- * accepts any event (no requirement).
+ * accepts any event (no requirement). If the value carries no string `id` (e.g.
+ * composed on an id-less schema through the untyped JS path), the check **fails**
+ * rather than throwing, keeping zod's `safeParse`-never-throws contract — the
+ * same graceful degradation as `signatureCheck()` on a malformed event.
  */
 function powCheck(minDifficulty: number): core.$ZodCheck<NostrEventLike> {
   assertDifficulty("powCheck", minDifficulty);
   return makeCheck<NostrEventLike>((payload) => {
-    if (countLeadingZeroBits(payload.value.id) < minDifficulty) {
+    const { id } = payload.value;
+    if (typeof id !== "string" || countLeadingZeroBits(id) < minDifficulty) {
       payload.issues.push({
         code: "custom",
         input: payload.value,
