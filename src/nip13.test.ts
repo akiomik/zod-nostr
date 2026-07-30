@@ -252,15 +252,7 @@ describe("zostr.nip13 check input validation", () => {
   it("powCheck fails (does not throw) on a non-string id that passes base parse", () => {
     // With an `id: any` field a Symbol reaches the check; `RegExp.test` would
     // throw coercing a Symbol to string, so the typeof guard must come first.
-    const anyIdEvent = zc.object({
-      id: zc.any(),
-      pubkey: zc.string(),
-      created_at: zc.number(),
-      kind: zc.number(),
-      tags: zc.array(zc.array(zc.string())),
-      content: zc.string(),
-      sig: zc.string(),
-    });
+    const anyIdEvent = looseEvent.extend({ id: zc.any() });
     const schema = anyIdEvent.check(classicZostr.nip13.powCheck(4));
     expect(
       schema.safeParse({ ...eventWith(ID_8), id: Symbol("bad") }).success,
@@ -284,15 +276,7 @@ describe("zostr.nip13 check input validation", () => {
     // A null tag can't be a nonce tag; the shared isNamedTag guard checks
     // Array.isArray before indexing, so `.find` doesn't throw on the null and
     // the real nonce tag after it is still found (committed target 8 >= 1).
-    const anyTagsEvent = zc.object({
-      id: zc.string(),
-      pubkey: zc.string(),
-      created_at: zc.number(),
-      kind: zc.number(),
-      tags: zc.any(),
-      content: zc.string(),
-      sig: zc.string(),
-    });
+    const anyTagsEvent = looseEvent.extend({ tags: zc.any() });
     const result = anyTagsEvent
       .check(classicZostr.nip13.commitmentCheck(1))
       .safeParse({ ...eventWith(ID_8), tags: [null, ["nonce", "1", "8"]] });
