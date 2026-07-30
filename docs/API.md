@@ -994,6 +994,74 @@ const relayMessage = z.union([zostr.nip01.relayMessage.any(), zostr.nip67.relayM
 relayMessage.parse(["EOSE", "sub1", ["more"]]);
 ```
 
+## NIP-70 — protected events
+
+Schema and check for [NIP-70](https://github.com/nostr-protocol/nips/blob/master/70.md)
+protected events, under `zostr.nip70.*`. A protected event carries a `["-"]`
+marker tag; NIP-70 makes the relay behavior **normative**: a relay MUST reject a
+protected event by default, and MAY accept it only after the client authenticates
+via NIP-42 as the event's author. The tag's **structure** (`protectedTag()`) is
+kept separate from that author-authorization decision (`protectedCheck(...)`),
+because the decision depends on the connection's NIP-42 authentication state —
+context the schema cannot see.
+
+The opt-in here is not a relaxation of NIP-70's MUST: it separates the general
+event schema from a relay's publication policy. `zostr.event()` has no session
+context, so it does not judge NIP-70 acceptance; a relay that accepts protected
+events applies `protectedCheck()` (or an equivalent) as a required step, and an
+empty authenticated set makes it reject by default. The protected marker is a
+publication-authorization signal only — it does not technically guarantee
+secrecy or prevent redistribution of an event that was ever public.
+
+This API models the protected marker and relay-side publication authorization.
+NIP-70's repost-embedding rule (a repost of a protected event MUST NOT embed the
+reposted event) is not modeled, because zod-nostr does not currently expose a
+NIP-18 repost schema.
+
+### `zostr.nip70.protectedTag()`
+
+Schema for the protected marker tag: `["-"]`. The marker carries no value, so it
+is a fixed **single-element** tuple — a second element is rejected, the same way
+the other tag schemas reject extra elements.
+
+```ts
+zostr.nip70.protectedTag().parse(["-"]);      // ok
+zostr.nip70.protectedTag().parse(["-", "x"]); // throws (fixed single-element tuple)
+```
+
+### `zostr.nip70.protectedCheck(authenticatedPubkeys?)`
+
+An opt-in [check](https://zod.dev/api#checks) that a **protected** event (one
+carrying a `["-"]` tag) is published only by its author — its `pubkey` must be
+among the connection's authenticated pubkeys. Compose it onto an event schema the
+same way as `signatureCheck()`:
+
+```ts
+const authorized = zostr.event().check(zostr.nip70.protectedCheck([authenticatedPubkey]));
+authorized.parse(protectedEvent); // throws unless the event's author is authenticated
+```
+
+- `authenticatedPubkeys` is the **set** of pubkeys the connection has
+  authenticated. NIP-42 lets one connection authenticate several pubkeys in a
+  sequence of `AUTH` messages ("Relays MUST treat all pubkeys as authenticated
+  accordingly"), so this takes a list, not a single value; pass a fresh snapshot
+  of the authenticated set (e.g. `[pubkey]` for a single identity) and re-compose
+  the check when that set changes. The NIP-42 session state stays outside — only
+  the resolved pubkeys cross the boundary, like `nip42.relayTagCheck(relayUrl)`.
+- It defaults to `[]` — an **unauthenticated** connection — which fails **closed**:
+  every protected event is rejected (NIP-70's default). A bad or absent set errs
+  toward rejection, so the factory doesn't throw on it (unlike `nip42.createdAtCheck`,
+  where a bad argument would fail *open*).
+- A **non-protected** event has no author restriction and always **passes**.
+- Detection is intentionally broader than `protectedTag()`: any tag whose first
+  element is `"-"` marks the event protected here, even a malformed `["-", "x"]`
+  that `protectedTag()` rejects — otherwise appending a junk element to the marker
+  would bypass the author check.
+
+Pubkeys are compared as **exact strings**: a NIP-01 pubkey is canonically a
+64-character lowercase hex string and an authenticated pubkey comes from a
+verified NIP-42 auth event in that same form, so there is nothing to normalize.
+
 ## Generic codecs
 
 ### `zostr.jsonCodec(schema)`

@@ -141,6 +141,10 @@ const EXPECTED_SURFACE: Surface = {
   nip67: {
     relayMessage: { eose: FN },
   },
+  nip70: {
+    protectedTag: FN,
+    protectedCheck: FN,
+  },
 
   // Ergonomic root aliases (direct references into nip01/nip19 above)
   pubkey: FN,

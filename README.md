@@ -7,8 +7,8 @@
 Zod schemas and codecs for [Nostr](https://nostr.com) — NIP-01 events, NIP-05
 identifiers, NIP-10 text notes, NIP-11 relay information documents, NIP-13 proof
 of work, NIP-19 bech32 entities, NIP-21 `nostr:` URIs, NIP-40 expiration
-timestamps, NIP-42 authentication, NIP-45 event counts, NIP-50 search, and
-NIP-67 EOSE completeness hints.
+timestamps, NIP-42 authentication, NIP-45 event counts, NIP-50 search, NIP-67
+EOSE completeness hints, and NIP-70 protected events.
 
 Validation logic is written once against `zod/v4/core` and re-exposed through
 two entry points, so the exact same rules work with both
@@ -157,6 +157,9 @@ aliased at the root (`zostr.event`, `zostr.npub`, …).
   NIP-01's
 - **NIP-67** — EOSE completeness hint: `EOSE` extended with an optional hints
   array (`nip67.relayMessage.eose`), a strict superset of NIP-01's
+- **NIP-70** — protected events: the `["-"]` marker tag schema
+  (`nip70.protectedTag`) and an opt-in check that a protected event's author is
+  an authenticated pubkey (`nip70.protectedCheck`)
 
 See [docs/API.md](docs/API.md) for the full API reference.
 

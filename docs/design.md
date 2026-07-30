@@ -123,6 +123,19 @@ the NIP-10 reply/thread conventions that depend on context the schema can't see
 justify moving a check to a separate layer, but cost alone does not override a
 required invariant — a MUST-level structural rule stays in the base.
 
+The `.check()` layer also holds MUST-level rules that are **not structural** —
+ones whose verdict depends on connection or session context the value itself
+doesn't carry. These take that context as a **parameter** (a resolved value, not
+the live session), so the check stays a pure function of its inputs: NIP-42's
+relay-side steps (`nip42.challengeTagCheck`, `nip42.relayTagCheck`,
+`nip42.createdAtCheck`) and NIP-70's protected-event authorization
+(`nip70.protectedCheck`, which takes the connection's authenticated pubkeys) are
+MUSTs, but a relay MUST, evaluated against state outside the schema — so they are
+opt-in checks rather than base-schema rules. The boundary is *structural vs.
+contextual*, not *MUST vs. SHOULD*: a MUST that a lone value can be judged
+against stays in the base; a MUST that needs outside context becomes a
+parameterized check.
+
 ### Separate shape from transport
 
 An object's **shape** (its field schema) is kept separate from the **transport**
