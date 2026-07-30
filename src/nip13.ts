@@ -2,6 +2,7 @@ import type * as core from "zod/v4/core";
 import {
   integerStringCheck,
   integerStringPattern,
+  isNamedTag,
   makeCheck,
   type NostrEventLike,
 } from "./core/checks.js";
@@ -154,9 +155,12 @@ function powCheck(minDifficulty: number): core.$ZodCheck<NostrEventLike> {
 function committedTarget(tags: readonly string[][]): number | undefined {
   // Guard the untyped JS path: a missing or non-array `tags` must make the check
   // fail, not throw on `.find` — the same `safeParse`-never-throws contract that
-  // powCheck honors for a malformed id.
+  // powCheck honors for a malformed id. Unlike the guardEventTags-based checks
+  // this pushes no issue: a non-array here means "no valid commitment", which
+  // commitmentCheck reports itself. isNamedTag also guards each tag element, so a
+  // null/non-array tag is skipped rather than throwing on `.find`'s index access.
   if (!Array.isArray(tags)) return undefined;
-  const target = tags.find((tag) => tag[0] === NONCE_TAG_NAME)?.[2];
+  const target = tags.find((tag) => isNamedTag(tag, NONCE_TAG_NAME))?.[2];
   if (target === undefined || !DIFFICULTY_RE.test(target)) return undefined;
   return Number(target);
 }

@@ -279,6 +279,25 @@ describe("zostr.nip13 check input validation", () => {
       .check(classicZostr.nip13.commitmentCheck(1));
     expect(schema.safeParse({ id: "a".repeat(64) }).success).toBe(false);
   });
+
+  it("commitmentCheck skips a null tag element (does not throw)", () => {
+    // A null tag can't be a nonce tag; the shared isNamedTag guard checks
+    // Array.isArray before indexing, so `.find` doesn't throw on the null and
+    // the real nonce tag after it is still found (committed target 8 >= 1).
+    const anyTagsEvent = zc.object({
+      id: zc.string(),
+      pubkey: zc.string(),
+      created_at: zc.number(),
+      kind: zc.number(),
+      tags: zc.any(),
+      content: zc.string(),
+      sig: zc.string(),
+    });
+    const result = anyTagsEvent
+      .check(classicZostr.nip13.commitmentCheck(1))
+      .safeParse({ ...eventWith(ID_8), tags: [null, ["nonce", "1", "8"]] });
+    expect(result.success).toBe(true);
+  });
 });
 
 describe("zostr.nip13 output types", () => {

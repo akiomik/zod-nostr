@@ -134,6 +134,49 @@ export interface NostrEventLike {
 }
 
 /**
+ * Shared message for an event whose `tags` is not an array. A tag-scanning check
+ * can't run at all on such an event, so it fails with this single verbatim
+ * message; centralizing it keeps the wording identical across the per-NIP tag
+ * checks (`nip40.expirationCheck`, `nip70.protectedCheck`, …).
+ */
+const MALFORMED_TAGS_MESSAGE =
+  'Invalid event (expected "tags" to be an array of tags)';
+
+/**
+ * Reads an event's `tags` for a tag-scanning check, guarding the untyped JS
+ * path. A non-array `tags` is a malformed event (not one merely lacking the
+ * scanned tag), so this pushes {@link MALFORMED_TAGS_MESSAGE} and returns
+ * `undefined` — the caller returns without scanning. Otherwise it returns the
+ * tags array to iterate; individual non-array tag **elements** are still skipped
+ * per-tag via {@link isNamedTag}. Shared by the event-tag checks so the guard
+ * and its message can't drift between them.
+ */
+export function guardEventTags(
+  payload: core.ParsePayload<NostrEventLike>,
+): string[][] | undefined {
+  const { tags } = payload.value;
+  if (!Array.isArray(tags)) {
+    payload.issues.push({
+      code: "custom",
+      input: payload.value,
+      message: MALFORMED_TAGS_MESSAGE,
+    });
+    return undefined;
+  }
+  return tags;
+}
+
+/**
+ * True when `tag` is a well-formed tag whose name (its first element) equals
+ * `name`. Guards `Array.isArray` so a `null`/non-array tag reaching a check on
+ * the untyped JS path is skipped rather than throwing on index access — the
+ * per-tag half of the scan {@link guardEventTags} sets up.
+ */
+export function isNamedTag(tag: unknown, name: string): tag is string[] {
+  return Array.isArray(tag) && tag[0] === name;
+}
+
+/**
  * Check factory for event signature verification. Takes verifyEvent as a
  * parameter to keep the core layer decoupled from nostr-tools (also helps testability).
  */

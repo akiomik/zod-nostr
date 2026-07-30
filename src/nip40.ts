@@ -1,7 +1,9 @@
 import type * as core from "zod/v4/core";
 import {
+  guardEventTags,
   integerStringCheck,
   integerStringPattern,
+  isNamedTag,
   makeCheck,
   type NostrEventLike,
 } from "./core/checks.js";
@@ -97,18 +99,11 @@ function expirationCheck(now: number): core.$ZodCheck<NostrEventLike> {
     );
   }
   return makeCheck<NostrEventLike>((payload) => {
-    const { tags } = payload.value;
-    if (!Array.isArray(tags)) {
-      // A non-array `tags` is a malformed event, not one without an expiry.
-      payload.issues.push({
-        code: "custom",
-        input: payload.value,
-        message: 'Invalid event (expected "tags" to be an array of tags)',
-      });
-      return;
-    }
+    // A non-array `tags` is a malformed event, not one without an expiry.
+    const tags = guardEventTags(payload);
+    if (tags === undefined) return;
     for (const tag of tags) {
-      if (!Array.isArray(tag) || tag[0] !== EXPIRATION_TAG_NAME) continue;
+      if (!isNamedTag(tag, EXPIRATION_TAG_NAME)) continue;
       const value = tag[1];
       if (typeof value !== "string" || !TIMESTAMP_RE.test(value)) {
         payload.issues.push({
