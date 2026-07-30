@@ -208,13 +208,28 @@ describe("zostr.nip10 opt-in checks input validation (untyped JS path)", () => {
     ).toBe(true);
   });
 
-  it("threadCheck fails (does not throw) on a non-string e-tag marker", () => {
-    // A Symbol marker must be String()-coerced, not template-interpolated (which
-    // would throw); it is reported as an invalid marker.
-    expect(
-      thread.safeParse({ ...base, tags: [["e", ID, "", Symbol("x")]] }).success,
-    ).toBe(false);
-  });
+  it.each([
+    ["a Symbol", Symbol("x")],
+    // String()/template coercion throws on these; the check must not stringify
+    // the marker value, so it fails cleanly instead of throwing.
+    ["a null-prototype object (no toString)", Object.create(null)],
+    [
+      "an object whose toString throws",
+      {
+        toString() {
+          throw new Error("boom");
+        },
+      },
+    ],
+    ["a number", 3],
+  ])(
+    "threadCheck fails (does not throw) on %s e-tag marker",
+    (_label, marker) => {
+      expect(
+        thread.safeParse({ ...base, tags: [["e", ID, "", marker]] }).success,
+      ).toBe(false);
+    },
+  );
 
   it("participantsCheck fails (does not throw) when tags is not an array", () => {
     const check = looseEvent.check(classicZostr.nip10.participantsCheck([PK]));

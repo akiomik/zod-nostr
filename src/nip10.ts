@@ -236,13 +236,18 @@ function threadCheck(): core.$ZodCheck<NostrEventLike> {
       // Unmarked (positional scheme) or present-but-empty: not our concern.
       if (value === undefined || value === "") return;
       // isNamedTag narrows only the tag name, so the marker stays `unknown`; a
-      // non-string value on the untyped path is an invalid marker (and must be
-      // String()-coerced, not template-interpolated, so a Symbol can't throw).
+      // non-string value on the untyped path is an invalid marker. Don't
+      // stringify it — `String()`/template coercion itself throws on a Symbol, a
+      // null-prototype object (no `toString`), or an object whose `toString`
+      // throws — just name its type, so a garbage marker fails cleanly rather
+      // than breaking the safeParse-never-throws contract.
       if (typeof value !== "string" || !E_TAG_MARKER_SET.has(value)) {
+        const actual =
+          typeof value === "string" ? value : `<non-string:${typeof value}>`;
         payload.issues.push({
           code: "custom",
           input: payload.value,
-          message: `Invalid "e" tag marker (expected "root" or "reply"): ${String(value)}`,
+          message: `Invalid "e" tag marker (expected "root" or "reply"): ${actual}`,
         });
         return;
       }
