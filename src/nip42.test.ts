@@ -168,10 +168,13 @@ describe("zostr.nip42 tag checks input validation (untyped JS path)", () => {
     classicZostr.nip42.challengeTagCheck(CHALLENGE),
   );
 
-  it("challengeTagCheck fails (does not throw) when tags is not an array", () => {
-    expect(challengeCheck.safeParse({ ...base, tags: "nope" }).success).toBe(
-      false,
-    );
+  it("challengeTagCheck fails (does not throw) with the shared malformed-tags message when tags is not an array", () => {
+    // A non-array tags is a malformed event, reported with the canonical
+    // message via guardEventTags — the same as nip10/nip40/nip70, not a
+    // misleading challenge-mismatch message.
+    const result = challengeCheck.safeParse({ ...base, tags: "nope" });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.message).toContain('"tags"');
   });
 
   it("challengeTagCheck skips a null tag element and still matches a later challenge tag", () => {
@@ -194,11 +197,13 @@ describe("zostr.nip42 tag checks input validation (untyped JS path)", () => {
     ).toBe(false);
   });
 
-  it("relayTagCheck fails (does not throw) when tags is not an array", () => {
+  it("relayTagCheck fails (does not throw) with the shared malformed-tags message when tags is not an array", () => {
     const relayCheck = looseEvent.check(
       classicZostr.nip42.relayTagCheck(RELAY),
     );
-    expect(relayCheck.safeParse({ ...base, tags: 42 }).success).toBe(false);
+    const result = relayCheck.safeParse({ ...base, tags: 42 });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.message).toContain('"tags"');
   });
 });
 

@@ -1,5 +1,10 @@
 import type * as core from "zod/v4/core";
-import { isNamedTag, makeCheck, type NostrEventLike } from "./core/checks.js";
+import {
+  guardEventTags,
+  isNamedTag,
+  makeCheck,
+  type NostrEventLike,
+} from "./core/checks.js";
 import {
   zodLiteral,
   zodNever,
@@ -64,16 +69,13 @@ function clientAuthMessage() {
 
 /**
  * Value of the first tag named `name` (its second element), or `undefined`.
- * Takes `unknown` because a check reached through a consumer's loose schema sees
- * whatever the runtime `tags` is, not the `string[][]` the static event type
- * promises: a non-array `tags` yields `undefined` (no match) rather than throwing
- * on `.find`, and {@link isNamedTag} guards each element so a null/non-array tag
- * is skipped. The result stays `unknown` — the tag-value checks only compare it
- * (`!== expected`), so a non-string value simply fails the match (fail-closed)
- * and there is nothing to coerce.
+ * `eventTags` is the array {@link guardEventTags} returns — the caller has
+ * already rejected a non-array `tags` with the canonical malformed-event message
+ * — so this only scans: {@link isNamedTag} skips a null/non-array element, and
+ * the result stays `unknown` (the tag-value checks compare it with `!==`, so a
+ * non-string value simply fails the match with nothing to coerce).
  */
-function firstTagValue(eventTags: unknown, name: string): unknown {
-  if (!Array.isArray(eventTags)) return undefined;
+function firstTagValue(eventTags: unknown[], name: string): unknown {
   return eventTags.find((tag) => isNamedTag(tag, name))?.[1];
 }
 
@@ -83,10 +85,16 @@ function firstTagValue(eventTags: unknown, name: string): unknown {
  * expected challenge is connection state, not something the schema can know —
  * the same reasoning as `signatureCheck()`. Compose on `authEvent()`:
  * `authEvent().check(challengeTagCheck(challenge))`.
+ *
+ * A non-array `tags` (reachable only through a consumer's loose schema) fails
+ * with the shared malformed-event message via {@link guardEventTags}, the same
+ * as the other tag checks — not a misleading challenge-mismatch message.
  */
 function challengeTagCheck(challenge: string): core.$ZodCheck<NostrEventLike> {
   return makeCheck<NostrEventLike>((payload) => {
-    if (firstTagValue(payload.value.tags, "challenge") !== challenge) {
+    const tags = guardEventTags(payload);
+    if (tags === undefined) return;
+    if (firstTagValue(tags, "challenge") !== challenge) {
       payload.issues.push({
         code: "custom",
         input: payload.value,
@@ -103,10 +111,15 @@ function challengeTagCheck(challenge: string): core.$ZodCheck<NostrEventLike> {
  * consumer that wants to match loosely (e.g. by domain, ignoring a trailing
  * slash) normalizes both sides before comparing. Compose on `authEvent()`:
  * `authEvent().check(relayTagCheck(relayUrl))`.
+ *
+ * A non-array `tags` fails with the shared malformed-event message via
+ * {@link guardEventTags}, the same as the other tag checks.
  */
 function relayTagCheck(relayUrl: string): core.$ZodCheck<NostrEventLike> {
   return makeCheck<NostrEventLike>((payload) => {
-    if (firstTagValue(payload.value.tags, "relay") !== relayUrl) {
+    const tags = guardEventTags(payload);
+    if (tags === undefined) return;
+    if (firstTagValue(tags, "relay") !== relayUrl) {
       payload.issues.push({
         code: "custom",
         input: payload.value,
