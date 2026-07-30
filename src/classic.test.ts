@@ -308,11 +308,18 @@ describe("zostr (classic)", () => {
     // regular event: 64-hex id, optional author pubkey
     expect(zostr.nip10.qTag().parse(["q", id, ""])).toBeTruthy();
     expect(zostr.nip10.qTag().parse(["q", id, "wss://r", pk])).toBeTruthy();
-    // addressable event: <kind>:<pubkey>:<d> coordinate, no trailing pubkey
-    expect(
-      zostr.nip10.qTag().parse(["q", `30023:${pk}:slug`, "wss://r"]),
-    ).toBeTruthy();
-    expect(zostr.nip10.qTag().parse(["q", `30023:${pk}:`, ""])).toBeTruthy();
+
+    // event address: addressable (30000..39999) with any identifier; normal
+    // replaceable (0, 3, 10000..19999) only with an empty identifier
+    for (const coord of [
+      `30023:${pk}:slug`,
+      `30023:${pk}:`,
+      `0:${pk}:`,
+      `3:${pk}:`,
+      `10002:${pk}:`,
+    ]) {
+      expect(zostr.nip10.qTag().parse(["q", coord, "wss://r"])).toBeTruthy();
+    }
 
     // neither a valid id nor a valid coordinate
     expect(() => zostr.nip10.qTag().parse(["q", "garbage", ""])).toThrow();
@@ -322,13 +329,16 @@ describe("zostr (classic)", () => {
     expect(() =>
       zostr.nip10.qTag().parse(["q", `30023:${pk}:slug`, "wss://r", pk]),
     ).toThrow();
-    // malformed coordinates: non-hex pubkey, out-of-range kind
-    expect(() =>
-      zostr.nip10.qTag().parse(["q", "30023:nothex:d", ""]),
-    ).toThrow();
-    expect(() =>
-      zostr.nip10.qTag().parse(["q", `99999:${pk}:d`, ""]),
-    ).toThrow();
+    // malformed / non-addressable coordinates
+    for (const coord of [
+      "30023:nothex:d", // non-hex pubkey
+      `1:${pk}:`, // regular kind
+      `20000:${pk}:`, // ephemeral kind
+      `40000:${pk}:`, // above the addressable range
+      `10002:${pk}:unexpected`, // replaceable with a non-empty identifier
+    ]) {
+      expect(() => zostr.nip10.qTag().parse(["q", coord, ""])).toThrow();
+    }
   });
 
   it("nip10.threadCheck() enforces marked e-tag conventions", () => {

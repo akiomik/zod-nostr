@@ -190,7 +190,14 @@ describe("zostr (mini)", () => {
     expect(
       z.parse(zostr.nip10.qTag(), ["q", `30023:${pk}:slug`, "wss://r"]),
     ).toBeTruthy();
+    // normal replaceable: accepted only with an empty identifier
+    expect(z.parse(zostr.nip10.qTag(), ["q", `10002:${pk}:`, ""])).toBeTruthy();
     expect(() => z.parse(zostr.nip10.qTag(), ["q", "garbage", ""])).toThrow();
+    // regular kind and replaceable-with-identifier are not event addresses
+    expect(() => z.parse(zostr.nip10.qTag(), ["q", `1:${pk}:`, ""])).toThrow();
+    expect(() =>
+      z.parse(zostr.nip10.qTag(), ["q", `10002:${pk}:x`, ""]),
+    ).toThrow();
     // a coordinate must not carry a trailing pubkey
     expect(() =>
       z.parse(zostr.nip10.qTag(), ["q", `30023:${pk}:slug`, "wss://r", pk]),

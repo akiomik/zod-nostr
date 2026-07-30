@@ -442,15 +442,17 @@ order:
 - `zostr.nip10.qTag()` — the citation tag, a **union of two exact shapes** by
   what is cited: a regular event by 64-char hex id (`["q", <event-id>,
   <relay-url>, <pubkey>?]`, where `<pubkey>` is the referenced author) or an
-  addressable event by its NIP-01 `<kind>:<pubkey>:<d>` coordinate (`["q",
-  <event-address>, <relay-url>]`, with **no** trailing `<pubkey>` — the
-  coordinate already names the author). A first value that is neither a valid
-  id nor a valid coordinate is rejected.
+  event by its NIP-01 **event address** (`["q", <kind>:<pubkey>:<d>,
+  <relay-url>]`, with **no** trailing `<pubkey>` — the coordinate already names
+  the author). Only kinds referenceable by address are accepted: addressable
+  (`30000..39999`, any `<d>`) and normal replaceable (`0`, `3`, `10000..19999`,
+  which must have an **empty** `<d>`); regular and ephemeral kinds are rejected,
+  as is a first value that is neither a valid id nor a valid coordinate.
 
 ```ts
 zostr.nip10.eTag().parse(["e", rootId, "wss://relay.example", "root", authorPk]);
-zostr.nip10.qTag().parse(["q", citedId, "", authorPk]); // regular event
-zostr.nip10.qTag().parse(["q", `30023:${authorPk}:slug`, ""]); // addressable
+zostr.nip10.qTag().parse(["q", citedId, "", authorPk]); // regular event by id
+zostr.nip10.qTag().parse(["q", `30023:${authorPk}:slug`, ""]); // event address
 ```
 
 ### Opt-in reply/thread checks

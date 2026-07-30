@@ -110,28 +110,51 @@ function eTag() {
 }
 
 /**
- * A NIP-01 addressable-event coordinate: `<kind>:<pubkey>:<d-identifier>`, the
- * value carried by an `a` tag. `<kind>` is a canonical decimal in the NIP-01
- * `kind` range (0..65535, no leading zeros), `<pubkey>` is 64-char lowercase
- * hex, and `<d-identifier>` is the rest of the string (any value, possibly
- * empty, and may itself contain `:`).
+ * Validates a NIP-01 event-address coordinate `<kind>:<pubkey>:<d-identifier>`
+ * (the value an `a` tag carries). A coordinate only addresses a **replaceable**
+ * or **addressable** event — the only kinds NIP-01 lets you reference by
+ * address rather than by id:
+ *
+ * - addressable (parameterized replaceable), kind `30000..39999`: any
+ *   `<d-identifier>` (including empty);
+ * - replaceable, kind `0`, `3`, or `10000..19999`: `<d-identifier>` MUST be
+ *   empty — these events have no `d` tag, so their coordinate is `kind:pubkey:`.
+ *
+ * Regular (`1`, `2`, `4..44`, `1000..9999`) and ephemeral (`20000..29999`)
+ * kinds are not referenceable by address and are rejected. `<pubkey>` is
+ * 64-char lowercase hex; `<kind>` is a canonical decimal (no leading zeros).
+ * `<d-identifier>` is the remainder (may contain `:`), extracted by slicing so
+ * arbitrary values pass through unchanged.
  */
-const ADDRESS_COORDINATE = /^(0|[1-9]\d*):[0-9a-f]{64}:/;
+function isEventAddress(value: string): boolean {
+  const firstColon = value.indexOf(":");
+  const secondColon = value.indexOf(":", firstColon + 1);
+  if (firstColon <= 0 || secondColon <= firstColon) return false;
 
-function isAddressCoordinate(value: string): boolean {
-  const match = ADDRESS_COORDINATE.exec(value);
-  return match !== null && Number(match[1]) <= 65535;
+  const kindStr = value.slice(0, firstColon);
+  const pubkeyStr = value.slice(firstColon + 1, secondColon);
+  const identifier = value.slice(secondColon + 1);
+  if (!/^(0|[1-9]\d*)$/.test(kindStr) || !/^[0-9a-f]{64}$/.test(pubkeyStr)) {
+    return false;
+  }
+
+  const kind = Number(kindStr);
+  if (kind >= 30000 && kind < 40000) return true; // addressable: any identifier
+  if (kind === 0 || kind === 3 || (kind >= 10000 && kind < 20000)) {
+    return identifier === ""; // replaceable: no `d` tag, empty identifier
+  }
+  return false; // regular / ephemeral: not referenceable by address
 }
 
-function addressCoordinate(): core.$ZodString<string> {
+function eventAddress(): core.$ZodString<string> {
   return zodString([
     makeCheck<string>((payload) => {
-      if (!isAddressCoordinate(payload.value)) {
+      if (!isEventAddress(payload.value)) {
         payload.issues.push({
           code: "custom",
           input: payload.value,
           message:
-            'Invalid event address (expected "<kind>:<pubkey>:<d-identifier>")',
+            'Invalid event address (expected a replaceable/addressable "<kind>:<pubkey>:<d>" coordinate)',
         });
       }
     }),
@@ -139,10 +162,9 @@ function addressCoordinate(): core.$ZodString<string> {
 }
 
 /**
- * `q` tag citing a **regular** (non-addressable) event by its id:
- * `["q", <event-id>, <relay-url>, <pubkey>?]`. `<pubkey>` — the referenced
- * event's author — is only meaningful for a regular event, so it lives on this
- * branch, not on {@link qTagAddressable}.
+ * `q` tag citing a **regular** event by its id: `["q", <event-id>, <relay-url>,
+ * <pubkey>?]`. `<pubkey>` — the referenced event's author — is only meaningful
+ * for a regular event, so it lives on this branch, not on {@link qTagAddress}.
  */
 function qTagRegular() {
   return zodTuple([
@@ -154,12 +176,13 @@ function qTagRegular() {
 }
 
 /**
- * `q` tag citing an **addressable** event by its NIP-01 coordinate:
- * `["q", <kind>:<pubkey>:<d>, <relay-url>]`. There is no trailing `<pubkey>` —
- * the coordinate already carries the author — so a 4th element is rejected.
+ * `q` tag citing a replaceable/addressable event by its NIP-01 **event
+ * address**: `["q", <kind>:<pubkey>:<d>, <relay-url>]`. There is no trailing
+ * `<pubkey>` — the coordinate already carries the author — so a 4th element is
+ * rejected.
  */
-function qTagAddressable() {
-  return zodTuple([zodLiteral("q"), addressCoordinate(), zodString()]);
+function qTagAddress() {
+  return zodTuple([zodLiteral("q"), eventAddress(), zodString()]);
 }
 
 /**
@@ -168,13 +191,13 @@ function qTagAddressable() {
  *
  * A union of two exact shapes rather than a loose "any non-empty first value":
  * the first element is either a 64-char hex **event id** ({@link qTagRegular},
- * which may carry the author `<pubkey>`) or a NIP-01 **event-address
- * coordinate** ({@link qTagAddressable}, which may not — the coordinate already
- * names the author). `<relay-url>` position is required but may be `""`, same
- * as {@link eTag}.
+ * which may carry the author `<pubkey>`) or a NIP-01 **event address**
+ * ({@link qTagAddress}, which may not — the coordinate already names the
+ * author). `<relay-url>` position is required but may be `""`, same as
+ * {@link eTag}.
  */
 function qTag() {
-  return zodUnion([qTagRegular(), qTagAddressable()]);
+  return zodUnion([qTagRegular(), qTagAddress()]);
 }
 
 /**

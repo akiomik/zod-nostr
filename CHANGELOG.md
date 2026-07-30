@@ -15,7 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     (`["e", id, relay, marker?, pubkey?]`, marker `"root"` / `"reply"` / `""`).
   - `zostr.nip10.qTag()` — schema for the `q` citation tag, a union of a
     regular-event branch (`["q", event-id, relay, pubkey?]`) and an
-    addressable-event branch (`["q", "<kind>:<pubkey>:<d>", relay]`).
+    event-address branch (`["q", "<kind>:<pubkey>:<d>", relay]`) that accepts
+    only addressable (`30000..39999`) and normal replaceable (`0`, `3`,
+    `10000..19999`, empty `<d>`) kinds.
   - `zostr.nip10.threadCheck()` — opt-in check enforcing the marked `e`-tag
     conventions (only `"root"`/`"reply"` markers; at most one of each; `"root"`
     before `"reply"`).
