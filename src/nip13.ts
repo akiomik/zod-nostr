@@ -1,5 +1,6 @@
 import type * as core from "zod/v4/core";
 import { makeCheck, type NostrEventLike } from "./core/checks.js";
+import { hexPattern } from "./core/hex.js";
 import {
   zodLiteral,
   zodOptional,
@@ -21,7 +22,7 @@ const NONCE_TAG_NAME = "nonce";
 const DIFFICULTY_RE = /^\d+$/;
 
 /** A NIP-01 event id: exactly 64 lowercase hex chars (same as `eventId()`). */
-const EVENT_ID_RE = /^[0-9a-f]{64}$/;
+const EVENT_ID_RE = hexPattern(64);
 
 /**
  * The `nonce` tag's committed target difficulty (its third element): a string
@@ -129,13 +130,19 @@ function powCheck(minDifficulty: number): core.$ZodCheck<NostrEventLike> {
   assertDifficulty("powCheck", minDifficulty);
   return makeCheck<NostrEventLike>((payload) => {
     const { id } = payload.value;
-    if (
-      // typeof guard first: `RegExp.test` coerces its argument to a string, and
-      // a Symbol id would throw on that coercion (not just fail to match).
-      typeof id !== "string" ||
-      !EVENT_ID_RE.test(id) ||
-      countLeadingZeroBits(id) < minDifficulty
-    ) {
+    // typeof guard first: `RegExp.test` coerces its argument to a string, and a
+    // Symbol id would throw on that coercion (not just fail to match).
+    if (typeof id !== "string" || !EVENT_ID_RE.test(id)) {
+      // Distinct diagnostic: the defect is a malformed id, not the PoW amount.
+      payload.issues.push({
+        code: "custom",
+        input: payload.value,
+        message:
+          "Invalid event id (expected a 64-character lowercase hex string)",
+      });
+      return;
+    }
+    if (countLeadingZeroBits(id) < minDifficulty) {
       payload.issues.push({
         code: "custom",
         input: payload.value,
@@ -147,6 +154,10 @@ function powCheck(minDifficulty: number): core.$ZodCheck<NostrEventLike> {
 
 /** The committed target of the event's first `nonce` tag, if it is valid. */
 function committedTarget(tags: readonly string[][]): number | undefined {
+  // Guard the untyped JS path: a missing or non-array `tags` must make the check
+  // fail, not throw on `.find` — the same `safeParse`-never-throws contract that
+  // powCheck honors for a malformed id.
+  if (!Array.isArray(tags)) return undefined;
   const target = tags.find((tag) => tag[0] === NONCE_TAG_NAME)?.[2];
   if (target === undefined || !DIFFICULTY_RE.test(target)) return undefined;
   return Number(target);
@@ -173,7 +184,9 @@ function committedTarget(tags: readonly string[][]): number | undefined {
  * `minDifficulty` all fail. When several `nonce` tags are present (NIP-13 uses
  * one) the first is checked, matching how the other tag checks read tags.
  *
- * `minDifficulty` fails closed (see {@link assertDifficulty}).
+ * `minDifficulty` fails closed (see {@link assertDifficulty}). A value whose
+ * `tags` is missing or not an array (the untyped JS path) **fails** the check
+ * rather than throwing, the same graceful degradation as powCheck.
  */
 function commitmentCheck(
   minDifficulty: number,

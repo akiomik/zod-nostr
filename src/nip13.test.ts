@@ -208,32 +208,48 @@ describe.each(FLAVORS)("zostr.nip13 end-to-end ($name)", ({ zostr, z }) => {
   });
 });
 
-describe("zostr.nip13.powCheck id validation", () => {
-  it("fails on a malformed (non-hex) id rather than miscounting it as work", () => {
-    // A consumer's own loosely-typed event schema can carry a non-hex id past
-    // base parse. Invalid hex digits parseInt to NaN, and
-    // Math.clz32(NaN) - 28 === 4 would otherwise let "g".repeat(64) pass
-    // powCheck(4); the check validates the id format itself. powCheck is one
-    // shared check object across both flavors, so classic covers the guard.
-    const looseEvent = zc.object({
-      id: zc.string(),
-      pubkey: zc.string(),
-      created_at: zc.number(),
-      kind: zc.number(),
-      tags: zc.array(zc.array(zc.string())),
-      content: zc.string(),
-      sig: zc.string(),
-    });
-    const schema = looseEvent.check(classicZostr.nip13.powCheck(4));
-
-    expect(
-      schema.safeParse({ ...eventWith(ID_8), id: "g".repeat(64) }).success,
-    ).toBe(false);
-    // Sanity: the same loose schema accepts a real mined id.
-    expect(schema.safeParse(eventWith(ID_8)).success).toBe(true);
+// The checks are one shared object across both flavors (direct reference), so
+// classic covers these untyped-JS-path guards. A consumer's own loosely-typed
+// event schema can carry values the strict event() would reject at base parse.
+describe("zostr.nip13 check input validation", () => {
+  const looseEvent = zc.object({
+    id: zc.string(),
+    pubkey: zc.string(),
+    created_at: zc.number(),
+    kind: zc.number(),
+    tags: zc.array(zc.array(zc.string())),
+    content: zc.string(),
+    sig: zc.string(),
   });
 
-  it("fails (does not throw) on a non-string id that passes base parse", () => {
+  it("powCheck distinguishes a malformed id from insufficient work", () => {
+    // A non-hex id fails with an id-specific message, not a PoW-tuning one.
+    // (Invalid hex digits parseInt to NaN, and Math.clz32(NaN) - 28 === 4 would
+    // otherwise let "g".repeat(64) pass powCheck(4).)
+    const badId = looseEvent
+      .check(classicZostr.nip13.powCheck(4))
+      .safeParse({ ...eventWith(ID_8), id: "g".repeat(64) });
+    expect(badId.success).toBe(false);
+    expect(badId.error?.issues[0]?.message).toContain("Invalid event id");
+
+    // A valid id that simply falls short gets the proof-of-work message.
+    const lowPow = looseEvent
+      .check(classicZostr.nip13.powCheck(9))
+      .safeParse(eventWith(ID_8)); // ID_8 has only 8 leading zero bits
+    expect(lowPow.success).toBe(false);
+    expect(lowPow.error?.issues[0]?.message).toContain(
+      "Insufficient proof of work",
+    );
+
+    // Sanity: a sufficiently-mined valid id passes.
+    expect(
+      looseEvent
+        .check(classicZostr.nip13.powCheck(4))
+        .safeParse(eventWith(ID_8)).success,
+    ).toBe(true);
+  });
+
+  it("powCheck fails (does not throw) on a non-string id that passes base parse", () => {
     // With an `id: any` field a Symbol reaches the check; `RegExp.test` would
     // throw coercing a Symbol to string, so the typeof guard must come first.
     const anyIdEvent = zc.object({
@@ -249,6 +265,19 @@ describe("zostr.nip13.powCheck id validation", () => {
     expect(
       schema.safeParse({ ...eventWith(ID_8), id: Symbol("bad") }).success,
     ).toBe(false);
+  });
+
+  it("commitmentCheck fails (does not throw) when tags is missing/non-array", () => {
+    // A loose schema without a `tags` field: the check must fail, not throw on
+    // `.find`, keeping the same safeParse contract powCheck honors for the id.
+    // TypeScript blocks composing a tags-requiring check here (it wants a full
+    // NostrEventLike); @ts-expect-error reaches the untyped JS runtime path.
+    const schema = zc
+      .object({ id: zc.string() })
+      .loose()
+      // @ts-expect-error — tags-less schema, simulating the untyped JS path
+      .check(classicZostr.nip13.commitmentCheck(1));
+    expect(schema.safeParse({ id: "a".repeat(64) }).success).toBe(false);
   });
 });
 
