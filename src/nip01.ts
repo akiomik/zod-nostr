@@ -66,18 +66,7 @@ export function timestamp(): core.$ZodNumber<number> {
 
 /** NIP-01 defines kind as `<integer between 0 and 65535>` */
 export function kind(): core.$ZodNumber<number> {
-  return zodNumber([
-    makeCheck<number>((payload) => {
-      const value = payload.value;
-      if (!Number.isInteger(value) || value < 0 || value > 65535) {
-        payload.issues.push({
-          code: "custom",
-          input: value,
-          message: "Invalid kind (expected an integer between 0 and 65535)",
-        });
-      }
-    }),
-  ]);
+  return zodNumber([nonNegativeIntegerCheck("kind", 65535)]);
 }
 
 /**
