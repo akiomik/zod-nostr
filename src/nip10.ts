@@ -236,14 +236,19 @@ function threadCheck(): core.$ZodCheck<NostrEventLike> {
       // Unmarked (positional scheme) or present-but-empty: not our concern.
       if (value === undefined || value === "") return;
       // isNamedTag narrows only the tag name, so the marker stays `unknown`; a
-      // non-string value on the untyped path is an invalid marker. Don't
-      // stringify it — `String()`/template coercion itself throws on a Symbol, a
-      // null-prototype object (no `toString`), or an object whose `toString`
-      // throws — just name its type, so a garbage marker fails cleanly rather
-      // than breaking the safeParse-never-throws contract.
+      // non-string value on the untyped path is an invalid marker. Echo the
+      // offending value, but never let building the message throw: `String()`
+      // (like template coercion) throws on a null-prototype object or one whose
+      // `toString` throws, so fall back to a type label only for those. A
+      // string, number, boolean, symbol, or ordinary object still shows its
+      // actual value, keeping the safeParse-never-throws contract.
       if (typeof value !== "string" || !E_TAG_MARKER_SET.has(value)) {
-        const actual =
-          typeof value === "string" ? value : `<non-string:${typeof value}>`;
+        let actual: string;
+        try {
+          actual = String(value);
+        } catch {
+          actual = `<non-string:${typeof value}>`;
+        }
         payload.issues.push({
           code: "custom",
           input: payload.value,

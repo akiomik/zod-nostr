@@ -231,6 +231,15 @@ describe("zostr.nip10 opt-in checks input validation (untyped JS path)", () => {
     },
   );
 
+  it("threadCheck echoes a stringifiable invalid marker's value in the message", () => {
+    // A coercible marker (a number here, or a legacy string like "mention") is
+    // shown verbatim; only a value whose String() throws falls back to a type
+    // label. Guards against the message regressing to a bare type name.
+    const result = thread.safeParse({ ...base, tags: [["e", ID, "", 3]] });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.message).toContain(": 3");
+  });
+
   it("participantsCheck fails (does not throw) when tags is not an array", () => {
     const check = looseEvent.check(classicZostr.nip10.participantsCheck([PK]));
     const result = check.safeParse({ ...base, tags: 42 });
