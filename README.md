@@ -156,7 +156,9 @@ aliased at the root (`zostr.event`, `zostr.npub`, …).
 | **NIP-67** | EOSE completeness hint: `EOSE` extended with an optional hints array, a strict superset of NIP-01's | `nip67.relayMessage.eose` |
 | **NIP-70** | Protected events: the `["-"]` marker tag schema and an opt-in check that a protected event's author is an authenticated pubkey | `nip70.protectedTag`, `nip70.protectedCheck` |
 
-See [docs/API.md](docs/API.md) for the full API reference.
+See [docs/API.md](docs/API.md) for the full API reference, and
+[docs/guides.md](docs/guides.md) for task-oriented how-to guides (building a
+tunable profile schema, composing opt-in checks).
 
 ## Development
 

@@ -123,6 +123,10 @@ const verifiedEvent = zostr.event().check(zostr.signatureCheck());
 verifiedEvent.parse(event); // throws if id/sig don't match
 ```
 
+Multiple checks — signature, proof of work, expiration, NIP-42 auth — compose
+onto an event schema the same way; see
+[Composing opt-in checks](./guides.md#composing-opt-in-checks).
+
 ### `zostr.nip01.metadata()`
 
 An **object schema** for a parsed kind:0 profile. Every known field is
@@ -133,7 +137,7 @@ catchall), not stripped. No `.catch()`/fallback is baked in — a present-but-
 invalid field fails, so layer your own recovery policy on top (or reuse the
 field atoms from `metadataFields`). For clients that write `""` to clear a field
 instead of removing the key, see
-[Recipe: empty-string fields](#recipe-empty-string-fields).
+[Accepting cleared (empty-string) fields](./guides.md#accepting-cleared-empty-string-fields).
 
 ```ts
 zostr.nip01.metadata().parse({ name: "alice", nip05: "alice@example.com" });
@@ -210,48 +214,9 @@ const Profile = z.object({
 In zod/mini, compose with the functional API instead
 (`z._default(z.catch(f.name(), ""), "")`).
 
-#### Recipe: empty-string fields
-
-A value like `{ "website": "" }` is rejected, because `""` is not a valid URL —
-the field schema validates whatever is present. Some clients write `""` to
-*clear* a kind:0 field instead of removing the key, so an application may want to
-accept it. Whether `""` means "reject", "keep as-is", or "treat as absent" is an
-application-level recovery decision, so the base stays strict and you compose the
-policy you want (see design.md,
-[Do not bake in recovery policy](./design.md#do-not-bake-in-recovery-policy)).
-
-The safe, lossless form accepts and **preserves** `""` — it adds no one-way
-transform, so it still round-trips through `jsonCodec`:
-
-```ts
-import { z } from "zod";
-import { zostr } from "zod-nostr";
-
-const f = zostr.nip01.metadataFields;
-const Metadata = zostr.nip01.metadata().extend({
-  website: f.website().or(z.literal("")).optional(),
-});
-
-Metadata.parse({ website: "" }); // { website: "" }
-
-const tolerantContent = zostr.jsonCodec(Metadata); // decodes/encodes "" and real URLs
-```
-
-The same pattern applies to the other validated fields — `picture`, `banner`,
-`nip05`, `lud16`, `lud06`. An application that treats `""` as a cleared field
-removes or normalizes it after decoding, keeping that policy out of the schema.
-
-In zod/mini, compose the field the same way with the functional API:
-
-```ts
-import * as z from "zod/mini";
-import { zostr } from "zod-nostr/mini";
-
-const f = zostr.nip01.metadataFields;
-const Metadata = z.extend(zostr.nip01.metadata(), {
-  website: z.optional(z.union([f.website(), z.literal("")])),
-});
-```
+For a full walkthrough — building a lenient profile and accepting cleared
+(empty-string) fields — see
+[Building a tunable profile schema](./guides.md#building-a-tunable-profile-schema).
 
 ### `zostr.subscriptionId()`
 
