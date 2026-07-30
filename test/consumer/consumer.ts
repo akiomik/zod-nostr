@@ -22,6 +22,7 @@ zostr.nip10.textNote();
 zostr.nip10.eTag();
 zostr.nip10.qTag();
 zostr.nip11.relayInformationDocument();
+zostr.nip13.nonceTag();
 zostr.nip42.relayMessage.auth();
 zostr.nip42.clientMessage.auth();
 zostr.nip45.clientMessage.count();
@@ -76,6 +77,18 @@ zostr.nip10
   .textNote()
   .check(zostr.nip10.threadCheck())
   .check(zostr.nip10.participantsCheck([pk]));
+
+// NIP-13 proof of work. The nonce tag infers a precise tuple (literal name +
+// optional target), and the opt-in checks compose onto an event schema — both
+// exercised through the resolved classic/mini declarations below.
+const nonceTag = zostr.nip13.nonceTag().parse(["nonce", "1", "8"]);
+const nonceName: "nonce" = nonceTag[0];
+const nonceTarget: string | undefined = nonceTag[2];
+void [nonceName, nonceTarget];
+zostr
+  .event()
+  .check(zostr.nip13.powCheck(20))
+  .check(zostr.nip13.commitmentCheck(20));
 
 // NIP-21 nostr: URIs. The full surface is exercised in BOTH flavors so a
 // one-sided flavor gap or a degraded pointer type fails this compile gate.
@@ -195,6 +208,20 @@ void classicProfile;
 miniZostr.nip01.event();
 miniZostr.event();
 zMini.parse(miniZostr.event(), signed);
+// NIP-13 across the mini flavor: nonce tag type (literal name + optional
+// target, so a degraded [0] type also fails this gate) and check composition.
+const miniNonceTag = zMini.parse(miniZostr.nip13.nonceTag(), [
+  "nonce",
+  "1",
+  "8",
+]);
+const miniNonceName: "nonce" = miniNonceTag[0];
+const miniNonceTarget: string | undefined = miniNonceTag[2];
+void [miniNonceName, miniNonceTarget];
+miniZostr
+  .event()
+  .check(miniZostr.nip13.powCheck(20))
+  .check(miniZostr.nip13.commitmentCheck(20));
 zMini.encode(miniZostr.nprofile(), { pubkey: pk, relays: [] });
 // @ts-expect-error the pointer shape is strict in the mini flavor too
 zMini.encode(miniZostr.nprofile(), { pubkey: pk, relays: [], extra: 1 });

@@ -525,6 +525,76 @@ zostr.nip11.relayInformationDocument().parse({
 });
 ```
 
+## NIP-13 — proof of work
+
+Schemas and checks for [NIP-13](https://github.com/nostr-protocol/nips/blob/master/13.md)
+proof of work, under `zostr.nip13.*`. The **structure** of the `nonce` tag
+(`nonceTag()`) is kept separate from verifying an event's **achieved** difficulty
+(`powCheck()`) and its **committed** target (`commitmentCheck()`), so each can be
+composed independently.
+
+### `zostr.nip13.nonceTag()`
+
+Schema for the `nonce` tag: `["nonce", <nonce>, <target difficulty>?]`.
+
+- `<nonce>` — the value a miner varies to change the event id. NIP-13 places no
+  format constraint on it, so it is a plain string.
+- `<target difficulty>` — the difficulty the miner **commits** to, validated as
+  a non-negative integer string when present. It is **optional**: NIP-13 says the
+  tag _SHOULD_ carry the commitment (not MUST), so a two-element
+  `["nonce", <nonce>]` is accepted. The tag is a fixed tuple, so a fourth element
+  is rejected.
+
+```ts
+zostr.nip13.nonceTag().parse(["nonce", "776797", "20"]); // committed to 20 bits
+zostr.nip13.nonceTag().parse(["nonce", "776797"]);       // no commitment (ok)
+zostr.nip13.nonceTag().parse(["nonce", "1", "abc"]);     // throws (bad target)
+```
+
+### `zostr.nip13.powCheck(minDifficulty)`
+
+An opt-in [check](https://zod.dev/api#checks) that the event's **achieved** proof
+of work meets `minDifficulty` — its `id` has at least `minDifficulty` leading
+zero **bits** (each hex digit is 4 bits, per NIP-13's difficulty definition). It
+inspects only the `id`, not the `nonce` tag. Compose it onto an id-bearing event
+schema (`event()` / `nip10.textNote()` / `nip42.authEvent()` — not the id-less
+`eventTemplate()` / `unsignedEvent()`), the same way as `signatureCheck()`:
+
+```ts
+zostr.event().check(zostr.nip13.powCheck(20)).parse(minedEvent);
+```
+
+`minDifficulty` must be a non-negative integer; `0` accepts any event. A
+non-integer or negative value throws at composition time (fails **closed**, like
+`nip42.createdAtCheck()`) rather than silently accepting every event.
+
+### `zostr.nip13.commitmentCheck(minDifficulty)`
+
+An opt-in check that the event **commits** to a target of at least
+`minDifficulty` — its `nonce` tag carries a committed target that is
+`>= minDifficulty`. This is NIP-13's anti-spam guard: a note that merely got
+lucky at a low committed target can be rejected even if its actual difficulty is
+high. Composing this check is how you opt into requiring a commitment (NIP-13's
+"a client MAY reject a note missing a difficulty commitment") — a missing `nonce`
+tag, a missing/invalid target, or a target below `minDifficulty` all fail. It
+fails **closed** on a bad `minDifficulty` the same way as `powCheck()`.
+
+Compose the two checks (plus `signatureCheck()`) for full NIP-13 validation:
+
+```ts
+const verified = zostr
+  .event()
+  .check(zostr.signatureCheck())
+  .check(zostr.nip13.powCheck(20)) // actual difficulty >= 20
+  .check(zostr.nip13.commitmentCheck(20)); // committed target >= 20
+verified.parse(minedEvent);
+```
+
+The relay-side `min_pow_difficulty` advertisement is a NIP-11 field
+([`zostr.nip11.relayInformationDocument()`](#zostrnip11relayinformationdocument)),
+and a relay's `pow:`-prefixed `OK` rejection is an ordinary prefix accepted by
+[`zostr.nip01.relayMessage.okMessagePrefixCheck()`](#zostrnip01relaymessageokmessageprefixcheck--zostrnip01relaymessageclosedmessageprefixcheck).
+
 ## NIP-19 — bech32 entities
 
 These live under `zostr.nip19.*` and are also aliased at the root (`zostr.npub`

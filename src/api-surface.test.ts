@@ -112,6 +112,11 @@ const EXPECTED_SURFACE: Surface = {
     participantsCheck: FN,
   },
   nip11: { relayInformationDocument: FN },
+  nip13: {
+    nonceTag: FN,
+    powCheck: FN,
+    commitmentCheck: FN,
+  },
   nip42: {
     authEvent: FN,
     relayMessage: { auth: FN },

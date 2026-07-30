@@ -5,9 +5,9 @@
 [![codecov](https://codecov.io/gh/akiomik/zod-nostr/graph/badge.svg?token=GDL3P5N6L7)](https://codecov.io/gh/akiomik/zod-nostr)
 
 Zod schemas and codecs for [Nostr](https://nostr.com) — NIP-01 events, NIP-05
-identifiers, NIP-10 text notes, NIP-11 relay information documents, NIP-19 bech32
-entities, NIP-21 `nostr:` URIs, NIP-42 authentication, NIP-45 event counts,
-NIP-50 search, and NIP-67 EOSE completeness hints.
+identifiers, NIP-10 text notes, NIP-11 relay information documents, NIP-13 proof
+of work, NIP-19 bech32 entities, NIP-21 `nostr:` URIs, NIP-42 authentication,
+NIP-45 event counts, NIP-50 search, and NIP-67 EOSE completeness hints.
 
 Validation logic is written once against `zod/v4/core` and re-exposed through
 two entry points, so the exact same rules work with both
@@ -136,6 +136,9 @@ aliased at the root (`zostr.event`, `zostr.npub`, …).
 - **NIP-10** — kind:1 text notes and threads (`nip10.textNote`), marked
   reply/citation tags, and opt-in reply/thread checks
 - **NIP-11** — relay information document (`nip11.relayInformationDocument`)
+- **NIP-13** — proof of work: the `nonce` tag schema (`nip13.nonceTag`) and
+  opt-in checks for achieved difficulty (`nip13.powCheck`) and the committed
+  target (`nip13.commitmentCheck`)
 - **NIP-19** — bech32 entities (`nip19.npub`, `nip19.nsec`, `nip19.note`,
   `nip19.nprofile`, `nip19.nevent`, `nip19.naddr`)
 - **NIP-21** — `nostr:` URIs over the supported NIP-19 entities (`nsec`
