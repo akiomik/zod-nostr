@@ -267,17 +267,19 @@ A public API addition ships with:
 - passing the release gates below;
 - updated `API.md` and `CHANGELOG.md`.
 
-Two release gates run in CI:
+One external release gate runs in CI:
 
 - **External consumer compile** (`npm run test:consumer`, `test/consumer/`) —
   compiles a fixture that imports the package by its published specifiers
   (`zod-nostr` / `zod-nostr/mini`), resolved to the built declarations in
   `dist/`, so it exercises the emitted `.d.ts` a consumer actually sees rather
   than source-relative types.
-- **Release-surface comparison** (`src/release-surface.test.ts`) — diffs the
-  current public path set against the last published release and requires every
-  removed/renamed path to be listed in an intentional-breaking manifest;
-  additive paths are always allowed, an unclassified removal fails.
+
+Any change to the public runtime surface — an addition, a removal, or a rename —
+fails the API-surface test above, which matches the exposed key tree against a
+declared expectation. A change therefore lands only as a deliberate edit to that
+expectation; whether the edit is breaking is then governed by the versioning
+rules above and recorded in `CHANGELOG.md`.
 
 ## Decision records
 
