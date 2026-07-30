@@ -232,6 +232,24 @@ describe("zostr.nip13.powCheck id validation", () => {
     // Sanity: the same loose schema accepts a real mined id.
     expect(schema.safeParse(eventWith(ID_8)).success).toBe(true);
   });
+
+  it("fails (does not throw) on a non-string id that passes base parse", () => {
+    // With an `id: any` field a Symbol reaches the check; `RegExp.test` would
+    // throw coercing a Symbol to string, so the typeof guard must come first.
+    const anyIdEvent = zc.object({
+      id: zc.any(),
+      pubkey: zc.string(),
+      created_at: zc.number(),
+      kind: zc.number(),
+      tags: zc.array(zc.array(zc.string())),
+      content: zc.string(),
+      sig: zc.string(),
+    });
+    const schema = anyIdEvent.check(classicZostr.nip13.powCheck(4));
+    expect(
+      schema.safeParse({ ...eventWith(ID_8), id: Symbol("bad") }).success,
+    ).toBe(false);
+  });
 });
 
 describe("zostr.nip13 output types", () => {

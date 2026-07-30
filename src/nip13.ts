@@ -129,7 +129,13 @@ function powCheck(minDifficulty: number): core.$ZodCheck<NostrEventLike> {
   assertDifficulty("powCheck", minDifficulty);
   return makeCheck<NostrEventLike>((payload) => {
     const { id } = payload.value;
-    if (!EVENT_ID_RE.test(id) || countLeadingZeroBits(id) < minDifficulty) {
+    if (
+      // typeof guard first: `RegExp.test` coerces its argument to a string, and
+      // a Symbol id would throw on that coercion (not just fail to match).
+      typeof id !== "string" ||
+      !EVENT_ID_RE.test(id) ||
+      countLeadingZeroBits(id) < minDifficulty
+    ) {
       payload.issues.push({
         code: "custom",
         input: payload.value,

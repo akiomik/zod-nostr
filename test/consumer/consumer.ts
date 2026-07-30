@@ -208,12 +208,16 @@ void classicProfile;
 miniZostr.nip01.event();
 miniZostr.event();
 zMini.parse(miniZostr.event(), signed);
-// NIP-13 across the mini flavor: nonce tag type and check composition.
-const miniNonceTarget: string | undefined = zMini.parse(
-  miniZostr.nip13.nonceTag(),
-  ["nonce", "1", "8"],
-)[2];
-void miniNonceTarget;
+// NIP-13 across the mini flavor: nonce tag type (literal name + optional
+// target, so a degraded [0] type also fails this gate) and check composition.
+const miniNonceTag = zMini.parse(miniZostr.nip13.nonceTag(), [
+  "nonce",
+  "1",
+  "8",
+]);
+const miniNonceName: "nonce" = miniNonceTag[0];
+const miniNonceTarget: string | undefined = miniNonceTag[2];
+void [miniNonceName, miniNonceTarget];
 miniZostr
   .event()
   .check(miniZostr.nip13.powCheck(20))
