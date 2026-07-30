@@ -167,6 +167,11 @@ which layer it extends.
   (`jsonCodec(schema)`).
 - **Entity codecs** — decode/encode a specific entity to a fixed output type
   (bech32 entities `npub` / `nsec` / `note` / `nprofile` / `nevent` / `naddr`).
+  A related wire form of the same entities can add a parallel set — the NIP-21
+  `nostr:` **URI-form** entity codecs (`nip21.npub` … `nip21.naddr`) are the
+  NIP-19 set **minus `nsec`** (which NIP-21 excludes; `nrelay`/`ncryptsec` are
+  unmodeled), reusing the NIP-19 decoded shapes. A union-typed entity codec
+  (`nip21.any`) decodes any of them to a `{ type, data }` discriminated union.
 - **Convenience codecs** — a specific transport + shape assembled for a common
   case (`nip01.metadataContent()`, built on `jsonCodec(nip01.metadata())`).
 
@@ -196,7 +201,16 @@ Public names follow ownership and the protocol's own wire vocabulary:
 - A schema that is a **superset** of an existing one reuses the leaf name, when
   unambiguous, to signal the relationship: `nip50.clientMessage.req` ⊃
   `nip01.clientMessage.req`, `nip50.filter` ⊃ `nip01.filter`,
-  `nip67.relayMessage.eose` ⊃ `nip01.relayMessage.eose`.
+  `nip67.relayMessage.eose` ⊃ `nip01.relayMessage.eose`. The same leaf reuse
+  applies to a **related wire form** of an existing entity, not only a superset:
+  the NIP-21 `nostr:` URI codecs reuse the wrapped entity's leaf
+  (`nip21.npub` ↔ `nip19.npub`) to signal that relationship, disambiguated by
+  the namespace.
+- An **`any` leaf** denotes the union of a namespace's **variant factories**
+  (not all its siblings — `uri`, checks, and helpers are excluded), and takes
+  the **same kind** as those variants: a union *schema* where they are schemas
+  (`nip01.relayMessage.any`), a *codec* where they are codecs (`nip21.any`,
+  which unions the entity codecs into a `{ type, data }`-decoding codec).
 
 ## Composition examples
 

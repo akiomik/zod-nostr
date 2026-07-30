@@ -591,6 +591,91 @@ key rather than dropping it, since the TLV encoding carries only the known
 fields — preserving it in the type would be a lie a `decode(encode(x))`
 round-trip can't honor.
 
+## NIP-21 — `nostr:` URIs
+
+[NIP-21](https://github.com/nostr-protocol/nips/blob/master/21.md) wraps a NIP-19
+bech32 entity in a `nostr:` URI. These live under `zostr.nip21.*` (no root
+aliases — the namespace keeps the URI form distinct from the bare NIP-19
+entity). The entity is delegated to the NIP-19 codecs, so validation and the
+decoded shapes match [NIP-19](#nip-19--bech32-entities) exactly.
+
+**Supported entities.** `npub`, `note`, `nprofile`, `nevent`, `naddr`. `nsec` is
+a NIP-19 entity but NIP-21 excludes it from URIs, so there is **no**
+`zostr.nip21.nsec`, and every schema here rejects `nostr:nsec…` (secret-bearing
+prefixes are rejected before the payload is decoded). `nrelay` (deprecated) and
+`ncryptsec` (NIP-49) are not modeled and are rejected too.
+
+**Scheme contract.** The `nostr:` scheme is matched **case-insensitively** on
+decode/validate (`nostr:`, `NOSTR:`, mixed case), per
+[RFC 3986 §3.1](https://www.rfc-editor.org/rfc/rfc3986#section-3.1); `encode`
+always emits the lowercase canonical `nostr:`. The URI must be exactly the
+scheme plus one bech32 entity — leading/trailing/internal whitespace, a query,
+a fragment, a trailing suffix, and a doubled scheme are all rejected. The entity
+body's case is left to NIP-19: bech32 (BIP-173) permits an all-lowercase or
+all-uppercase entity and rejects mixed case, so `nostr:NPUB1…` is accepted (and
+decodes to the same value) while a mixed-case body is rejected. `encode` always
+emits the lowercase-canonical form.
+
+### `zostr.nip21.uri(prefix?)`
+
+Validation-only string schema: checks that a string is a supported `nostr:` URI
+and returns it unchanged (it does not decode). With no `prefix` it accepts any
+supported entity; passing a `prefix` (`"npub" | "note" | "nprofile" | "nevent" |
+"naddr"` — `"nsec"` is not accepted) narrows it to that one entity.
+
+```ts
+zostr.nip21.uri().parse("nostr:npub1...");     // returns the string unchanged
+zostr.nip21.uri().parse("NOSTR:npub1...");     // case-insensitive scheme, ok
+zostr.nip21.uri("npub").parse("nostr:note1..."); // throws (wrong entity)
+zostr.nip21.uri().parse("nostr:nsec1...");     // throws (nsec excluded)
+```
+
+### NIP-21 entity codecs
+
+Each returns a **codec** whose decoded value is identical to the corresponding
+NIP-19 codec's — only the wire form differs (a `nostr:` URI instead of bare
+bech32).
+
+| function | decodes to |
+| --- | --- |
+| `zostr.nip21.npub()` | hex pubkey (`string`) |
+| `zostr.nip21.note()` | hex event id (`string`) |
+| `zostr.nip21.nprofile()` | `{ pubkey: string, relays?: string[] }` |
+| `zostr.nip21.nevent()` | `{ id: string, relays?: string[], author?: string, kind?: number }` |
+| `zostr.nip21.naddr()` | `{ identifier: string, pubkey: string, kind: number, relays?: string[] }` |
+
+```ts
+const uri = zostr.nip21.npub().encode(pubkey); // "nostr:npub1..."
+zostr.nip21.npub().decode(uri);                // pubkey (hex string)
+zostr.nip21.npub().decode("NOSTR:npub1...");   // case-insensitive scheme on decode
+```
+
+### `zostr.nip21.any()`
+
+A codec over **all** supported entities. `decode` produces a discriminated union
+tagged by `type`; `encode` uses that tag to pick the entity, so it is never
+ambiguous (an `npub` and a `note` both carry a `string` payload — the tag is
+what distinguishes them).
+
+```ts
+type Decoded =
+  | { type: "npub"; data: string }
+  | { type: "note"; data: string }
+  | { type: "nprofile"; data: { pubkey: string; relays?: string[] } }
+  | { type: "nevent"; data: { id: string; relays?: string[]; author?: string; kind?: number } }
+  | { type: "naddr"; data: { identifier: string; pubkey: string; kind: number; relays?: string[] } };
+
+const decoded = zostr.nip21.any().decode("nostr:nprofile1...");
+if (decoded.type === "nprofile") {
+  decoded.data.pubkey; // narrowed
+}
+zostr.nip21.any().encode({ type: "npub", data: pubkey }); // "nostr:npub1..."
+```
+
+The `{ type, data }` shape matches what `nostr-tools`' `nip19.decode()` returns
+for these five entities. Each branch reuses the NIP-19 output schema, so — like
+the pointers — the branch object and its pointer `data` **reject** unknown keys.
+
 ## NIP-42 — authentication
 
 Schemas for the NIP-42 `AUTH` handshake (a client authenticating to a relay by

@@ -23,6 +23,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     before `"reply"`).
   - `zostr.nip10.participantsCheck(expected)` — opt-in check that the note's
     `p` tags include every expected participant pubkey.
+- **NIP-21 `nostr:` URI support.** `zostr.nip21` wraps the supported NIP-19
+  entities (`npub` / `note` / `nprofile` / `nevent` / `naddr`; `nsec` is
+  excluded, along with the unmodeled `nrelay` and NIP-49 `ncryptsec`) in a
+  `nostr:` URI, reusing NIP-19's validation and decoded shapes:
+  - `zostr.nip21.uri(prefix?)` — validation-only string schema for a `nostr:`
+    URI; with no `prefix` it accepts any supported entity, a `prefix` narrows it
+    to one.
+  - `zostr.nip21.npub()` / `note()` / `nprofile()` / `nevent()` / `naddr()` —
+    per-entity codecs (`nostr:<entity>` ⇄ the NIP-19 decoded value).
+  - `zostr.nip21.any()` — codec over all supported entities, decoding to a
+    `{ type, data }` discriminated union.
+  - The `nostr:` scheme is matched case-insensitively on decode/validate and
+    always emitted lowercase on encode (RFC 3986 §3.1); whitespace, a query, a
+    fragment, a trailing suffix, and a doubled scheme are rejected.
 
 ## [0.5.0] - 2026-07-29
 

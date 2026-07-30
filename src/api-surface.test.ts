@@ -86,12 +86,23 @@ const NIP19: Surface = {
   naddr: FN,
 };
 
+const NIP21: Surface = {
+  uri: FN,
+  npub: FN,
+  note: FN,
+  nprofile: FN,
+  nevent: FN,
+  naddr: FN,
+  any: FN,
+};
+
 const EXPECTED_SURFACE: Surface = {
   jsonCodec: FN,
 
   // Canonical spec namespaces
   nip01: NIP01,
   nip19: NIP19,
+  nip21: NIP21,
   nip05: { identifier: FN, nostrJsonDocument: FN, formatIdentifier: FN },
   nip10: {
     textNote: FN,
