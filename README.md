@@ -4,16 +4,30 @@
 [![CI](https://github.com/akiomik/zod-nostr/actions/workflows/ci.yml/badge.svg)](https://github.com/akiomik/zod-nostr/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/akiomik/zod-nostr/graph/badge.svg?token=GDL3P5N6L7)](https://codecov.io/gh/akiomik/zod-nostr)
 
-Zod schemas and codecs for [Nostr](https://nostr.com) — NIP-01 events, NIP-05
-identifiers, NIP-10 text notes, NIP-11 relay information documents, NIP-13 proof
-of work, NIP-19 bech32 entities, NIP-21 `nostr:` URIs, NIP-40 expiration
-timestamps, NIP-42 authentication, NIP-45 event counts, NIP-50 search, NIP-67
-EOSE completeness hints, and NIP-70 protected events.
+**Spec-faithful, tunable Zod schemas & codecs for [Nostr](https://nostr.com) —
+strict by default, loosen deliberately.**
 
-Validation logic is written once against `zod/v4/core` and re-exposed through
-two entry points, so the exact same rules work with both
-[classic zod](https://zod.dev) and [zod/mini](https://zod.dev/packages/mini),
-each with native `.check()` chaining for its own flavor.
+- **Strict, spec-faithful atoms** — each schema validates to exactly what its NIP
+  permits, and never rejects spec-valid input.
+- **Tunable in both directions** — strict base schemas compose with
+  `.optional()`, `.catch()`, `.default()`, and `.refine()`, so you can
+  deliberately loosen them to absorb the messy data real relays serve.
+- **Classic zod and zod/mini** — one set of rules, written once against
+  `zod/v4/core` and re-exposed through two entry points with each flavor's native
+  `.check()` chaining; reach for tree-shakeable
+  [zod/mini](https://zod.dev/packages/mini) or ergonomic
+  [classic zod](https://zod.dev).
+- **Precise type inference** — schemas are the single source of truth, so
+  inferred types and runtime checks can't drift apart.
+- **Bidirectional codecs** — NIP-19 bech32 entities and NIP-21 `nostr:` URIs
+  decode *and* encode, not just validate.
+- **Opt-in checks** — expensive or context-dependent verification (signatures,
+  proof of work, expiration, authentication) composes via `.check()` instead of
+  being baked into every parse.
+- **Framework-agnostic** — a pure schema layer you can drop into any Nostr stack.
+
+Covers NIP-01, NIP-05, NIP-10, NIP-11, NIP-13, NIP-19, NIP-21, NIP-40, NIP-42,
+NIP-45, NIP-50, NIP-67, and NIP-70 — see [Supported NIPs](#supported-nips).
 
 ## Installation
 

@@ -1,7 +1,7 @@
 {
   "name": "zod-nostr",
   "version": "0.5.1",
-  "description": "Zod schemas for Nostr (NIP-01, NIP-05, NIP-11, NIP-19, NIP-21, ...)",
+  "description": "Spec-faithful, tunable Zod schemas & codecs for Nostr — strict by default, loosen deliberately. Classic + zod/mini.",
   "type": "module",
   "files": [
     "dist"
