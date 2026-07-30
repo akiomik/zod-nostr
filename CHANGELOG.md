@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **NIP-13 proof-of-work support.** `zostr.nip13` models NIP-13's `nonce` tag
+  and separates verifying a note's achieved difficulty from its committed
+  target:
+  - `zostr.nip13.nonceTag()` — schema for the `["nonce", <nonce>, <target>?]`
+    tag. The committed target is optional (NIP-13 makes it a SHOULD) and
+    validated as a non-negative integer string when present.
+  - `zostr.nip13.powCheck(minDifficulty)` — opt-in check that the event id has
+    at least `minDifficulty` leading zero bits (achieved difficulty).
+  - `zostr.nip13.commitmentCheck(minDifficulty)` — opt-in check that the `nonce`
+    tag commits to a target of at least `minDifficulty` (NIP-13's anti-spam
+    guard against a note that merely got lucky at a low target).
+  - Both checks compose onto an event schema like `zostr.signatureCheck()`, and
+    fail closed on a non-integer/negative `minDifficulty`.
+
 - **NIP-10 reply/thread tag support.** `zostr.nip10` now models NIP-10's
   threading conventions beyond the kind:1 event shape:
   - `zostr.nip10.eTag()` — schema for the marked `e` reply tag

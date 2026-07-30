@@ -8,6 +8,7 @@ export type { ProfileMetadata } from "./nip01.js";
 import * as nip05 from "./nip05.js";
 import * as nip10 from "./nip10.js";
 import * as nip11 from "./nip11.js";
+import * as nip13 from "./nip13.js";
 import * as nip19 from "./nip19.js";
 import * as nip21 from "./nip21.js";
 import * as nip42 from "./nip42.js";
@@ -240,6 +241,16 @@ export const zostr = {
   nip11: {
     relayInformationDocument: () =>
       miniOpenObject(nip11.nip11.relayInformationDocument()),
+  },
+
+  // NIP-13 proof of work (nonce tag schema + opt-in achieved/committed difficulty checks)
+  nip13: {
+    nonceTag: () => z.tuple(nip13.nip13.nonceTag()._zod.def.items),
+
+    // Opt-in checks composed onto an event schema, the same way as
+    // signatureCheck(): zostr.event().check(zostr.nip13.powCheck(20))
+    powCheck: nip13.nip13.powCheck,
+    commitmentCheck: nip13.nip13.commitmentCheck,
   },
 
   // NIP-42 client-relay authentication (AUTH handshake messages + auth event + opt-in checks)
