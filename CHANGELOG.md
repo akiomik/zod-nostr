@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-07-31
+
 ### Added
 
 - **NIP-70 protected-event support.** `zostr.nip70` models the `["-"]` protected
@@ -516,7 +518,8 @@ under each NIP instead of by collision-specific name suffixes.
   can be retried by re-running the workflow against the existing tag, without
   having to delete and recreate the GitHub Release.
 
-[Unreleased]: https://github.com/akiomik/zod-nostr/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/akiomik/zod-nostr/compare/v0.5.1...HEAD
+[0.5.1]: https://github.com/akiomik/zod-nostr/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/akiomik/zod-nostr/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/akiomik/zod-nostr/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/akiomik/zod-nostr/compare/v0.2.1...v0.3.0
