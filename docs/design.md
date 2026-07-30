@@ -275,9 +275,14 @@ Two release gates run in CI:
   `dist/`, so it exercises the emitted `.d.ts` a consumer actually sees rather
   than source-relative types.
 - **Release-surface comparison** (`src/release-surface.test.ts`) — diffs the
-  current public path set against the last published release and requires every
-  removed/renamed path to be listed in an intentional-breaking manifest;
-  additive paths are always allowed, an unclassified removal fails.
+  current public path set against a frozen record of the last published release
+  (v0.5.0) and requires every removed/renamed path to be listed in an
+  intentional-breaking manifest; additive paths are always allowed, an
+  unclassified removal fails. This baseline is deliberately independent of the
+  API-surface test's editable expectation: a PR that deletes a public path and
+  updates that expectation in the same change passes the API-surface test but is
+  still caught here, so a shipped path can't be dropped without declaring it
+  breaking.
 
 ## Decision records
 

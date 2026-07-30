@@ -1,4 +1,3 @@
-import { bech32 } from "@scure/base";
 import { describe, expect, it } from "vitest";
 import * as zc from "zod";
 import * as zm from "zod/mini";
@@ -9,38 +8,11 @@ import { zostr as miniZostr } from "./mini.js";
  * Field-level schemas for kind:0 profile metadata. Each atom is strict and
  * non-optional so consumers can compose their own optional/catch/default
  * policy on top (D3: a pre-weakened field can't be recovered).
+ *
+ * Fields whose value format is owned by another spec (nip05, lud16, lud06) are
+ * only smoke-tested here for correct delegation; their exhaustive validation
+ * lives in that spec's own test file.
  */
-
-// A real (long) LNURL from the LUD-01 spec example — well over @scure/base's
-// default 90-char decode limit, so a naive `bech32.decode(v)` would reject it.
-const LONG_LNURL =
-  "LNURL1DP68GURN8GHJ7UM9WFMXJCM99E3K7MF0V9CXJ0M385EKVCENXC6R2C35XVUKXEFCV5MKVV34X5EKZD3EV56NYD3HXQURZEPEXEJXXEPNXSCRVWFNV9NXZCN9XQ6XYEFHVGCXXCMYXYMNSERXFQ5FNS".toLowerCase();
-// Valid bech32 checksum but the wrong HRP (`note`, not `lnurl`).
-const LNURL_WRONG_HRP = bech32.encode(
-  "note",
-  bech32.toWords(new Uint8Array(10)),
-);
-// A valid LNURL with its last character flipped, breaking the checksum.
-const LNURL_BAD_CHECKSUM = `${LONG_LNURL.slice(0, -1)}${
-  LONG_LNURL.endsWith("a") ? "z" : "a"
-}`;
-
-const LUD16_VALID = ["alice@example.com", "alice+tag@example.com", "a@b.onion"];
-const LUD16_INVALID = [
-  "+@example.com",
-  "alice+@example.com",
-  "alice++tag@example.com",
-  "alice@example.com/path",
-  "Alice@example.com",
-  "no-at-sign",
-];
-const LUD06_INVALID: [string, string][] = [
-  ["excess padding", "lnurl1leltelt"],
-  ["mixed case", "LNURL1leltelt"],
-  ["wrong hrp (valid checksum)", LNURL_WRONG_HRP],
-  ["bad checksum", LNURL_BAD_CHECKSUM],
-  ["garbage", "not-bech32"],
-];
 
 // Flavor adapters: classic exposes instance .parse/.safeParse; mini uses the
 // top-level z.parse/z.safeParse functions.
@@ -90,9 +62,21 @@ describe.each(FLAVORS)(
     });
 
     it("validates birthday as an object with optional year/month/day", () => {
-      expect(parse(f.birthday(), { year: 1990 })).toEqual({ year: 1990 });
+      expect(parse(f.birthday(), { year: 1990, month: 1, day: 31 })).toEqual({
+        year: 1990,
+        month: 1,
+        day: 31,
+      });
       expect(parse(f.birthday(), {})).toEqual({});
       expect(accepts(f.birthday(), { year: "1990" })).toBe(false);
+    });
+
+    it("preserves unknown keys on birthday (forward-compatible, never stripped)", () => {
+      // birthday is part of kind:0 profile content, which is forward-compatible:
+      // its catchall is `unknown`, matching the enclosing metadata() object.
+      expect(
+        parse(f.birthday(), { year: 1990, calendar: "gregorian" }),
+      ).toEqual({ year: 1990, calendar: "gregorian" });
     });
 
     it("delegates nip05 to the NIP-05 identifier schema", () => {
@@ -102,20 +86,16 @@ describe.each(FLAVORS)(
       expect(accepts(f.nip05(), "Alice@example.com")).toBe(false);
     });
 
-    it.each(LUD16_VALID)("lud16 accepts %s", (value) => {
-      expect(parse(f.lud16(), value)).toBe(value);
+    it("delegates lud16 to the LUD-16 lightning-address schema", () => {
+      expect(parse(f.lud16(), "alice@example.com")).toBe("alice@example.com");
+      expect(accepts(f.lud16(), "no-at-sign")).toBe(false);
     });
 
-    it.each(LUD16_INVALID)("lud16 rejects %s", (value) => {
-      expect(accepts(f.lud16(), value)).toBe(false);
-    });
-
-    it("lud06 accepts a real (long) LNURL", () => {
-      expect(parse(f.lud06(), LONG_LNURL)).toBe(LONG_LNURL);
-    });
-
-    it.each(LUD06_INVALID)("lud06 rejects %s", (_label, value) => {
-      expect(accepts(f.lud06(), value)).toBe(false);
+    it("delegates lud06 to the LUD-06 LNURL schema", () => {
+      // A short but valid bech32 lnurl; the plain-string default would accept
+      // "not-bech32", so its rejection confirms the LUD-06 schema is wired in.
+      expect(parse(f.lud06(), "lnurl1qypqxadgqpq")).toBe("lnurl1qypqxadgqpq");
+      expect(accepts(f.lud06(), "not-bech32")).toBe(false);
     });
   },
 );
