@@ -225,39 +225,21 @@ Public names follow ownership and the protocol's own wire vocabulary:
   (`nip01.relayMessage.any`), a *codec* where they are codecs (`nip21.any`,
   which unions the entity codecs into a `{ type, data }`-decoding codec).
 
-## Composition examples
+## Composition
 
-Compose strict atoms into an application schema. Minimal example (classic) — a
-lenient profile schema built from the strict metadata field atoms:
-
-```ts
-import { z } from "zod";
-import { zostr } from "zod-nostr";
-
-const f = zostr.nip01.metadataFields;
-const Profile = z.object({
-  name: f.name().trim().min(1).catch("").default(""),
-  picture: f.picture().catch("").default(""),
-  nip05: f.nip05().catch("").default(""),
-});
-```
-
-zod/mini is equivalent via the functional API — the same `trim`/`min` checks
-and `catch`/`default` policy, composed as functions:
+The field atoms are strict and additive-only: `optional`/`catch`/`default` can be
+added but never removed (see
+[Controllability is the axis](#controllability-is-the-axis-not-strict-vs-lenient)).
+So a consumer composes the exact recovery policy they need on top of a strict
+base — a strict URL atom becomes an always-present, never-throwing field:
 
 ```ts
-import * as z from "zod/mini";
-import { zostr } from "zod-nostr/mini";
-
 const f = zostr.nip01.metadataFields;
-const Profile = z.object({
-  name: z._default(z.catch(f.name().check(z.trim(), z.minLength(1)), ""), ""),
-  picture: z._default(z.catch(f.picture(), ""), ""),
-  nip05: z._default(z.catch(f.nip05(), ""), ""),
-});
+const picture = f.picture().catch("").default(""); // strict URL → lenient, never throws
 ```
 
-See [API.md](./API.md) for the full surface.
+The same additivity assembles a whole application schema — e.g. a lenient profile
+with per-field policy — from the atoms, in either flavor.
 
 ## Compatibility and versioning
 
@@ -319,3 +301,6 @@ Longer-form records of specific past decisions live in
 - [0001 — Separate kind:0 metadata shape from its transport](./decisions/0001-metadata-shape-and-transport.md)
   — the worked example the *separate shape from transport* and *expose strict
   atoms* principles were derived from.
+- [0002 — Documentation altitudes and one-way references](./decisions/0002-documentation-altitudes.md)
+  — how the reference, how-to, and rationale docs are split, and why references
+  flow one way (how-to → reference → rationale).
