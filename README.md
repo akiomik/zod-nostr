@@ -2,6 +2,7 @@
 
 [![npm version](https://badge.fury.io/js/zod-nostr.svg)](https://badge.fury.io/js/zod-nostr)
 [![CI](https://github.com/akiomik/zod-nostr/actions/workflows/ci.yml/badge.svg)](https://github.com/akiomik/zod-nostr/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/akiomik/zod-nostr/graph/badge.svg?token=GDL3P5N6L7)](https://codecov.io/gh/akiomik/zod-nostr)
 
 Zod schemas and codecs for [Nostr](https://nostr.com) — NIP-01 events, NIP-05
 identifiers, NIP-10 text notes, NIP-11 relay information documents, NIP-19 bech32
