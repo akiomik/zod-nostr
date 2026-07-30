@@ -63,18 +63,16 @@ export function integerStringPattern(
 /**
  * Check factory for a wire integer string (see {@link integerStringPattern}) —
  * the string counterpart of {@link nonNegativeIntegerCheck}, for numeric values
- * carried as tag strings. `label` names the field in the error message; `signed`
- * allows a leading `-` (a count is unsigned; a unix timestamp may be negative);
- * `expected` overrides the "(expected …)" phrase with a field-specific one.
+ * carried as tag strings. `label` names the field and `expected` is the
+ * field-specific "(expected …)" phrase, both in the error message; `signed`
+ * allows a leading `-` (a count is unsigned; a unix timestamp may be negative).
  */
 export function integerStringCheck(
   label: string,
-  options: { signed?: boolean; expected?: string } = {},
+  expected: string,
+  options: { signed?: boolean } = {},
 ): core.$ZodCheck<string> {
   const re = integerStringPattern(options);
-  const expected =
-    options.expected ??
-    (options.signed ? "an integer" : "a non-negative integer");
   return makeCheck<string>((payload) => {
     if (!re.test(payload.value)) {
       payload.issues.push({

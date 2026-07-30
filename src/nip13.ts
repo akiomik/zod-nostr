@@ -38,7 +38,9 @@ const EVENT_ID_RE = hexPattern(64);
  * validated without imposing a canonical encoding.
  */
 function targetDifficulty(): core.$ZodString<string> {
-  return zodString([integerStringCheck("target difficulty")]);
+  return zodString([
+    integerStringCheck("target difficulty", "a non-negative integer"),
+  ]);
 }
 
 /**

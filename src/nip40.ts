@@ -26,9 +26,8 @@ const TIMESTAMP_RE = integerStringPattern({ signed: true });
 /** The `expiration` tag's timestamp value (its second element). */
 function expirationTimestamp(): core.$ZodString<string> {
   return zodString([
-    integerStringCheck("expiration", {
+    integerStringCheck("expiration", "an integer unix timestamp in seconds", {
       signed: true,
-      expected: "an integer unix timestamp in seconds",
     }),
   ]);
 }
@@ -71,10 +70,14 @@ function expirationTag() {
  *   timestamp → a malformed expiration → **fails** (structural validity is
  *   {@link expirationTag}'s job, but a garbage value here must not be silently
  *   treated as "no expiry");
- * - a non-array `tags`, or a non-array/non-string tag element (the untyped JS
- *   path) → a malformed event → **fails**, without throwing (zod's
- *   `safeParse`-never-throws contract, the same graceful degradation as
- *   `nip13.powCheck`).
+ * - a non-array `tags` → a malformed event that can't be scanned at all →
+ *   **fails**, without throwing (zod's `safeParse`-never-throws contract, the
+ *   same graceful degradation as `nip13.powCheck`);
+ * - a single tag that is not a well-formed `expiration` tag — a `null`/non-array
+ *   tag, or any tag whose name isn't `expiration` — is **skipped**: this check
+ *   governs expiration, not general tag well-formedness, so an unrelated
+ *   malformed tag is not its concern. Guarding `Array.isArray(tag)` before
+ *   indexing also keeps a `null` tag from throwing on the untyped JS path.
  *
  * Comparison uses `BigInt` so a timestamp beyond `Number.MAX_SAFE_INTEGER` is
  * compared exactly rather than rounded (a rounded `Number` could flip the
