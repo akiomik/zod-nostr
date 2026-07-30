@@ -276,6 +276,97 @@ describe("zostr (classic)", () => {
     expect(() => zostr.nip10.textNote().parse(reaction)).toThrow();
   });
 
+  it("nip10.eTag() validates the marked e-tag format", () => {
+    const id = "a".repeat(64);
+    const pk = "b".repeat(64);
+
+    // relay present-but-empty, marker + pubkey optional
+    expect(zostr.nip10.eTag().parse(["e", id, ""])).toBeTruthy();
+    expect(zostr.nip10.eTag().parse(["e", id, "wss://r", "root"])).toBeTruthy();
+    expect(
+      zostr.nip10.eTag().parse(["e", id, "wss://r", "reply", pk]),
+    ).toBeTruthy();
+
+    // bad marker, non-hex id, missing relay position, extra trailing element
+    expect(() =>
+      zostr.nip10.eTag().parse(["e", id, "wss://r", "mention"]),
+    ).toThrow();
+    expect(() => zostr.nip10.eTag().parse(["e", "nothex", ""])).toThrow();
+    expect(() => zostr.nip10.eTag().parse(["e", id])).toThrow();
+    expect(() =>
+      zostr.nip10.eTag().parse(["e", id, "wss://r", "root", pk, "x"]),
+    ).toThrow();
+  });
+
+  it("nip10.qTag() validates the quote-tag format", () => {
+    const id = "a".repeat(64);
+    const pk = "b".repeat(64);
+
+    expect(zostr.nip10.qTag().parse(["q", id, ""])).toBeTruthy();
+    expect(zostr.nip10.qTag().parse(["q", id, "wss://r", pk])).toBeTruthy();
+    // event-address coordinate is accepted as a non-empty reference string
+    expect(
+      zostr.nip10.qTag().parse(["q", `30023:${pk}:slug`, "wss://r"]),
+    ).toBeTruthy();
+
+    expect(() => zostr.nip10.qTag().parse(["q", "", ""])).toThrow();
+    expect(() => zostr.nip10.qTag().parse(["q", id])).toThrow();
+  });
+
+  it("nip10.threadCheck() enforces marked e-tag conventions", () => {
+    const sk = generateSecretKey();
+    const id = "a".repeat(64);
+    const id2 = "c".repeat(64);
+    const note = (tags: string[][]) =>
+      finalizeEvent({ kind: 1, created_at: 0, tags, content: "hi" }, sk);
+    const checked = zostr.nip10.textNote().check(zostr.nip10.threadCheck());
+
+    // single root + single reply, unmarked/positional e tags ignored
+    expect(
+      checked.parse(
+        note([
+          ["e", id, "", "root"],
+          ["e", id2, "", "reply"],
+          ["e", "d".repeat(64), ""],
+        ]),
+      ),
+    ).toBeTruthy();
+
+    // unknown/legacy marker, and duplicate root
+    expect(() => checked.parse(note([["e", id, "", "mention"]]))).toThrow();
+    expect(() =>
+      checked.parse(
+        note([
+          ["e", id, "", "root"],
+          ["e", id2, "", "root"],
+        ]),
+      ),
+    ).toThrow();
+  });
+
+  it("nip10.participantsCheck() requires expected p tags", () => {
+    const sk = generateSecretKey();
+    const a1 = "1".repeat(64);
+    const p1 = "2".repeat(64);
+    const note = (tags: string[][]) =>
+      finalizeEvent({ kind: 1, created_at: 0, tags, content: "hi" }, sk);
+    const checked = zostr.nip10
+      .textNote()
+      .check(zostr.nip10.participantsCheck([a1, p1]));
+
+    // presence-only (order/extras don't matter)
+    expect(
+      checked.parse(
+        note([
+          ["p", p1],
+          ["p", "9".repeat(64)],
+          ["p", a1],
+        ]),
+      ),
+    ).toBeTruthy();
+    expect(() => checked.parse(note([["p", a1]]))).toThrow();
+  });
+
   it("subscriptionId() enforces a non-empty string of at most 64 chars", () => {
     expect(zostr.subscriptionId().parse("sub1")).toBe("sub1");
     expect(() => zostr.subscriptionId().parse("")).toThrow();

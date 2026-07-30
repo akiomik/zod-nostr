@@ -198,9 +198,16 @@ export const zostr = {
   // NIP-05
   nip05: nip05Namespace,
 
-  // NIP-10 text notes (kind:1 structure; thread tag semantics not modeled)
+  // NIP-10 text notes and threads (kind:1 event + reply/quote tags + opt-in thread checks)
   nip10: {
     textNote: () => classicStrictObject(nip10.nip10.textNote()),
+    eTag: () => z.tuple(nip10.nip10.eTag()._zod.def.items),
+    qTag: () => z.tuple(nip10.nip10.qTag()._zod.def.items),
+
+    // Opt-in reply/thread conventions composed onto textNote() — see design.md
+    // "Checks beyond the structural contract are opt-in".
+    threadCheck: nip10.nip10.threadCheck,
+    participantsCheck: nip10.nip10.participantsCheck,
   },
 
   // NIP-11 relay information document

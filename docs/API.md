@@ -407,7 +407,7 @@ zostr.nip05.formatIdentifier("_@example.com"); // "example.com"
 zostr.nip05.formatIdentifier("bob@example.com"); // "bob@example.com"
 ```
 
-## NIP-10 — text notes
+## NIP-10 — text notes and threads
 
 ### `zostr.nip10.textNote()`
 
@@ -415,11 +415,60 @@ The kind:1 text note: the same shape as `zostr.event()` with `kind` constrained
 to `1` (the definition of kind 1 as a plaintext note belongs to NIP-10). It
 validates the minimum **structural** form only — like `event()` it does not
 verify the signature (compose `.check(zostr.signatureCheck())`), and it does
-**not** validate NIP-10's reply/thread `e`/`p` tag conventions. Unknown keys are
-rejected, the same as `event()`.
+**not** validate NIP-10's reply/thread `e`/`p` tag conventions (those are opt-in
+checks, below). Unknown keys are rejected, the same as `event()`.
 
 ```ts
 zostr.nip10.textNote().parse(signedKind1Event);
+```
+
+### `zostr.nip10.eTag()` / `zostr.nip10.qTag()`
+
+Tuple schemas for NIP-10's reply and citation tags. Each models the tag's
+format **verbatim**, so the relay-url position is required (its value may be
+`""`, which NIP-10 explicitly allows) and trailing optional fields must appear
+in order:
+
+- `zostr.nip10.eTag()` — the **marked** `e` tag (the preferred reply/thread
+  scheme): `["e", <event-id>, <relay-url>, <marker>?, <pubkey>?]`. `<event-id>`
+  and `<pubkey>` are 64-char lowercase hex; `<marker>` is `"root"` or `"reply"`.
+  The deprecated **positional** scheme (bare `["e", <id>]` / `["e", <id>,
+  <relay>]`) is intentionally out of scope — a marked tag always carries the
+  relay position.
+- `zostr.nip10.qTag()` — the citation tag: `["q", <event-id> or
+  <event-address>, <relay-url>, <pubkey>?]`. The first value is validated only
+  as a non-empty string (it may be an event id **or** a NIP-01 `a`-coordinate;
+  the two aren't distinguished here); `<pubkey>` is present only when citing a
+  regular event.
+
+```ts
+zostr.nip10.eTag().parse(["e", rootId, "wss://relay.example", "root", authorPk]);
+zostr.nip10.qTag().parse(["q", citedId, "", authorPk]);
+```
+
+### Opt-in reply/thread checks
+
+NIP-10's `e`/`p` tag conventions depend on context the note itself doesn't carry
+(the events being replied to/quoted), so they're exposed as opt-in `.check()`s
+composed onto `textNote()` rather than baked in:
+
+- `zostr.nip10.threadCheck()` — the marked `e` tags follow the reply/thread
+  conventions: every marker is `"root"` or `"reply"` (the legacy `"mention"` and
+  any unknown value are rejected), and the note carries **at most one** `"root"`
+  and one `"reply"`. Unmarked (positional) `e` tags are left untouched.
+- `zostr.nip10.participantsCheck(expected)` — the note's `p` tags include every
+  expected participant pubkey (`p` tags ⊇ `expected`). NIP-10 asks a reply to
+  carry all of the parent's `p` tags plus the replied-to/quoted authors; that
+  set is context the schema can't know, so it's a parameter (like
+  `zostr.nip42.relayTagCheck`). Only presence is checked — order and extra
+  participants don't matter.
+
+```ts
+const verifiedReply = zostr.nip10
+  .textNote()
+  .check(zostr.signatureCheck())
+  .check(zostr.nip10.threadCheck())
+  .check(zostr.nip10.participantsCheck([parentAuthor, ...parentParticipants]));
 ```
 
 ## NIP-11 — relay information document

@@ -170,6 +170,57 @@ describe("zostr (mini)", () => {
     expect(() => z.parse(zostr.nip10.textNote(), reaction)).toThrow();
   });
 
+  it("nip10.eTag()/qTag() validate marked reply/quote tags", () => {
+    const id = "a".repeat(64);
+    const pk = "b".repeat(64);
+
+    expect(
+      z.parse(zostr.nip10.eTag(), ["e", id, "wss://r", "reply", pk]),
+    ).toBeTruthy();
+    expect(() =>
+      z.parse(zostr.nip10.eTag(), ["e", id, "wss://r", "mention"]),
+    ).toThrow();
+    expect(() => z.parse(zostr.nip10.eTag(), ["e", id])).toThrow();
+
+    expect(z.parse(zostr.nip10.qTag(), ["q", id, ""])).toBeTruthy();
+    expect(() => z.parse(zostr.nip10.qTag(), ["q", "", ""])).toThrow();
+  });
+
+  it("nip10.threadCheck()/participantsCheck() compose onto textNote()", () => {
+    const sk = generateSecretKey();
+    const a1 = "1".repeat(64);
+    const id = "a".repeat(64);
+    const id2 = "c".repeat(64);
+    const note = (tags: string[][]) =>
+      finalizeEvent({ kind: 1, created_at: 0, tags, content: "hi" }, sk);
+
+    const thread = zostr.nip10.textNote().check(zostr.nip10.threadCheck());
+    expect(
+      z.parse(
+        thread,
+        note([
+          ["e", id, "", "root"],
+          ["e", id2, "", "reply"],
+        ]),
+      ),
+    ).toBeTruthy();
+    expect(() =>
+      z.parse(
+        thread,
+        note([
+          ["e", id, "", "root"],
+          ["e", id2, "", "root"],
+        ]),
+      ),
+    ).toThrow();
+
+    const participants = zostr.nip10
+      .textNote()
+      .check(zostr.nip10.participantsCheck([a1]));
+    expect(z.parse(participants, note([["p", a1]]))).toBeTruthy();
+    expect(() => z.parse(participants, note([]))).toThrow();
+  });
+
   it("every wrapped event schema and codec exposes mini's native .check() (regression: raw core schemas lack it)", () => {
     const wrappedSchemas: Array<() => { check: unknown }> = [
       () => zostr.event(),

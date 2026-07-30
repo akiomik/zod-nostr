@@ -138,8 +138,9 @@ aliased at the root (`zostr.event`, `zostr.npub`, …).
   messages (`nip01.relayMessage.*`, `nip01.clientMessage.*`)
 - **NIP-05** — identifier format validation (`nip05.identifier`) and
   `.well-known/nostr.json` document validation (`nip05.nostrJsonDocument`)
-- **NIP-10** — kind:1 text notes (`nip10.textNote`, structure only; thread tag
-  conventions not modeled)
+- **NIP-10** — kind:1 text notes and threads (`nip10.textNote`; marked reply/
+  citation tags `nip10.eTag`/`nip10.qTag`; opt-in reply/thread checks
+  `nip10.threadCheck`/`nip10.participantsCheck`)
 - **NIP-11** — relay information document (`nip11.relayInformationDocument`)
 - **NIP-19** — bech32 entities (`nip19.npub`, `nip19.nsec`, `nip19.note`,
   `nip19.nprofile`, `nip19.nevent`, `nip19.naddr`)

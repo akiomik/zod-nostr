@@ -115,8 +115,11 @@ Checks that fall outside the base schema's declared structural contract are
 exposed as composable, opt-in `.check()`s rather than baked in. This covers
 advisory conventions (spec "SHOULD"s) and separately-requested semantic or
 cryptographic verification. Examples: signature verification
-(`signatureCheck`) and the NIP-01 OK/CLOSED message-prefix convention
-(`nip01.relayMessage.okMessagePrefixCheck` / `closedMessagePrefixCheck`). Cost may
+(`signatureCheck`), the NIP-01 OK/CLOSED message-prefix convention
+(`nip01.relayMessage.okMessagePrefixCheck` / `closedMessagePrefixCheck`), and
+the NIP-10 reply/thread conventions that depend on context the schema can't see
+(`nip10.threadCheck` for marked `e`-tag usage, `nip10.participantsCheck` for the
+`p`-tag participant set). Cost may
 justify moving a check to a separate layer, but cost alone does not override a
 required invariant — a MUST-level structural rule stays in the base.
 
