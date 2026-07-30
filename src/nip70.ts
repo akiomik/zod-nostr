@@ -47,9 +47,12 @@ function protectedTag() {
  *
  * `authenticatedPubkeys` defaults to `[]` — an **unauthenticated** connection —
  * which fails **closed**: every protected event is rejected (NIP-70's default),
- * so a bad or absent set errs toward rejection rather than acceptance. This is
- * why the factory does not throw on an empty/odd set (unlike `nip42.createdAtCheck`,
- * where a bad argument would fail *open* and silently accept everything).
+ * so a bad or absent set errs toward rejection rather than acceptance. The
+ * factory does not throw on a malformed set: a non-array argument (or a
+ * non-string element) reaching it through the untyped JS path contributes no
+ * authenticated pubkey, so it rejects protected events rather than blowing up
+ * before parse — unlike `nip42.createdAtCheck`, where a bad argument would fail
+ * *open* and silently accept everything, so it throws instead.
  *
  * Distinct outcomes, deliberately not collapsed together:
  * - no `["-"]` tag → not protected → **passes**;
@@ -74,7 +77,17 @@ function protectedTag() {
 function protectedCheck(
   authenticatedPubkeys: readonly string[] = [],
 ): core.$ZodCheck<NostrEventLike> {
-  const authenticated = new Set(authenticatedPubkeys);
+  // Fail closed on a malformed set from the untyped JS path: a non-array
+  // argument (or a non-string element) contributes no authenticated pubkey
+  // rather than throwing at composition time — `new Set(42)` would throw before
+  // parse, defeating the fail-closed contract. A bad set thus rejects protected
+  // events, the opposite of `nip42.createdAtCheck` (which throws because a bad
+  // argument there would fail *open*).
+  const authenticated = new Set(
+    Array.isArray(authenticatedPubkeys)
+      ? authenticatedPubkeys.filter((pubkey) => typeof pubkey === "string")
+      : [],
+  );
   return makeCheck<NostrEventLike>((payload) => {
     const { tags, pubkey } = payload.value;
     if (!Array.isArray(tags)) {

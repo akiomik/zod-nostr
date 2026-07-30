@@ -218,6 +218,48 @@ describe("zostr.nip70.protectedCheck input validation", () => {
   });
 });
 
+// The `readonly string[]` type is a compile-time guarantee only; a JS caller can
+// pass anything as the authenticated set. A malformed set must fail **closed** —
+// reject protected events without throwing at composition time (`new Set(42)`
+// would otherwise throw before parse) — matching the documented contract.
+describe("zostr.nip70.protectedCheck malformed authenticated set (untyped JS path)", () => {
+  const AUTHOR = "b".repeat(64);
+  const protectedEvent = eventWith(AUTHOR, [["-"]]);
+  const plainEvent = eventWith(AUTHOR, []);
+
+  it.each([
+    ["a number", 42],
+    ["a plain object", {}],
+    ["a boolean", true],
+    ["null", null],
+    // A string is iterable, so `new Set("…")` wouldn't throw but would wrongly
+    // split into characters; the array guard treats it as no pubkeys instead.
+    ["a string", AUTHOR],
+  ])(
+    "does not throw and rejects a protected event when the set is %s",
+    (_label, bad) => {
+      // biome-ignore lint/suspicious/noExplicitAny: exercising the untyped JS path
+      const check = classicZostr.nip70.protectedCheck(bad as any);
+      const event = classicZostr.event().check(check);
+      expect(event.safeParse(protectedEvent).success).toBe(false);
+      // A non-protected event still passes — a malformed set only bites protected ones.
+      expect(event.safeParse(plainEvent).success).toBe(true);
+    },
+  );
+
+  it("ignores non-string elements in the array", () => {
+    // ["b".repeat(64), 42]: the number can't be an authenticated pubkey, but the
+    // real pubkey still authorizes its own protected event (no throw on the 42).
+    const check = classicZostr.nip70.protectedCheck([
+      AUTHOR,
+      // biome-ignore lint/suspicious/noExplicitAny: exercising the untyped JS path
+      42 as any,
+    ]);
+    const event = classicZostr.event().check(check);
+    expect(event.safeParse(protectedEvent).success).toBe(true);
+  });
+});
+
 describe("zostr.nip70 output types", () => {
   it("infers the protected marker literal tuple (classic)", () => {
     const tag = classicZostr.nip70.protectedTag().parse(["-"]);
