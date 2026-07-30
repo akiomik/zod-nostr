@@ -1,5 +1,10 @@
 import type * as core from "zod/v4/core";
-import { makeCheck, type NostrEventLike } from "./core/checks.js";
+import {
+  guardEventTags,
+  isNamedTag,
+  makeCheck,
+  type NostrEventLike,
+} from "./core/checks.js";
 import { zodLiteral, zodTuple } from "./core/primitives.js";
 
 /** NIP-70 marks a protected event with a single-element `["-"]` tag. */
@@ -89,19 +94,11 @@ function protectedCheck(
       : [],
   );
   return makeCheck<NostrEventLike>((payload) => {
-    const { tags, pubkey } = payload.value;
-    if (!Array.isArray(tags)) {
-      // A non-array `tags` is a malformed event, not a non-protected one.
-      payload.issues.push({
-        code: "custom",
-        input: payload.value,
-        message: 'Invalid event (expected "tags" to be an array of tags)',
-      });
-      return;
-    }
-    const isProtected = tags.some(
-      (tag) => Array.isArray(tag) && tag[0] === PROTECTED_TAG_NAME,
-    );
+    // A non-array `tags` is a malformed event, not a non-protected one.
+    const tags = guardEventTags(payload);
+    if (tags === undefined) return;
+    const { pubkey } = payload.value;
+    const isProtected = tags.some((tag) => isNamedTag(tag, PROTECTED_TAG_NAME));
     if (
       isProtected &&
       (typeof pubkey !== "string" || !authenticated.has(pubkey))

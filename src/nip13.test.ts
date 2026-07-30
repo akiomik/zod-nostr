@@ -221,6 +221,9 @@ describe("zostr.nip13 check input validation", () => {
     content: zc.string(),
     sig: zc.string(),
   });
+  // Per-test loosenings of a single field, so the shared shape has one source.
+  const anyIdEvent = looseEvent.extend({ id: zc.any() });
+  const anyTagsEvent = looseEvent.extend({ tags: zc.any() });
 
   it("powCheck distinguishes a malformed id from insufficient work", () => {
     // A non-hex id fails with an id-specific message, not a PoW-tuning one.
@@ -252,15 +255,6 @@ describe("zostr.nip13 check input validation", () => {
   it("powCheck fails (does not throw) on a non-string id that passes base parse", () => {
     // With an `id: any` field a Symbol reaches the check; `RegExp.test` would
     // throw coercing a Symbol to string, so the typeof guard must come first.
-    const anyIdEvent = zc.object({
-      id: zc.any(),
-      pubkey: zc.string(),
-      created_at: zc.number(),
-      kind: zc.number(),
-      tags: zc.array(zc.array(zc.string())),
-      content: zc.string(),
-      sig: zc.string(),
-    });
     const schema = anyIdEvent.check(classicZostr.nip13.powCheck(4));
     expect(
       schema.safeParse({ ...eventWith(ID_8), id: Symbol("bad") }).success,
@@ -278,6 +272,35 @@ describe("zostr.nip13 check input validation", () => {
       // @ts-expect-error — tags-less schema, simulating the untyped JS path
       .check(classicZostr.nip13.commitmentCheck(1));
     expect(schema.safeParse({ id: "a".repeat(64) }).success).toBe(false);
+  });
+
+  it("commitmentCheck skips a null tag element (does not throw)", () => {
+    // A null tag can't be a nonce tag; the shared isNamedTag guard checks
+    // Array.isArray before indexing, so `.find` doesn't throw on the null and
+    // the real nonce tag after it is still found (committed target 8 >= 1).
+    const result = anyTagsEvent
+      .check(classicZostr.nip13.commitmentCheck(1))
+      .safeParse({ ...eventWith(ID_8), tags: [null, ["nonce", "1", "8"]] });
+    expect(result.success).toBe(true);
+  });
+
+  it("commitmentCheck fails (does not throw) on a non-string committed target", () => {
+    // isNamedTag narrows only the tag name, so a nonce tag's third element stays
+    // `unknown` on the untyped JS path. A Symbol would throw if it reached
+    // `RegExp.test` (string coercion), and a number like `8` would coerce to
+    // "8" and be wrongly accepted — the `typeof === "string"` guard must reject
+    // both cleanly (treated as no valid commitment).
+    const check = anyTagsEvent.check(classicZostr.nip13.commitmentCheck(1));
+    expect(
+      check.safeParse({
+        ...eventWith(ID_8),
+        tags: [["nonce", "1", Symbol("bad")]],
+      }).success,
+    ).toBe(false);
+    expect(
+      check.safeParse({ ...eventWith(ID_8), tags: [["nonce", "1", 8]] })
+        .success,
+    ).toBe(false);
   });
 });
 

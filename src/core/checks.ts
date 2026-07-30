@@ -134,6 +134,63 @@ export interface NostrEventLike {
 }
 
 /**
+ * Shared message for an event whose `tags` is not an array. A tag-scanning check
+ * can't run at all on such an event, so it fails with this single verbatim
+ * message; centralizing it keeps the wording identical across the per-NIP tag
+ * checks (`nip40.expirationCheck`, `nip70.protectedCheck`, …).
+ */
+const MALFORMED_TAGS_MESSAGE =
+  'Invalid event (expected "tags" to be an array of tags)';
+
+/**
+ * Reads an event's `tags` for a tag-scanning check, guarding the untyped JS
+ * path. A non-array `tags` is a malformed event (not one merely lacking the
+ * scanned tag), so this pushes {@link MALFORMED_TAGS_MESSAGE} and returns
+ * `undefined` — the caller returns without scanning. Otherwise it returns the
+ * tags array to iterate, typed `unknown[]`: the container is an array, but its
+ * **elements** are not yet known to be well-formed tags (the `NostrEventLike`
+ * static type promises `string[][]`, but a check reached through a consumer's
+ * loose schema sees whatever passed `Array.isArray`). Match and narrow each
+ * element with {@link isNamedTag} before indexing it. Shared by the event-tag
+ * checks so the guard and its message can't drift between them.
+ */
+export function guardEventTags(
+  payload: core.ParsePayload<NostrEventLike>,
+): unknown[] | undefined {
+  const { tags } = payload.value;
+  if (!Array.isArray(tags)) {
+    payload.issues.push({
+      code: "custom",
+      input: payload.value,
+      message: MALFORMED_TAGS_MESSAGE,
+    });
+    return undefined;
+  }
+  return tags;
+}
+
+/**
+ * True when `tag` is an array whose **name** (its first element) equals `name`.
+ * Guards `Array.isArray` so a `null`/non-array tag reaching a check on the
+ * untyped JS path is skipped rather than throwing on index access — the per-tag
+ * half of the scan {@link guardEventTags} sets up.
+ *
+ * The predicate narrows only what it actually checks: the first element is the
+ * matched `name`, but the remaining elements stay `unknown` (a tag reached on
+ * the untyped path may carry non-string values, e.g. `["nonce", "1", 8]`). A
+ * caller reading a later element (`tag[1]`, `tag[2]`) must still guard its type
+ * (`typeof … === "string"`) before using it — asserting `string[]` here would
+ * let a non-string value flow into a `RegExp.test`/`String` coercion that
+ * throws or silently accepts.
+ */
+export function isNamedTag(
+  tag: unknown,
+  name: string,
+): tag is [string, ...unknown[]] {
+  return Array.isArray(tag) && tag[0] === name;
+}
+
+/**
  * Check factory for event signature verification. Takes verifyEvent as a
  * parameter to keep the core layer decoupled from nostr-tools (also helps testability).
  */
