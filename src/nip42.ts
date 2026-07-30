@@ -89,8 +89,17 @@ function firstTagValue(eventTags: unknown[], name: string): unknown {
  * A non-array `tags` (reachable only through a consumer's loose schema) fails
  * with the shared malformed-event message via {@link guardEventTags}, the same
  * as the other tag checks — not a misleading challenge-mismatch message.
+ *
+ * `challenge` fails **closed**: a non-string (e.g. an `undefined` reaching this
+ * on the untyped JS path) would make an auth event that carries *no* challenge
+ * tag compare `undefined !== undefined` and silently pass, disabling the check.
+ * The factory throws at composition time instead, the same guard as
+ * `createdAtCheck`.
  */
 function challengeTagCheck(challenge: string): core.$ZodCheck<NostrEventLike> {
+  if (typeof challenge !== "string") {
+    throw new TypeError("challengeTagCheck: `challenge` must be a string");
+  }
   return makeCheck<NostrEventLike>((payload) => {
     const tags = guardEventTags(payload);
     if (tags === undefined) return;
@@ -114,8 +123,15 @@ function challengeTagCheck(challenge: string): core.$ZodCheck<NostrEventLike> {
  *
  * A non-array `tags` fails with the shared malformed-event message via
  * {@link guardEventTags}, the same as the other tag checks.
+ *
+ * `relayUrl` fails **closed** the same way as `challengeTagCheck`'s `challenge`:
+ * a non-string would let an auth event with no `relay` tag pass silently, so the
+ * factory throws at composition time.
  */
 function relayTagCheck(relayUrl: string): core.$ZodCheck<NostrEventLike> {
+  if (typeof relayUrl !== "string") {
+    throw new TypeError("relayTagCheck: `relayUrl` must be a string");
+  }
   return makeCheck<NostrEventLike>((payload) => {
     const tags = guardEventTags(payload);
     if (tags === undefined) return;

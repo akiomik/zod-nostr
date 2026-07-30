@@ -140,6 +140,19 @@ describe.each(FLAVORS)("zostr.nip42 opt-in checks ($name)", ({ zostr, z }) => {
       expect(make).toThrow();
     },
   );
+
+  it("challengeTagCheck() throws on a non-string expected value (fails closed, not open)", () => {
+    // A non-string (e.g. undefined on the untyped JS path) would let an auth
+    // event carrying no challenge tag compare `undefined !== undefined` and
+    // silently pass, disabling the check — the factory rejects it instead.
+    // @ts-expect-error — undefined violates the `string` param
+    expect(() => zostr.nip42.challengeTagCheck(undefined)).toThrow();
+  });
+
+  it("relayTagCheck() throws on a non-string expected value (fails closed, not open)", () => {
+    // @ts-expect-error — undefined violates the `string` param
+    expect(() => zostr.nip42.relayTagCheck(undefined)).toThrow();
+  });
 });
 
 // The tag checks share one object across both flavors (direct reference), so
