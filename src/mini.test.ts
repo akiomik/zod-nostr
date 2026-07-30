@@ -177,6 +177,10 @@ describe("zostr (mini)", () => {
     expect(
       z.parse(zostr.nip10.eTag(), ["e", id, "wss://r", "reply", pk]),
     ).toBeTruthy();
+    // unmarked ("" placeholder) reference carrying a pubkey
+    expect(
+      z.parse(zostr.nip10.eTag(), ["e", id, "wss://r", "", pk]),
+    ).toBeTruthy();
     expect(() =>
       z.parse(zostr.nip10.eTag(), ["e", id, "wss://r", "mention"]),
     ).toThrow();

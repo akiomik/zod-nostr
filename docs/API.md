@@ -431,7 +431,10 @@ in order:
 
 - `zostr.nip10.eTag()` — the **marked** `e` tag (the preferred reply/thread
   scheme): `["e", <event-id>, <relay-url>, <marker>?, <pubkey>?]`. `<event-id>`
-  and `<pubkey>` are 64-char lowercase hex; `<marker>` is `"root"` or `"reply"`.
+  and `<pubkey>` are 64-char lowercase hex; `<marker>` is `"root"`, `"reply"`,
+  or `""`. Because the fields are positional, `""` is the "no marker"
+  placeholder that lets a `<pubkey>` be attached to an *unmarked* reference
+  (`["e", id, relay, "", pubkey]` — a plain mention, neither root nor parent).
   The deprecated **positional** scheme (bare `["e", <id>]` / `["e", <id>,
   <relay>]`) is intentionally out of scope — a marked tag always carries the
   relay position.

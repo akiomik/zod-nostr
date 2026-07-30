@@ -1,5 +1,9 @@
 import type * as core from "zod/v4/core";
-import { makeCheck, type NostrEventLike } from "./core/checks.js";
+import {
+  makeCheck,
+  type NostrEventLike,
+  nonEmptyStringCheck,
+} from "./core/checks.js";
 import {
   zodLiteral,
   zodNever,
@@ -53,29 +57,26 @@ function textNote() {
 }
 
 /**
- * NIP-10 marker for a marked `e` tag: `"root"` (the thread's originating event)
- * or `"reply"` (the direct parent). Ordered root-then-reply, matching the
- * reply-stack order the spec asks `e` tags to be sorted in.
+ * The markers a marked `e` tag may carry, in reply-stack order: `"root"` (the
+ * thread's originating event) and `"reply"` (the direct parent). Single source
+ * of truth shared by {@link eTag}'s schema and {@link threadCheck}, so the two
+ * can never disagree on which markers are valid.
  */
-function marker() {
-  return zodUnion([zodLiteral("root"), zodLiteral("reply")]);
-}
+const E_TAG_MARKERS = ["root", "reply"] as const;
+
+/** Membership form of {@link E_TAG_MARKERS} for {@link threadCheck}. */
+const E_TAG_MARKER_SET: ReadonlySet<string> = new Set(E_TAG_MARKERS);
 
 /**
- * A non-empty string check for a tag value that must reference something —
- * e.g. the `q` tag's `<event-id> or <event-address>`, where `""` refers to
- * nothing and is never valid.
+ * The value of a marked `e` tag's marker slot: a real marker
+ * ({@link E_TAG_MARKERS}) or `""`. The empty string is a positional
+ * placeholder meaning "no marker" — the marked scheme's fields are positional,
+ * so it lets a later `<pubkey>` be present on an *unmarked* reference, which is
+ * how the scheme cites an event ("mention"s it) without implying it is the
+ * root or the direct parent. Absent (a shorter tag) means the same thing.
  */
-function nonEmptyValueCheck(label: string): core.$ZodCheck<string> {
-  return makeCheck<string>((payload) => {
-    if (payload.value.length === 0) {
-      payload.issues.push({
-        code: "custom",
-        input: payload.value,
-        message: `Invalid ${label} (expected a non-empty string)`,
-      });
-    }
-  });
+function marker() {
+  return zodUnion([zodLiteral(""), ...E_TAG_MARKERS.map((m) => zodLiteral(m))]);
 }
 
 /**
@@ -88,7 +89,10 @@ function nonEmptyValueCheck(label: string): core.$ZodCheck<string> {
  *   leave it as `\"\"`", i.e. present-but-empty, never absent. It is a plain
  *   string, not a validated URL: `""` is allowed and relay hints are often
  *   loosely formatted, while a valid URL is only a SHOULD.
- * - `<marker>` (optional) is `"root"` or `"reply"` — see {@link marker}.
+ * - `<marker>` (optional) is `"root"`, `"reply"`, or `""` — see {@link marker}.
+ *   `""` (or a shorter tag) is an *unmarked* reference: since the fields are
+ *   positional, `["e", id, relay, "", pubkey]` is how the scheme attaches a
+ *   `<pubkey>` to a plain mention (neither root nor direct parent).
  * - `<pubkey>` (optional) is the 64-char hex pubkey of the referenced event's
  *   author.
  *
@@ -124,14 +128,11 @@ function eTag() {
 function qTag() {
   return zodTuple([
     zodLiteral("q"),
-    zodString([nonEmptyValueCheck("q tag reference")]),
+    zodString([nonEmptyStringCheck("q tag reference")]),
     zodString(),
     zodOptional(pubkey()),
   ]);
 }
-
-/** The two valid markers for a marked `e` tag. */
-const E_TAG_MARKERS = new Set(["root", "reply"]);
 
 /**
  * Opt-in check: the event's marked `e` tags follow NIP-10's reply/thread
@@ -154,7 +155,7 @@ function threadCheck(): core.$ZodCheck<NostrEventLike> {
       const value = tag[3];
       // Unmarked (positional scheme) or present-but-empty: not our concern.
       if (value === undefined || value === "") continue;
-      if (!E_TAG_MARKERS.has(value)) {
+      if (!E_TAG_MARKER_SET.has(value)) {
         payload.issues.push({
           code: "custom",
           input: payload.value,

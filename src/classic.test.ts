@@ -286,6 +286,9 @@ describe("zostr (classic)", () => {
     expect(
       zostr.nip10.eTag().parse(["e", id, "wss://r", "reply", pk]),
     ).toBeTruthy();
+    // unmarked ("" placeholder) reference carrying a pubkey — the marked
+    // scheme's positional way to cite (mention) without a root/reply marker
+    expect(zostr.nip10.eTag().parse(["e", id, "wss://r", "", pk])).toBeTruthy();
 
     // bad marker, non-hex id, missing relay position, extra trailing element
     expect(() =>
