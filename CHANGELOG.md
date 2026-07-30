@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **NIP-40 expiration-timestamp support.** `zostr.nip40` models the `expiration`
+  tag and keeps its structure separate from the time comparison:
+  - `zostr.nip40.expirationTag()` — schema for the
+    `["expiration", <unix timestamp in seconds>]` tag. The value is validated as
+    an integer unix-seconds string (same format as `created_at`).
+  - `zostr.nip40.expirationCheck(now)` — opt-in check that the event is not
+    expired at `now`. It inspects every `expiration` tag (NIP-40 sets no limit on
+    their number) and fails on the earliest expiry, compares with `BigInt` so
+    out-of-safe-range timestamps stay exact, and fails closed on a non-finite
+    `now`. Composes onto an event schema like `zostr.signatureCheck()`.
+
 - **NIP-13 proof-of-work support.** `zostr.nip13` models NIP-13's `nonce` tag
   and separates verifying a note's achieved difficulty from its committed
   target:

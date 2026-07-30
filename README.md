@@ -6,8 +6,9 @@
 
 Zod schemas and codecs for [Nostr](https://nostr.com) — NIP-01 events, NIP-05
 identifiers, NIP-10 text notes, NIP-11 relay information documents, NIP-13 proof
-of work, NIP-19 bech32 entities, NIP-21 `nostr:` URIs, NIP-42 authentication,
-NIP-45 event counts, NIP-50 search, and NIP-67 EOSE completeness hints.
+of work, NIP-19 bech32 entities, NIP-21 `nostr:` URIs, NIP-40 expiration
+timestamps, NIP-42 authentication, NIP-45 event counts, NIP-50 search, and
+NIP-67 EOSE completeness hints.
 
 Validation logic is written once against `zod/v4/core` and re-exposed through
 two entry points, so the exact same rules work with both
@@ -144,6 +145,8 @@ aliased at the root (`zostr.event`, `zostr.npub`, …).
 - **NIP-21** — `nostr:` URIs over the supported NIP-19 entities (`nsec`
   excluded): validation-only, per-entity codecs, and `nip21.any` decoding to a
   `{ type, data }` discriminated union
+- **NIP-40** — expiration timestamps: the `expiration` tag schema
+  (`nip40.expirationTag`) and an opt-in not-expired check (`nip40.expirationCheck`)
 - **NIP-42** — authentication (`AUTH`): the `kind: 22242` auth event
   (`nip42.authEvent`), the relay/client `AUTH` messages, and opt-in verification
   checks

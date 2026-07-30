@@ -47,6 +47,46 @@ export function nonNegativeIntegerCheck(
 }
 
 /**
+ * Compiled regex for an integer as it appears **on the wire** (a tag value is
+ * always a string): one or more decimal digits, sign-prefixed only when
+ * `signed`. No canonical encoding is imposed (leading zeros pass). Single source
+ * shared by {@link integerStringCheck} (the schema) and callers that need a bare
+ * predicate — NIP-13's committed-target lookup, NIP-40's not-expired check — so
+ * the two can't drift, the same split as `hexPattern`.
+ */
+export function integerStringPattern(
+  options: { signed?: boolean } = {},
+): RegExp {
+  return options.signed ? /^-?\d+$/ : /^\d+$/;
+}
+
+/**
+ * Check factory for a wire integer string (see {@link integerStringPattern}) —
+ * the string counterpart of {@link nonNegativeIntegerCheck}, for numeric values
+ * carried as tag strings. `label` names the field in the error message; `signed`
+ * allows a leading `-` (a count is unsigned; a unix timestamp may be negative);
+ * `expected` overrides the "(expected …)" phrase with a field-specific one.
+ */
+export function integerStringCheck(
+  label: string,
+  options: { signed?: boolean; expected?: string } = {},
+): core.$ZodCheck<string> {
+  const re = integerStringPattern(options);
+  const expected =
+    options.expected ??
+    (options.signed ? "an integer" : "a non-negative integer");
+  return makeCheck<string>((payload) => {
+    if (!re.test(payload.value)) {
+      payload.issues.push({
+        code: "custom",
+        input: payload.value,
+        message: `Invalid ${label} (expected ${expected})`,
+      });
+    }
+  });
+}
+
+/**
  * Check factory for a non-negative finite number (`>= 0`, not `NaN`/`Infinity`).
  * Unlike {@link nonNegativeIntegerCheck} this allows fractions, for amount
  * fields whose unit is caller-defined and may be sub-unit (e.g. NIP-11
