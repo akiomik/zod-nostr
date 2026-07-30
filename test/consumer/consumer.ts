@@ -30,6 +30,7 @@ zostr.nip45.clientMessage.count();
 zostr.nip45.relayMessage.count();
 zostr.nip50.clientMessage.req();
 zostr.nip67.relayMessage.eose();
+zostr.nip70.protectedTag();
 zostr.jsonCodec(zostr.nip01.event());
 
 // Root aliases resolve and are the same factory as their canonical path.
@@ -100,6 +101,14 @@ const expirationName: "expiration" = expirationTag[0];
 const expirationTs: string = expirationTag[1];
 void [expirationName, expirationTs];
 zostr.event().check(zostr.nip40.expirationCheck(1700000000));
+
+// NIP-70 protected events. The protected marker infers a precise single-element
+// literal tuple, and the opt-in author-authorization check composes onto an
+// event schema (taking the connection's authenticated pubkey set).
+const protectedTag = zostr.nip70.protectedTag().parse(["-"]);
+const protectedName: "-" = protectedTag[0];
+void protectedName;
+zostr.event().check(zostr.nip70.protectedCheck(["a".repeat(64)]));
 
 // NIP-21 nostr: URIs. The full surface is exercised in BOTH flavors so a
 // one-sided flavor gap or a degraded pointer type fails this compile gate.
@@ -242,6 +251,11 @@ const miniExpirationName: "expiration" = miniExpirationTag[0];
 const miniExpirationTs: string = miniExpirationTag[1];
 void [miniExpirationName, miniExpirationTs];
 miniZostr.event().check(miniZostr.nip40.expirationCheck(1700000000));
+// NIP-70 across the mini flavor: protected marker tuple type + check composition.
+const miniProtectedTag = zMini.parse(miniZostr.nip70.protectedTag(), ["-"]);
+const miniProtectedName: "-" = miniProtectedTag[0];
+void miniProtectedName;
+miniZostr.event().check(miniZostr.nip70.protectedCheck(["a".repeat(64)]));
 zMini.encode(miniZostr.nprofile(), { pubkey: pk, relays: [] });
 // @ts-expect-error the pointer shape is strict in the mini flavor too
 zMini.encode(miniZostr.nprofile(), { pubkey: pk, relays: [], extra: 1 });

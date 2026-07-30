@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **NIP-70 protected-event support.** `zostr.nip70` models the `["-"]` protected
+  marker and keeps its structure separate from the relay-side authorization:
+  - `zostr.nip70.protectedTag()` — schema for the `["-"]` marker tag. The marker
+    carries no value, so it is a fixed single-element tuple (a second element is
+    rejected).
+  - `zostr.nip70.protectedCheck(authenticatedPubkeys?)` — opt-in check that a
+    protected event's author is among the connection's authenticated pubkeys.
+    Takes the **set** of authenticated pubkeys (NIP-42 allows several per
+    connection), defaults to `[]` (unauthenticated → NIP-70's default reject),
+    and detects any `"-"`-led tag as a marker so a malformed `["-", "x"]` can't
+    bypass the check. Composes onto an event schema like `zostr.signatureCheck()`.
+
 - **NIP-40 expiration-timestamp support.** `zostr.nip40` models the `expiration`
   tag and keeps its structure separate from the time comparison:
   - `zostr.nip40.expirationTag()` — schema for the

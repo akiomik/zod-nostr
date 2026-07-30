@@ -16,6 +16,7 @@ import * as nip42 from "./nip42.js";
 import * as nip45 from "./nip45.js";
 import * as nip50 from "./nip50.js";
 import * as nip67 from "./nip67.js";
+import * as nip70 from "./nip70.js";
 
 /**
  * Re-wraps a core.$ZodCodec (shared, flavor-agnostic) through mini's own
@@ -319,6 +320,15 @@ export const zostr = {
     relayMessage: {
       eose: () => z.union(nip67.nip67.relayMessage.eose()._zod.def.options),
     },
+  },
+
+  // NIP-70 protected events (protected marker tag schema + opt-in author-authorization check)
+  nip70: {
+    protectedTag: () => z.tuple(nip70.nip70.protectedTag()._zod.def.items),
+
+    // Opt-in check composed onto an event schema, the same way as
+    // signatureCheck(): zostr.event().check(zostr.nip70.protectedCheck(pubkeys))
+    protectedCheck: nip70.nip70.protectedCheck,
   },
 
   // Ergonomic root aliases — direct references into the canonical namespaces
