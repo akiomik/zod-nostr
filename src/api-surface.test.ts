@@ -117,6 +117,10 @@ const EXPECTED_SURFACE: Surface = {
     powCheck: FN,
     commitmentCheck: FN,
   },
+  nip40: {
+    expirationTag: FN,
+    expirationCheck: FN,
+  },
   nip42: {
     authEvent: FN,
     relayMessage: { auth: FN },

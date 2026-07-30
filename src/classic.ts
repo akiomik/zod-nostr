@@ -11,6 +11,7 @@ import * as nip11 from "./nip11.js";
 import * as nip13 from "./nip13.js";
 import * as nip19 from "./nip19.js";
 import * as nip21 from "./nip21.js";
+import * as nip40 from "./nip40.js";
 import * as nip42 from "./nip42.js";
 import * as nip45 from "./nip45.js";
 import * as nip50 from "./nip50.js";
@@ -248,6 +249,15 @@ export const zostr = {
     // signatureCheck(): zostr.event().check(zostr.nip13.powCheck(20))
     powCheck: nip13.nip13.powCheck,
     commitmentCheck: nip13.nip13.commitmentCheck,
+  },
+
+  // NIP-40 expiration timestamps (expiration tag schema + opt-in not-expired check)
+  nip40: {
+    expirationTag: () => z.tuple(nip40.nip40.expirationTag()._zod.def.items),
+
+    // Opt-in check composed onto an event schema, the same way as
+    // signatureCheck(): zostr.event().check(zostr.nip40.expirationCheck(now))
+    expirationCheck: nip40.nip40.expirationCheck,
   },
 
   // NIP-42 client-relay authentication (AUTH handshake messages + auth event + opt-in checks)

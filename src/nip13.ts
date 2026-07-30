@@ -1,5 +1,10 @@
 import type * as core from "zod/v4/core";
-import { makeCheck, type NostrEventLike } from "./core/checks.js";
+import {
+  integerStringCheck,
+  integerStringPattern,
+  makeCheck,
+  type NostrEventLike,
+} from "./core/checks.js";
 import { hexPattern } from "./core/hex.js";
 import {
   zodLiteral,
@@ -14,12 +19,14 @@ const NONCE_TAG_NAME = "nonce";
 /**
  * A non-negative decimal integer: `"0"`, `"5"`, `"20"`, … A NIP-13 target
  * difficulty is a leading-zero-bit **count**, so it is a plain non-negative
- * integer on the wire. NIP-13 defines **no** canonical encoding (it does not
- * prohibit leading zeros), so `"05"` is accepted — the base schema must not
- * reject a spec-valid value (design.md, "never reject spec-valid input"). Only
- * non-numeric, signed, and fractional strings are rejected.
+ * integer on the wire (unsigned). NIP-13 defines **no** canonical encoding (it
+ * does not prohibit leading zeros), so `"05"` is accepted — the base schema must
+ * not reject a spec-valid value (design.md, "never reject spec-valid input").
+ * Only non-numeric, signed, and fractional strings are rejected. Shared by
+ * {@link targetDifficulty} (via {@link integerStringCheck}) and
+ * {@link committedTarget}'s bare predicate so the two can't drift.
  */
-const DIFFICULTY_RE = /^\d+$/;
+const DIFFICULTY_RE = integerStringPattern();
 
 /** A NIP-01 event id: exactly 64 lowercase hex chars (same as `eventId()`). */
 const EVENT_ID_RE = hexPattern(64);
@@ -32,16 +39,7 @@ const EVENT_ID_RE = hexPattern(64);
  */
 function targetDifficulty(): core.$ZodString<string> {
   return zodString([
-    makeCheck<string>((payload) => {
-      if (!DIFFICULTY_RE.test(payload.value)) {
-        payload.issues.push({
-          code: "custom",
-          input: payload.value,
-          message:
-            "Invalid target difficulty (expected a non-negative integer)",
-        });
-      }
-    }),
+    integerStringCheck("target difficulty", "a non-negative integer"),
   ]);
 }
 

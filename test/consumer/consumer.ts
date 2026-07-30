@@ -23,6 +23,7 @@ zostr.nip10.eTag();
 zostr.nip10.qTag();
 zostr.nip11.relayInformationDocument();
 zostr.nip13.nonceTag();
+zostr.nip40.expirationTag();
 zostr.nip42.relayMessage.auth();
 zostr.nip42.clientMessage.auth();
 zostr.nip45.clientMessage.count();
@@ -89,6 +90,16 @@ zostr
   .event()
   .check(zostr.nip13.powCheck(20))
   .check(zostr.nip13.commitmentCheck(20));
+
+// NIP-40 expiration. The expiration tag infers a precise tuple (literal name +
+// string timestamp), and the opt-in check composes onto an event schema.
+const expirationTag = zostr.nip40
+  .expirationTag()
+  .parse(["expiration", "1700000000"]);
+const expirationName: "expiration" = expirationTag[0];
+const expirationTs: string = expirationTag[1];
+void [expirationName, expirationTs];
+zostr.event().check(zostr.nip40.expirationCheck(1700000000));
 
 // NIP-21 nostr: URIs. The full surface is exercised in BOTH flavors so a
 // one-sided flavor gap or a degraded pointer type fails this compile gate.
@@ -222,6 +233,15 @@ miniZostr
   .event()
   .check(miniZostr.nip13.powCheck(20))
   .check(miniZostr.nip13.commitmentCheck(20));
+// NIP-40 across the mini flavor: expiration tag type + check composition.
+const miniExpirationTag = zMini.parse(miniZostr.nip40.expirationTag(), [
+  "expiration",
+  "1700000000",
+]);
+const miniExpirationName: "expiration" = miniExpirationTag[0];
+const miniExpirationTs: string = miniExpirationTag[1];
+void [miniExpirationName, miniExpirationTs];
+miniZostr.event().check(miniZostr.nip40.expirationCheck(1700000000));
 zMini.encode(miniZostr.nprofile(), { pubkey: pk, relays: [] });
 // @ts-expect-error the pointer shape is strict in the mini flavor too
 zMini.encode(miniZostr.nprofile(), { pubkey: pk, relays: [], extra: 1 });

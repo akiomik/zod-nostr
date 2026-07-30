@@ -746,6 +746,56 @@ The `{ type, data }` shape matches what `nostr-tools`' `nip19.decode()` returns
 for these five entities. Each branch reuses the NIP-19 output schema, so — like
 the pointers — the branch object and its pointer `data` **reject** unknown keys.
 
+## NIP-40 — expiration timestamps
+
+Schema and check for [NIP-40](https://github.com/nostr-protocol/nips/blob/master/40.md)
+expiration timestamps, under `zostr.nip40.*`. The **structure** of the
+`expiration` tag (`expirationTag()`) is kept separate from deciding whether an
+event is _currently_ expired (`expirationCheck(now)`), because that comparison
+depends on the reference time — context the schema cannot see.
+
+NIP-40 is an advisory convention, not a delete guarantee or a security feature:
+it asks relays to _SHOULD_ drop/stop serving expired events, but an event that
+was public is already retrievable by third parties. It also does not change how
+ephemeral events are stored.
+
+### `zostr.nip40.expirationTag()`
+
+Schema for the `expiration` tag: `["expiration", <unix timestamp in seconds>]`.
+The timestamp is validated as an integer unix-seconds string, the same format as
+`created_at` (integer, no bound). NIP-40 defines no canonical encoding, so
+leading zeros are accepted and negatives are not rejected; only non-numeric,
+fractional, and empty values are. The tag is a fixed tuple, so a third element is
+rejected.
+
+```ts
+zostr.nip40.expirationTag().parse(["expiration", "1700000000"]); // ok
+zostr.nip40.expirationTag().parse(["expiration", "1.5"]);        // throws (not an integer)
+```
+
+### `zostr.nip40.expirationCheck(now)`
+
+An opt-in [check](https://zod.dev/api#checks) that the event is **not expired**
+at `now` (a unix-seconds reference time the caller supplies, keeping the check
+pure). An event is expired when an `expiration` tag's timestamp is at or before
+`now` (NIP-40: expired _at_ that timestamp). Compose it onto an event schema the
+same way as `signatureCheck()`:
+
+```ts
+zostr.event().check(zostr.nip40.expirationCheck(nowInSeconds)).parse(event);
+```
+
+- No `expiration` tag → the event has no expiry → **passes**.
+- NIP-40 sets no limit on how many `expiration` tags an event carries, so
+  **every** one is inspected and the event fails if _any_ has reached its time
+  (the earliest expiry wins, independent of tag order).
+- A present-but-malformed `expiration` value **fails** rather than being silently
+  treated as no-expiry (structural validity is `expirationTag()`'s job).
+
+The comparison uses `BigInt`, so a timestamp beyond `Number.MAX_SAFE_INTEGER` is
+compared exactly rather than rounded. `now` must be finite; a non-finite value
+throws at composition time (fails **closed**, like `nip42.createdAtCheck()`).
+
 ## NIP-42 — authentication
 
 Schemas for the NIP-42 `AUTH` handshake (a client authenticating to a relay by
