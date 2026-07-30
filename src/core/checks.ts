@@ -147,13 +147,16 @@ const MALFORMED_TAGS_MESSAGE =
  * path. A non-array `tags` is a malformed event (not one merely lacking the
  * scanned tag), so this pushes {@link MALFORMED_TAGS_MESSAGE} and returns
  * `undefined` — the caller returns without scanning. Otherwise it returns the
- * tags array to iterate; individual non-array tag **elements** are still skipped
- * per-tag via {@link isNamedTag}. Shared by the event-tag checks so the guard
- * and its message can't drift between them.
+ * tags array to iterate, typed `unknown[]`: the container is an array, but its
+ * **elements** are not yet known to be well-formed tags (the `NostrEventLike`
+ * static type promises `string[][]`, but a check reached through a consumer's
+ * loose schema sees whatever passed `Array.isArray`). Match and narrow each
+ * element with {@link isNamedTag} before indexing it. Shared by the event-tag
+ * checks so the guard and its message can't drift between them.
  */
 export function guardEventTags(
   payload: core.ParsePayload<NostrEventLike>,
-): string[][] | undefined {
+): unknown[] | undefined {
   const { tags } = payload.value;
   if (!Array.isArray(tags)) {
     payload.issues.push({
@@ -167,12 +170,23 @@ export function guardEventTags(
 }
 
 /**
- * True when `tag` is a well-formed tag whose name (its first element) equals
- * `name`. Guards `Array.isArray` so a `null`/non-array tag reaching a check on
- * the untyped JS path is skipped rather than throwing on index access — the
- * per-tag half of the scan {@link guardEventTags} sets up.
+ * True when `tag` is an array whose **name** (its first element) equals `name`.
+ * Guards `Array.isArray` so a `null`/non-array tag reaching a check on the
+ * untyped JS path is skipped rather than throwing on index access — the per-tag
+ * half of the scan {@link guardEventTags} sets up.
+ *
+ * The predicate narrows only what it actually checks: the first element is the
+ * matched `name`, but the remaining elements stay `unknown` (a tag reached on
+ * the untyped path may carry non-string values, e.g. `["nonce", "1", 8]`). A
+ * caller reading a later element (`tag[1]`, `tag[2]`) must still guard its type
+ * (`typeof … === "string"`) before using it — asserting `string[]` here would
+ * let a non-string value flow into a `RegExp.test`/`String` coercion that
+ * throws or silently accepts.
  */
-export function isNamedTag(tag: unknown, name: string): tag is string[] {
+export function isNamedTag(
+  tag: unknown,
+  name: string,
+): tag is [string, ...unknown[]] {
   return Array.isArray(tag) && tag[0] === name;
 }
 

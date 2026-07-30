@@ -151,8 +151,13 @@ function powCheck(minDifficulty: number): core.$ZodCheck<NostrEventLike> {
   });
 }
 
-/** The committed target of the event's first `nonce` tag, if it is valid. */
-function committedTarget(tags: readonly string[][]): number | undefined {
+/**
+ * The committed target of the event's first `nonce` tag, if it is valid. Takes
+ * `unknown` because a check reached through a consumer's loose schema sees
+ * whatever the runtime `tags` actually is, not the `string[][]` the static event
+ * type promises.
+ */
+function committedTarget(tags: unknown): number | undefined {
   // Guard the untyped JS path: a missing or non-array `tags` must make the check
   // fail, not throw on `.find` — the same `safeParse`-never-throws contract that
   // powCheck honors for a malformed id. Unlike the guardEventTags-based checks
@@ -161,7 +166,13 @@ function committedTarget(tags: readonly string[][]): number | undefined {
   // null/non-array tag is skipped rather than throwing on `.find`'s index access.
   if (!Array.isArray(tags)) return undefined;
   const target = tags.find((tag) => isNamedTag(tag, NONCE_TAG_NAME))?.[2];
-  if (target === undefined || !DIFFICULTY_RE.test(target)) return undefined;
+  // `target` is `unknown` (isNamedTag narrows only the tag name): a non-string
+  // committed value must fail here, not reach `DIFFICULTY_RE.test`, where a
+  // Symbol would throw on string coercion and a number (e.g. `8`) would coerce
+  // to `"8"` and be wrongly accepted.
+  if (typeof target !== "string" || !DIFFICULTY_RE.test(target)) {
+    return undefined;
+  }
   return Number(target);
 }
 
