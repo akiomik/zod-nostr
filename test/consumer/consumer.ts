@@ -16,6 +16,8 @@ zostr.nip01.clientMessage.req();
 zostr.nip19.npub();
 zostr.nip05.identifier();
 zostr.nip10.textNote();
+zostr.nip10.eTag();
+zostr.nip10.qTag();
 zostr.nip11.relayInformationDocument();
 zostr.nip42.relayMessage.auth();
 zostr.nip42.clientMessage.auth();
@@ -58,6 +60,19 @@ const pk = "b".repeat(64);
 zostr.nprofile().encode({ pubkey: pk, relays: [] });
 // @ts-expect-error extra keys are not part of the pointer shape
 zostr.nprofile().encode({ pubkey: pk, relays: [], extra: 1 });
+
+// NIP-10 reply/thread tags infer precise shapes, and the opt-in checks compose
+// onto textNote() through the resolved declarations a consumer actually sees.
+const id64 = "a".repeat(64);
+const eTag = zostr.nip10.eTag().parse(["e", id64, "", "root", pk]);
+const eMarker: "" | "root" | "reply" | undefined = eTag[3];
+void eMarker;
+const qName: "q" = zostr.nip10.qTag().parse(["q", id64, ""])[0];
+void qName;
+zostr.nip10
+  .textNote()
+  .check(zostr.nip10.threadCheck())
+  .check(zostr.nip10.participantsCheck([pk]));
 
 // Named type export, exercised from both entry points, and classic/Mini parity.
 const profile: ProfileMetadata = { name: "alice", customField: 1 };

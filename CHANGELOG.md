@@ -11,11 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **NIP-10 reply/thread tag support.** `zostr.nip10` now models NIP-10's
   threading conventions beyond the kind:1 event shape:
-  - `zostr.nip10.eTag()` / `zostr.nip10.qTag()` — tuple schemas for the marked
-    `e` reply tag (`["e", id, relay, marker?, pubkey?]`, marker `"root"` /
-    `"reply"`) and the `q` citation tag (`["q", id-or-address, relay, pubkey?]`).
+  - `zostr.nip10.eTag()` — schema for the marked `e` reply tag
+    (`["e", id, relay, marker?, pubkey?]`, marker `"root"` / `"reply"` / `""`).
+  - `zostr.nip10.qTag()` — schema for the `q` citation tag, a union of a
+    regular-event branch (`["q", event-id, relay, pubkey?]`) and an
+    addressable-event branch (`["q", "<kind>:<pubkey>:<d>", relay]`).
   - `zostr.nip10.threadCheck()` — opt-in check enforcing the marked `e`-tag
-    conventions (only `"root"`/`"reply"` markers; at most one of each).
+    conventions (only `"root"`/`"reply"` markers; at most one of each; `"root"`
+    before `"reply"`).
   - `zostr.nip10.participantsCheck(expected)` — opt-in check that the note's
     `p` tags include every expected participant pubkey.
 

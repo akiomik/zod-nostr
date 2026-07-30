@@ -202,7 +202,7 @@ export const zostr = {
   nip10: {
     textNote: () => classicStrictObject(nip10.nip10.textNote()),
     eTag: () => z.tuple(nip10.nip10.eTag()._zod.def.items),
-    qTag: () => z.tuple(nip10.nip10.qTag()._zod.def.items),
+    qTag: () => z.union(nip10.nip10.qTag()._zod.def.options),
 
     // Opt-in reply/thread conventions composed onto textNote() — see design.md
     // "Checks beyond the structural contract are opt-in".

@@ -424,10 +424,10 @@ zostr.nip10.textNote().parse(signedKind1Event);
 
 ### `zostr.nip10.eTag()` / `zostr.nip10.qTag()`
 
-Tuple schemas for NIP-10's reply and citation tags. Each models the tag's
-format **verbatim**, so the relay-url position is required (its value may be
-`""`, which NIP-10 explicitly allows) and trailing optional fields must appear
-in order:
+Schemas for NIP-10's reply and citation tags. Each models the tag's format
+**verbatim**, so the relay-url position is required (its value may be `""`,
+which NIP-10 explicitly allows) and trailing optional fields must appear in
+order:
 
 - `zostr.nip10.eTag()` — the **marked** `e` tag (the preferred reply/thread
   scheme): `["e", <event-id>, <relay-url>, <marker>?, <pubkey>?]`. `<event-id>`
@@ -435,18 +435,22 @@ in order:
   or `""`. Because the fields are positional, `""` is the "no marker"
   placeholder that lets a `<pubkey>` be attached to an *unmarked* reference
   (`["e", id, relay, "", pubkey]` — a plain mention, neither root nor parent).
-  The deprecated **positional** scheme (bare `["e", <id>]` / `["e", <id>,
-  <relay>]`) is intentionally out of scope — a marked tag always carries the
-  relay position.
-- `zostr.nip10.qTag()` — the citation tag: `["q", <event-id> or
-  <event-address>, <relay-url>, <pubkey>?]`. The first value is validated only
-  as a non-empty string (it may be an event id **or** a NIP-01 `a`-coordinate;
-  the two aren't distinguished here); `<pubkey>` is present only when citing a
-  regular event.
+  An unmarked 3-element `["e", <id>, <relay>]` is **accepted** — it's
+  structurally identical to a deprecated positional `e` tag, so the two can't be
+  distinguished. What's rejected is a tag with no relay position (a bare `["e",
+  <id>]`), a bad marker, or any element beyond `<pubkey>`.
+- `zostr.nip10.qTag()` — the citation tag, a **union of two exact shapes** by
+  what is cited: a regular event by 64-char hex id (`["q", <event-id>,
+  <relay-url>, <pubkey>?]`, where `<pubkey>` is the referenced author) or an
+  addressable event by its NIP-01 `<kind>:<pubkey>:<d>` coordinate (`["q",
+  <event-address>, <relay-url>]`, with **no** trailing `<pubkey>` — the
+  coordinate already names the author). A first value that is neither a valid
+  id nor a valid coordinate is rejected.
 
 ```ts
 zostr.nip10.eTag().parse(["e", rootId, "wss://relay.example", "root", authorPk]);
-zostr.nip10.qTag().parse(["q", citedId, "", authorPk]);
+zostr.nip10.qTag().parse(["q", citedId, "", authorPk]); // regular event
+zostr.nip10.qTag().parse(["q", `30023:${authorPk}:slug`, ""]); // addressable
 ```
 
 ### Opt-in reply/thread checks
@@ -457,8 +461,10 @@ composed onto `textNote()` rather than baked in:
 
 - `zostr.nip10.threadCheck()` — the marked `e` tags follow the reply/thread
   conventions: every marker is `"root"` or `"reply"` (the legacy `"mention"` and
-  any unknown value are rejected), and the note carries **at most one** `"root"`
-  and one `"reply"`. Unmarked (positional) `e` tags are left untouched.
+  any unknown value are rejected), the note carries **at most one** `"root"` and
+  one `"reply"`, and the `"root"` tag comes **before** the `"reply"` tag (NIP-10
+  asks `e` tags to be sorted root → direct parent). Unmarked (positional) `e`
+  tags are left untouched.
 - `zostr.nip10.participantsCheck(expected)` — the note's `p` tags include every
   expected participant pubkey (`p` tags ⊇ `expected`). NIP-10 asks a reply to
   carry all of the parent's `p` tags plus the replied-to/quoted authors; that

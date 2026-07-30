@@ -301,19 +301,34 @@ describe("zostr (classic)", () => {
     ).toThrow();
   });
 
-  it("nip10.qTag() validates the quote-tag format", () => {
+  it("nip10.qTag() validates event-id vs event-address branches", () => {
     const id = "a".repeat(64);
     const pk = "b".repeat(64);
 
+    // regular event: 64-hex id, optional author pubkey
     expect(zostr.nip10.qTag().parse(["q", id, ""])).toBeTruthy();
     expect(zostr.nip10.qTag().parse(["q", id, "wss://r", pk])).toBeTruthy();
-    // event-address coordinate is accepted as a non-empty reference string
+    // addressable event: <kind>:<pubkey>:<d> coordinate, no trailing pubkey
     expect(
       zostr.nip10.qTag().parse(["q", `30023:${pk}:slug`, "wss://r"]),
     ).toBeTruthy();
+    expect(zostr.nip10.qTag().parse(["q", `30023:${pk}:`, ""])).toBeTruthy();
 
+    // neither a valid id nor a valid coordinate
+    expect(() => zostr.nip10.qTag().parse(["q", "garbage", ""])).toThrow();
     expect(() => zostr.nip10.qTag().parse(["q", "", ""])).toThrow();
     expect(() => zostr.nip10.qTag().parse(["q", id])).toThrow();
+    // a coordinate must not carry a trailing pubkey (that's for regular events)
+    expect(() =>
+      zostr.nip10.qTag().parse(["q", `30023:${pk}:slug`, "wss://r", pk]),
+    ).toThrow();
+    // malformed coordinates: non-hex pubkey, out-of-range kind
+    expect(() =>
+      zostr.nip10.qTag().parse(["q", "30023:nothex:d", ""]),
+    ).toThrow();
+    expect(() =>
+      zostr.nip10.qTag().parse(["q", `99999:${pk}:d`, ""]),
+    ).toThrow();
   });
 
   it("nip10.threadCheck() enforces marked e-tag conventions", () => {
@@ -335,12 +350,20 @@ describe("zostr (classic)", () => {
       ),
     ).toBeTruthy();
 
-    // unknown/legacy marker, and duplicate root
+    // unknown/legacy marker, duplicate root, and reply-before-root ordering
     expect(() => checked.parse(note([["e", id, "", "mention"]]))).toThrow();
     expect(() =>
       checked.parse(
         note([
           ["e", id, "", "root"],
+          ["e", id2, "", "root"],
+        ]),
+      ),
+    ).toThrow();
+    expect(() =>
+      checked.parse(
+        note([
+          ["e", id, "", "reply"],
           ["e", id2, "", "root"],
         ]),
       ),
@@ -368,6 +391,24 @@ describe("zostr (classic)", () => {
       ),
     ).toBeTruthy();
     expect(() => checked.parse(note([["p", a1]]))).toThrow();
+  });
+
+  it("nip10.eTag()/qTag() infer precise output types", () => {
+    const id = "a".repeat(64);
+    const pk = "b".repeat(64);
+
+    const e = zostr.nip10.eTag().parse(["e", id, "", "root", pk]);
+    const eName: "e" = e[0];
+    const eId: string = e[1];
+    // marker is the exact literal union (regression if it widened to string)
+    const marker: "" | "root" | "reply" | undefined = e[3];
+    const author: string | undefined = e[4];
+    expect([eName, eId, marker, author]).toEqual(["e", id, "root", pk]);
+
+    const q = zostr.nip10.qTag().parse(["q", id, "", pk]);
+    const qName: "q" = q[0];
+    const ref: string = q[1];
+    expect([qName, ref]).toEqual(["q", id]);
   });
 
   it("subscriptionId() enforces a non-empty string of at most 64 chars", () => {

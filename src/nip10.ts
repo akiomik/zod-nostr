@@ -1,9 +1,5 @@
 import type * as core from "zod/v4/core";
-import {
-  makeCheck,
-  type NostrEventLike,
-  nonEmptyStringCheck,
-} from "./core/checks.js";
+import { makeCheck, type NostrEventLike } from "./core/checks.js";
 import {
   zodLiteral,
   zodNever,
@@ -96,11 +92,12 @@ function marker() {
  * - `<pubkey>` (optional) is the 64-char hex pubkey of the referenced event's
  *   author.
  *
- * This models the marked format verbatim, so the deprecated **positional**
- * scheme (bare `["e", <id>]` / `["e", <id>, <relay>]` whose meaning comes from
- * position) is intentionally out of scope — a 2-element tag fails here because
- * the marked format always carries the relay position. No trailing elements
- * beyond `<pubkey>` are allowed.
+ * This models the marked format verbatim. Note it cannot distinguish an
+ * unmarked marked-scheme tag from the deprecated **positional** scheme: a
+ * 3-element `["e", <id>, <relay>]` is structurally identical either way and is
+ * **accepted** (as an unmarked reference). What it rejects is a tag with no
+ * relay position (a bare `["e", <id>]`, which the marked format never emits), a
+ * bad marker, or any element beyond `<pubkey>`.
  */
 function eTag() {
   return zodTuple([
@@ -113,33 +110,83 @@ function eTag() {
 }
 
 /**
- * NIP-10 `q` tag, used when citing an event in `.content` via NIP-21:
- * `["q", <event-id> or <event-address>, <relay-url>, <pubkey-if-a-regular-event>?]`.
- *
- * - The first value is the cited event's id **or** a NIP-01 addressable
- *   coordinate (`<kind>:<pubkey>:<d>`). The two are not structurally
- *   distinguished here — it is validated only as a non-empty string, because a
- *   precise "id or address" union would need an address-coordinate schema that
- *   NIP-10 does not itself define (it belongs to NIP-01's `a` coordinate).
- * - `<relay-url>` position is required but may be `""`, same as {@link eTag}.
- * - `<pubkey>` (optional) is present only when citing a regular (non-
- *   addressable) event; a 64-char hex pubkey.
+ * A NIP-01 addressable-event coordinate: `<kind>:<pubkey>:<d-identifier>`, the
+ * value carried by an `a` tag. `<kind>` is a canonical decimal in the NIP-01
+ * `kind` range (0..65535, no leading zeros), `<pubkey>` is 64-char lowercase
+ * hex, and `<d-identifier>` is the rest of the string (any value, possibly
+ * empty, and may itself contain `:`).
  */
-function qTag() {
+const ADDRESS_COORDINATE = /^(0|[1-9]\d*):[0-9a-f]{64}:/;
+
+function isAddressCoordinate(value: string): boolean {
+  const match = ADDRESS_COORDINATE.exec(value);
+  return match !== null && Number(match[1]) <= 65535;
+}
+
+function addressCoordinate(): core.$ZodString<string> {
+  return zodString([
+    makeCheck<string>((payload) => {
+      if (!isAddressCoordinate(payload.value)) {
+        payload.issues.push({
+          code: "custom",
+          input: payload.value,
+          message:
+            'Invalid event address (expected "<kind>:<pubkey>:<d-identifier>")',
+        });
+      }
+    }),
+  ]);
+}
+
+/**
+ * `q` tag citing a **regular** (non-addressable) event by its id:
+ * `["q", <event-id>, <relay-url>, <pubkey>?]`. `<pubkey>` — the referenced
+ * event's author — is only meaningful for a regular event, so it lives on this
+ * branch, not on {@link qTagAddressable}.
+ */
+function qTagRegular() {
   return zodTuple([
     zodLiteral("q"),
-    zodString([nonEmptyStringCheck("q tag reference")]),
+    eventId(),
     zodString(),
     zodOptional(pubkey()),
   ]);
 }
 
 /**
+ * `q` tag citing an **addressable** event by its NIP-01 coordinate:
+ * `["q", <kind>:<pubkey>:<d>, <relay-url>]`. There is no trailing `<pubkey>` —
+ * the coordinate already carries the author — so a 4th element is rejected.
+ */
+function qTagAddressable() {
+  return zodTuple([zodLiteral("q"), addressCoordinate(), zodString()]);
+}
+
+/**
+ * NIP-10 `q` tag, used when citing an event in `.content` via NIP-21:
+ * `["q", <event-id> or <event-address>, <relay-url>, <pubkey-if-a-regular-event>?]`.
+ *
+ * A union of two exact shapes rather than a loose "any non-empty first value":
+ * the first element is either a 64-char hex **event id** ({@link qTagRegular},
+ * which may carry the author `<pubkey>`) or a NIP-01 **event-address
+ * coordinate** ({@link qTagAddressable}, which may not — the coordinate already
+ * names the author). `<relay-url>` position is required but may be `""`, same
+ * as {@link eTag}.
+ */
+function qTag() {
+  return zodUnion([qTagRegular(), qTagAddressable()]);
+}
+
+/**
  * Opt-in check: the event's marked `e` tags follow NIP-10's reply/thread
- * conventions. For each `e` tag carrying a marker (4th element), the marker
- * must be `"root"` or `"reply"` — the legacy `"mention"` marker and any unknown
- * value are rejected — and the event may carry **at most one** `"root"` and at
- * most one `"reply"` (a thread has a single root and a single direct parent).
+ * conventions:
+ *
+ * - each marker (4th element) is `"root"` or `"reply"` — the legacy `"mention"`
+ *   marker and any unknown value are rejected;
+ * - **at most one** `"root"` and one `"reply"` (a thread has a single root and a
+ *   single direct parent);
+ * - the `"root"` tag appears **before** the `"reply"` tag, matching NIP-10's
+ *   "sorted by the reply stack from root to the direct parent".
  *
  * `e` tags with no marker (the deprecated positional scheme, or a
  * present-but-empty `""` marker) are left untouched — this check only governs
@@ -150,22 +197,29 @@ function threadCheck(): core.$ZodCheck<NostrEventLike> {
   return makeCheck<NostrEventLike>((payload) => {
     let rootCount = 0;
     let replyCount = 0;
-    for (const tag of payload.value.tags) {
-      if (tag[0] !== "e") continue;
+    let rootIndex = -1;
+    let replyIndex = -1;
+    payload.value.tags.forEach((tag, index) => {
+      if (tag[0] !== "e") return;
       const value = tag[3];
       // Unmarked (positional scheme) or present-but-empty: not our concern.
-      if (value === undefined || value === "") continue;
+      if (value === undefined || value === "") return;
       if (!E_TAG_MARKER_SET.has(value)) {
         payload.issues.push({
           code: "custom",
           input: payload.value,
           message: `Invalid "e" tag marker (expected "root" or "reply"): ${value}`,
         });
-        continue;
+        return;
       }
-      if (value === "root") rootCount++;
-      else replyCount++;
-    }
+      if (value === "root") {
+        rootCount++;
+        if (rootIndex === -1) rootIndex = index;
+      } else {
+        replyCount++;
+        if (replyIndex === -1) replyIndex = index;
+      }
+    });
     if (rootCount > 1) {
       payload.issues.push({
         code: "custom",
@@ -180,6 +234,14 @@ function threadCheck(): core.$ZodCheck<NostrEventLike> {
         input: payload.value,
         message:
           'Invalid thread (at most one "reply"-marked "e" tag is allowed)',
+      });
+    }
+    if (rootIndex !== -1 && replyIndex !== -1 && rootIndex > replyIndex) {
+      payload.issues.push({
+        code: "custom",
+        input: payload.value,
+        message:
+          'Invalid thread (the "root"-marked "e" tag must come before the "reply"-marked one)',
       });
     }
   });

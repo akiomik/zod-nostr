@@ -85,24 +85,6 @@ export function nonEmptyArrayCheck(label: string): core.$ZodCheck<unknown[]> {
   });
 }
 
-/**
- * Check factory for a non-empty string. The string sibling of
- * {@link nonEmptyArrayCheck}, for a value that must reference something —
- * e.g. NIP-10's `q` tag `<event-id> or <event-address>`, where `""` refers to
- * nothing and is never valid. `label` names the field in the error message.
- */
-export function nonEmptyStringCheck(label: string): core.$ZodCheck<string> {
-  return makeCheck<string>((payload) => {
-    if (payload.value.length === 0) {
-      payload.issues.push({
-        code: "custom",
-        input: payload.value,
-        message: `Invalid ${label} (expected a non-empty string)`,
-      });
-    }
-  });
-}
-
 export interface NostrEventLike {
   id: string;
   pubkey: string;
