@@ -129,6 +129,7 @@ challenge the relay sent, its own URL, and the current time as parameters:
 ```ts
 const relay = "wss://relay.example.com/";
 const now = Math.floor(Date.now() / 1000);
+const challenge = "<the challenge string the relay sent>";
 
 const verifiedAuth = zostr.nip42
   .authEvent()

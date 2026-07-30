@@ -234,6 +234,8 @@ So a consumer composes the exact recovery policy they need on top of a strict
 base — a strict URL atom becomes an always-present, never-throwing field:
 
 ```ts
+import { zostr } from "zod-nostr";
+
 const f = zostr.nip01.metadataFields;
 const picture = f.picture().catch("").default(""); // strict URL → lenient, never throws
 ```
