@@ -208,10 +208,13 @@ describe("zostr.nip10 opt-in checks input validation (untyped JS path)", () => {
     ).toBe(true);
   });
 
+  // Any non-string marker must fail cleanly, never throwing while the error
+  // message is built. These span both cases: values String() coerces safely
+  // (Symbol, number — echoed in the message) and values whose String() itself
+  // throws (a null-prototype object, a throwing `toString` — a type label is
+  // used instead).
   it.each([
     ["a Symbol", Symbol("x")],
-    // String()/template coercion throws on these; the check must not stringify
-    // the marker value, so it fails cleanly instead of throwing.
     ["a null-prototype object (no toString)", Object.create(null)],
     [
       "an object whose toString throws",
