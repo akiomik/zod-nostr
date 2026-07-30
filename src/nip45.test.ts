@@ -116,6 +116,9 @@ describe("zostr.nip45 output types", () => {
       .parse(["COUNT", "sub1", { kinds: [1] }]);
     // req[2] is the required first filter (non-optional).
     expectTypeOf(req[2].kinds).toEqualTypeOf<number[] | undefined>();
+
+    // @ts-expect-error embedded count body output is strict
+    res[2].extension;
   });
 
   it("infers a numeric count and optional approximate/kinds (mini)", () => {
@@ -133,5 +136,8 @@ describe("zostr.nip45 output types", () => {
       { kinds: [1] },
     ]);
     expectTypeOf(req[2].kinds).toEqualTypeOf<number[] | undefined>();
+
+    // @ts-expect-error embedded count body output is strict
+    res[2].extension;
   });
 });

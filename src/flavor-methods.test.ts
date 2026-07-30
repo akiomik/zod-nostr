@@ -1,3 +1,4 @@
+import { generateSecretKey, getPublicKey } from "nostr-tools/pure";
 import { describe, expect, it } from "vitest";
 import * as zm from "zod/mini";
 import { zostr as classicZostr } from "./classic.js";
@@ -64,6 +65,27 @@ describe("classic codecs expose instance .decode()/.encode()", () => {
     const codec = factory();
     expect(typeof codec.decode).toBe("function");
     expect(typeof codec.encode).toBe("function");
+  });
+
+  // Existence isn't enough: a mis-bound or wrong-direction instance method would
+  // still be a function. Exercise the instance .encode()/.decode() round-trip so
+  // a broken binding can't ship (the top-level z.encode/z.decode round-trips in
+  // nip19/metadata tests never touch these instance methods).
+  it("the instance .encode()/.decode() actually round-trip", () => {
+    const pk = getPublicKey(generateSecretKey());
+    const npub = classicZostr.npub();
+    expect(npub.decode(npub.encode(pk))).toBe(pk);
+
+    const id = "a".repeat(64);
+    const note = classicZostr.note();
+    expect(note.decode(note.encode(id))).toBe(id);
+
+    const content = classicZostr.nip01.metadataContent();
+    expect(content.decode(content.encode({ name: "alice" }))).toEqual({
+      name: "alice",
+    });
+    // instance .decode() runs validation, surfacing invalid JSON as a throw
+    expect(() => content.decode("not json")).toThrow();
   });
 });
 

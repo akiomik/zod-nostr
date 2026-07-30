@@ -410,4 +410,19 @@ describe("zostr NIP-01 output types", () => {
     // @ts-expect-error embedded event output is strict
     relayed[2].extension;
   });
+
+  it("an embedded event element infers a strict object — mini (no unknown index access)", () => {
+    // mini re-wraps relayMessage.event() through its own helper, which can
+    // regress the embedded object config independently of classic.
+    const relayed = zm.parse(miniZostr.nip01.relayMessage.event(), [
+      "EVENT",
+      "sub",
+      finalizeEvent(
+        { kind: 1, created_at: 0, tags: [], content: "hi" },
+        generateSecretKey(),
+      ),
+    ]);
+    // @ts-expect-error embedded event output is strict
+    relayed[2].extension;
+  });
 });
