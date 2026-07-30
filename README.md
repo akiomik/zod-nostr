@@ -126,40 +126,21 @@ matching how `nostr-tools` represents secret keys elsewhere
 Canonical paths below are `zostr.nipXX.*`; the curated Nostr-wide ones are also
 aliased at the root (`zostr.event`, `zostr.npub`, …).
 
-- **NIP-01** — event structure and templates (`nip01.event`,
-  `nip01.unsignedEvent`, `nip01.eventTemplate`), opt-in signature verification
-  (`nip01.signatureCheck`), kind:0 profile metadata (`nip01.metadata` plus its
-  content codec and field-level atoms), the `REQ`/`COUNT` filter object
-  (`nip01.filter`), and relay/client protocol messages (`nip01.relayMessage.*`,
-  `nip01.clientMessage.*`)
-- **NIP-05** — identifier and `.well-known/nostr.json` document validation
-  (`nip05.identifier`, `nip05.nostrJsonDocument`)
-- **NIP-10** — kind:1 text notes and threads (`nip10.textNote`), marked
-  reply/citation tags, and opt-in reply/thread checks
-- **NIP-11** — relay information document (`nip11.relayInformationDocument`)
-- **NIP-13** — proof of work: the `nonce` tag schema (`nip13.nonceTag`) and
-  opt-in checks for achieved difficulty (`nip13.powCheck`) and the committed
-  target (`nip13.commitmentCheck`)
-- **NIP-19** — bech32 entities (`nip19.npub`, `nip19.nsec`, `nip19.note`,
-  `nip19.nprofile`, `nip19.nevent`, `nip19.naddr`)
-- **NIP-21** — `nostr:` URIs over the supported NIP-19 entities (`nsec`
-  excluded): validation-only, per-entity codecs, and `nip21.any` decoding to a
-  `{ type, data }` discriminated union
-- **NIP-40** — expiration timestamps: the `expiration` tag schema
-  (`nip40.expirationTag`) and an opt-in not-expired check (`nip40.expirationCheck`)
-- **NIP-42** — authentication (`AUTH`): the `kind: 22242` auth event
-  (`nip42.authEvent`), the relay/client `AUTH` messages, and opt-in verification
-  checks
-- **NIP-45** — event counts (`COUNT`): request/response messages and the
-  response body object (`nip45.count`)
-- **NIP-50** — search: the filter extended with a `search` string
-  (`nip50.filter`) and the `REQ` that carries it, an intentional superset of
-  NIP-01's
-- **NIP-67** — EOSE completeness hint: `EOSE` extended with an optional hints
-  array (`nip67.relayMessage.eose`), a strict superset of NIP-01's
-- **NIP-70** — protected events: the `["-"]` marker tag schema
-  (`nip70.protectedTag`) and an opt-in check that a protected event's author is
-  an authenticated pubkey (`nip70.protectedCheck`)
+| NIP | Coverage | Key canonical paths |
+| --- | --- | --- |
+| **NIP-01** | Event structure and templates, opt-in signature verification, kind:0 profile metadata (content codec and field-level atoms), the `REQ`/`COUNT` filter object, and relay/client protocol messages | `nip01.event`, `nip01.unsignedEvent`, `nip01.eventTemplate`, `nip01.signatureCheck`, `nip01.metadata`, `nip01.filter`, `nip01.relayMessage.*`, `nip01.clientMessage.*` |
+| **NIP-05** | Identifier and `.well-known/nostr.json` document validation | `nip05.identifier`, `nip05.nostrJsonDocument` |
+| **NIP-10** | kind:1 text notes and threads, marked reply/citation tags, and opt-in reply/thread checks | `nip10.textNote` |
+| **NIP-11** | Relay information document | `nip11.relayInformationDocument` |
+| **NIP-13** | Proof of work: the `nonce` tag schema and opt-in checks for achieved difficulty and the committed target | `nip13.nonceTag`, `nip13.powCheck`, `nip13.commitmentCheck` |
+| **NIP-19** | bech32 entities | `nip19.npub`, `nip19.nsec`, `nip19.note`, `nip19.nprofile`, `nip19.nevent`, `nip19.naddr` |
+| **NIP-21** | `nostr:` URIs over the supported NIP-19 entities (`nsec` excluded): validation-only, per-entity codecs, and decoding to a `{ type, data }` discriminated union | `nip21.any` |
+| **NIP-40** | Expiration timestamps: the `expiration` tag schema and an opt-in not-expired check | `nip40.expirationTag`, `nip40.expirationCheck` |
+| **NIP-42** | Authentication (`AUTH`): the `kind: 22242` auth event, the relay/client `AUTH` messages, and opt-in verification checks | `nip42.authEvent` |
+| **NIP-45** | Event counts (`COUNT`): request/response messages and the response body object | `nip45.count` |
+| **NIP-50** | Search: the filter extended with a `search` string and the `REQ` that carries it, an intentional superset of NIP-01's | `nip50.filter` |
+| **NIP-67** | EOSE completeness hint: `EOSE` extended with an optional hints array, a strict superset of NIP-01's | `nip67.relayMessage.eose` |
+| **NIP-70** | Protected events: the `["-"]` marker tag schema and an opt-in check that a protected event's author is an authenticated pubkey | `nip70.protectedTag`, `nip70.protectedCheck` |
 
 See [docs/API.md](docs/API.md) for the full API reference.
 
