@@ -116,38 +116,50 @@ describe.each(FLAVORS)("zostr NIP-21 nostr: URIs ($name)", ({ zostr, z }) => {
     });
   });
 
-  describe("lowercase entity body is enforced (nip19.decode accepts uppercase)", () => {
-    it("uri() rejects an all-uppercase entity body, but accepts an uppercase scheme", () => {
+  describe("bech32 case handling is delegated to NIP-19 (BIP-173)", () => {
+    // A mixed-case body: uppercase the HRP+first data chars, keep the rest — a
+    // string bech32 (and nip19.decode) must reject as mixed case.
+    const mixedNpub =
+      bares.npub.slice(0, 8).toUpperCase() + bares.npub.slice(8);
+
+    it("uri() accepts an all-uppercase entity body and rejects mixed case", () => {
       const schema = zostr.nip21.uri();
-      // uppercase scheme + lowercase body: accepted (scheme is case-insensitive)
-      expect(z.safeParse(schema, `NOSTR:${bares.npub}`).success).toBe(true);
-      // uppercase body: rejected (NIP-19 entities are lowercase bech32)
-      expect(
-        z.safeParse(schema, `nostr:${bares.npub.toUpperCase()}`).success,
-      ).toBe(false);
+      // all-uppercase entity: valid bech32 (BIP-173), accepted, returned as-is
+      const upper = `nostr:${bares.npub.toUpperCase()}`;
+      expect(z.parse(schema, upper)).toBe(upper);
+      // uppercase scheme + uppercase body: also accepted
       expect(
         z.safeParse(schema, `NOSTR:${bares.npub.toUpperCase()}`).success,
-      ).toBe(false);
+      ).toBe(true);
+      // mixed case: rejected (by nip19.decode)
+      expect(z.safeParse(schema, `nostr:${mixedNpub}`).success).toBe(false);
     });
 
-    it("rejects an uppercase secret URI (no bypass of the secret pre-reject)", () => {
-      // The whole point of the pre-reject: `nostr:NSEC1…` must be rejected the
-      // same as `nostr:nsec1…`, so an uppercase HRP can't slip past into
-      // nip19.decode (which would materialize the secret key).
+    it("rejects an uppercase secret URI (secret pre-reject is case-insensitive)", () => {
+      // `nostr:NSEC1…` must be rejected like `nostr:nsec1…`, before nip19.decode
+      // materializes the secret key.
       expect(
         z.safeParse(zostr.nip21.uri(), `nostr:${nsec.toUpperCase()}`).success,
       ).toBe(false);
     });
 
-    it("codecs reject an all-uppercase entity body", () => {
+    it("codecs accept an all-uppercase entity body and re-encode lowercase-canonical", () => {
+      const lower = `nostr:${bares.npub}`;
+      const decodedLower = z.decode(zostr.nip21.npub(), lower);
+      const decodedUpper = z.decode(
+        zostr.nip21.npub(),
+        `nostr:${bares.npub.toUpperCase()}`,
+      );
+      expect(decodedUpper).toEqual(decodedLower);
+      // encode is always lowercase-canonical
+      expect(z.encode(zostr.nip21.npub(), decodedUpper)).toBe(lower);
+      // any() likewise
       expect(
-        z.safeDecode(zostr.nip21.npub(), `nostr:${bares.npub.toUpperCase()}`)
-          .success,
-      ).toBe(false);
-      expect(
-        z.safeDecode(zostr.nip21.any(), `nostr:${bares.npub.toUpperCase()}`)
-          .success,
-      ).toBe(false);
+        z.decode(zostr.nip21.any(), `nostr:${bares.npub.toUpperCase()}`),
+      ).toEqual({
+        type: "npub",
+        data: pk,
+      });
     });
   });
 

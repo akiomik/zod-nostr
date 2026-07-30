@@ -59,8 +59,10 @@ const SECRET_HRPS = ["nsec", "ncryptsec"] as const;
 /**
  * Strips the case-insensitive `nostr:` scheme (RFC 3986 §3.1: schemes are
  * case-insensitive), returning the bech32 body verbatim, or `null` if the value
- * does not carry a non-empty `nostr:` scheme. The body's case is left untouched;
- * the entity is validated by NIP-19 (lowercase bech32).
+ * does not carry a non-empty `nostr:` scheme. The body's case is left untouched:
+ * bech32 (BIP-173) permits an all-lowercase or all-uppercase entity and rejects
+ * mixed case, and `nip19.decode` enforces exactly that — so case handling for
+ * the entity is delegated to NIP-19, not re-implemented here.
  */
 function stripScheme(value: string): string | null {
   if (value.length <= SCHEME.length) {
@@ -72,8 +74,12 @@ function stripScheme(value: string): string | null {
   return value.slice(SCHEME.length);
 }
 
+// Case-insensitive: bech32 allows an all-uppercase entity, so an uppercase HRP
+// (`NSEC1…`) must be caught here too — otherwise it would slip past into
+// nip19.decode and materialize the secret key before rejection.
 function isSecretHrp(bare: string): boolean {
-  return SECRET_HRPS.some((hrp) => bare.startsWith(`${hrp}1`));
+  const lower = bare.toLowerCase();
+  return SECRET_HRPS.some((hrp) => lower.startsWith(`${hrp}1`));
 }
 
 function invalidUri(payload: core.ParsePayload<string>, message: string): void {
@@ -106,16 +112,9 @@ export function uriSchema(prefix?: Nip21Prefix): core.$ZodString<string> {
         invalidUri(payload, "Invalid NIP-21 URI (expected a nostr: URI)");
         return;
       }
-      // NIP-19 entities are lowercase bech32. `nip19.decode` also accepts an
-      // all-uppercase body, so reject any non-lowercase body up front — before
-      // the secret pre-reject and before decoding. This both enforces the
-      // lowercase-canonical entity and keeps the secret pre-reject effective
-      // for an uppercase HRP (e.g. `nostr:NSEC1…`), which would otherwise slip
-      // past isSecretHrp and materialize the secret key in nip19.decode.
-      if (bare !== bare.toLowerCase()) {
-        invalidUri(payload, "Invalid NIP-21 URI (entity must be lowercase)");
-        return;
-      }
+      // Reject secret-bearing entities before decoding (case-insensitive, so an
+      // uppercase `NSEC1…` can't slip past). Everything else — including the
+      // all-lowercase/all-uppercase-vs-mixed-case rule — is left to nip19.decode.
       if (isSecretHrp(bare)) {
         invalidUri(
           payload,
