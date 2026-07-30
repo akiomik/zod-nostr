@@ -22,6 +22,8 @@ npm install zod-nostr zod
 
 `zod` (`^4.4.3`) is a peer dependency — bring your own version.
 
+zod-nostr ships as ESM only.
+
 ## Quick start
 
 ### classic zod
@@ -111,58 +113,44 @@ rather than inventing a bespoke `.verified()`-style chain method.
 - `zostr.npub()`, `zostr.nsec()`, etc. — full **codecs**: decode a bech32
   string to its underlying value, and encode the value back to a bech32
   string. Use `z.decode(zostr.npub(), npub)` / `z.encode(zostr.npub(), pubkey)`
-  (or `.decode()`/`.encode()` methods on the classic schema).
+  (or `.decode()`/`.encode()` methods on the classic schema). See
+  [docs/API.md](docs/API.md) for each codec's decoded value.
 
-  | codec | decodes bech32 string to |
-  | --- | --- |
-  | `npub()` | hex pubkey (`string`) |
-  | `nsec()` | secret key bytes (`Uint8Array`, 32 bytes) |
-  | `note()` | hex event id (`string`) |
-  | `nprofile()` | `{ pubkey, relays? }` |
-  | `nevent()` | `{ id, relays?, author?, kind? }` |
-  | `naddr()` | `{ identifier, pubkey, kind, relays? }` |
-
-  Note that `nsec()` decodes to raw bytes (`Uint8Array`), not a hex string,
-  matching how `nostr-tools` represents secret keys elsewhere
-  (`generateSecretKey`, `finalizeEvent`, ...).
+Note that `nsec()` decodes to raw bytes (`Uint8Array`), not a hex string,
+matching how `nostr-tools` represents secret keys elsewhere
+(`generateSecretKey`, `finalizeEvent`, ...).
 
 ## Supported NIPs
 
 Canonical paths below are `zostr.nipXX.*`; the curated Nostr-wide ones are also
 aliased at the root (`zostr.event`, `zostr.npub`, …).
 
-- **NIP-01** — event structure (`nip01.event`, `nip01.unsignedEvent`,
-  `nip01.eventTemplate`), signature verification (`nip01.signatureCheck`), kind:0
-  profile metadata (object schema `nip01.metadata`, content codec
-  `nip01.metadataContent`, field-level schemas `nip01.metadataFields.*`), the
-  `REQ`/`COUNT` filter object (`nip01.filter`), and relay/client protocol
-  messages (`nip01.relayMessage.*`, `nip01.clientMessage.*`)
-- **NIP-05** — identifier format validation (`nip05.identifier`) and
-  `.well-known/nostr.json` document validation (`nip05.nostrJsonDocument`)
-- **NIP-10** — kind:1 text notes and threads (`nip10.textNote`; marked reply/
-  citation tags `nip10.eTag`/`nip10.qTag`; opt-in reply/thread checks
-  `nip10.threadCheck`/`nip10.participantsCheck`)
+- **NIP-01** — event structure and templates (`nip01.event`,
+  `nip01.unsignedEvent`, `nip01.eventTemplate`), opt-in signature verification
+  (`nip01.signatureCheck`), kind:0 profile metadata (`nip01.metadata` plus its
+  content codec and field-level atoms), the `REQ`/`COUNT` filter object
+  (`nip01.filter`), and relay/client protocol messages (`nip01.relayMessage.*`,
+  `nip01.clientMessage.*`)
+- **NIP-05** — identifier and `.well-known/nostr.json` document validation
+  (`nip05.identifier`, `nip05.nostrJsonDocument`)
+- **NIP-10** — kind:1 text notes and threads (`nip10.textNote`), marked
+  reply/citation tags, and opt-in reply/thread checks
 - **NIP-11** — relay information document (`nip11.relayInformationDocument`)
 - **NIP-19** — bech32 entities (`nip19.npub`, `nip19.nsec`, `nip19.note`,
   `nip19.nprofile`, `nip19.nevent`, `nip19.naddr`)
 - **NIP-21** — `nostr:` URIs over the supported NIP-19 entities (`nsec`
-  excluded): validation-only `nip21.uri`, per-entity codecs (`nip21.npub`,
-  `nip21.note`, `nip21.nprofile`, `nip21.nevent`, `nip21.naddr`), and
-  `nip21.any` decoding to a `{ type, data }` discriminated union
+  excluded): validation-only, per-entity codecs, and `nip21.any` decoding to a
+  `{ type, data }` discriminated union
 - **NIP-42** — authentication (`AUTH`): the `kind: 22242` auth event
-  (`nip42.authEvent`), the relay/client `AUTH` messages
-  (`nip42.relayMessage.auth`, `nip42.clientMessage.auth`), and opt-in
-  verification checks (`nip42.challengeTagCheck`, `nip42.relayTagCheck`,
-  `nip42.createdAtCheck`)
-- **NIP-45** — event counts (`COUNT`): request/response messages
-  (`nip45.clientMessage.count`, `nip45.relayMessage.count`) and the response body
-  object (`nip45.count`)
+  (`nip42.authEvent`), the relay/client `AUTH` messages, and opt-in verification
+  checks
+- **NIP-45** — event counts (`COUNT`): request/response messages and the
+  response body object (`nip45.count`)
 - **NIP-50** — search: the filter extended with a `search` string
-  (`nip50.filter`) and the `REQ` that carries it (`nip50.clientMessage.req`), an
-  intentional superset of `nip01.clientMessage.req`
+  (`nip50.filter`) and the `REQ` that carries it, an intentional superset of
+  NIP-01's
 - **NIP-67** — EOSE completeness hint: `EOSE` extended with an optional hints
-  array (`nip67.relayMessage.eose`), a strict superset of
-  `nip01.relayMessage.eose`
+  array (`nip67.relayMessage.eose`), a strict superset of NIP-01's
 
 See [docs/API.md](docs/API.md) for the full API reference.
 
@@ -195,11 +183,6 @@ backward-compatible additions and fixes bump the patch version.
 Publishing a release triggers `.github/workflows/publish.yml`, which
 type-checks, lints, tests, builds, verifies the tag matches
 `package.json`'s version, and runs `npm publish --access public`.
-
-Authentication uses npm [trusted publishing](https://docs.npmjs.com/trusted-publishers)
-(OIDC) — the workflow only needs `id-token: write`, no `NPM_TOKEN`/
-`NODE_AUTH_TOKEN` secret is involved. Provenance attestation is generated
-automatically as part of trusted publishing.
 
 ## License
 
