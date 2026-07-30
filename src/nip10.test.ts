@@ -170,6 +170,73 @@ describe.each(FLAVORS)("zostr.nip10 opt-in checks ($name)", ({ zostr, z }) => {
   });
 });
 
+// The thread/participants checks share one object across both flavors (direct
+// reference), so classic covers these untyped-JS-path guards: a consumer's own
+// loose schema can feed a non-array `tags`, a null tag element, or a non-string
+// tag value that the strict textNote() would reject at base parse.
+describe("zostr.nip10 opt-in checks input validation (untyped JS path)", () => {
+  const looseEvent = zc.object({
+    id: zc.string(),
+    pubkey: zc.string(),
+    created_at: zc.number(),
+    kind: zc.number(),
+    tags: zc.any(),
+    content: zc.string(),
+    sig: zc.string(),
+  });
+  const base = {
+    id: ID,
+    pubkey: PK,
+    created_at: 0,
+    kind: 1,
+    content: "hi",
+    sig: "a".repeat(128),
+  };
+  const thread = looseEvent.check(classicZostr.nip10.threadCheck());
+
+  it("threadCheck fails (does not throw) when tags is not an array", () => {
+    const result = thread.safeParse({ ...base, tags: "nope" });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.message).toContain('"tags"');
+  });
+
+  it("threadCheck skips a null tag element (does not throw)", () => {
+    // A null tag can't be an e tag; guarded, so a single valid root still passes.
+    expect(
+      thread.safeParse({ ...base, tags: [null, ["e", ID, "", "root"]] })
+        .success,
+    ).toBe(true);
+  });
+
+  it("threadCheck fails (does not throw) on a non-string e-tag marker", () => {
+    // A Symbol marker must be String()-coerced, not template-interpolated (which
+    // would throw); it is reported as an invalid marker.
+    expect(
+      thread.safeParse({ ...base, tags: [["e", ID, "", Symbol("x")]] }).success,
+    ).toBe(false);
+  });
+
+  it("participantsCheck fails (does not throw) when tags is not an array", () => {
+    const check = looseEvent.check(classicZostr.nip10.participantsCheck([PK]));
+    const result = check.safeParse({ ...base, tags: 42 });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.message).toContain('"tags"');
+  });
+
+  it("participantsCheck skips a null / non-string p tag on the untyped path", () => {
+    const check = looseEvent.check(classicZostr.nip10.participantsCheck([PK]));
+    // A null tag is skipped, so the real p tag after it is still counted.
+    expect(check.safeParse({ ...base, tags: [null, ["p", PK]] }).success).toBe(
+      true,
+    );
+    // A non-string pubkey isn't added to the participant set, so the expected
+    // participant is missing and the check fails (without throwing).
+    expect(
+      check.safeParse({ ...base, tags: [["p", Symbol("x")]] }).success,
+    ).toBe(false);
+  });
+});
+
 describe("zostr.nip10 output types", () => {
   it("eTag()/qTag() infer precise tuple types (classic)", () => {
     const e = classicZostr.nip10.eTag().parse(["e", ID, "", "root", PK]);

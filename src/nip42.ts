@@ -1,5 +1,5 @@
 import type * as core from "zod/v4/core";
-import { makeCheck, type NostrEventLike } from "./core/checks.js";
+import { isNamedTag, makeCheck, type NostrEventLike } from "./core/checks.js";
 import {
   zodLiteral,
   zodNever,
@@ -62,12 +62,19 @@ function clientAuthMessage() {
   return zodTuple([zodLiteral("AUTH"), authEvent()]);
 }
 
-/** Value of the first tag named `name` (its second element), or undefined. */
-function firstTagValue(
-  eventTags: readonly string[][],
-  name: string,
-): string | undefined {
-  return eventTags.find((tag) => tag[0] === name)?.[1];
+/**
+ * Value of the first tag named `name` (its second element), or `undefined`.
+ * Takes `unknown` because a check reached through a consumer's loose schema sees
+ * whatever the runtime `tags` is, not the `string[][]` the static event type
+ * promises: a non-array `tags` yields `undefined` (no match) rather than throwing
+ * on `.find`, and {@link isNamedTag} guards each element so a null/non-array tag
+ * is skipped. The result stays `unknown` — the tag-value checks only compare it
+ * (`!== expected`), so a non-string value simply fails the match (fail-closed)
+ * and there is nothing to coerce.
+ */
+function firstTagValue(eventTags: unknown, name: string): unknown {
+  if (!Array.isArray(eventTags)) return undefined;
+  return eventTags.find((tag) => isNamedTag(tag, name))?.[1];
 }
 
 /**
