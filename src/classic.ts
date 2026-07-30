@@ -9,6 +9,7 @@ import * as nip05 from "./nip05.js";
 import * as nip10 from "./nip10.js";
 import * as nip11 from "./nip11.js";
 import * as nip19 from "./nip19.js";
+import * as nip21 from "./nip21.js";
 import * as nip42 from "./nip42.js";
 import * as nip45 from "./nip45.js";
 import * as nip50 from "./nip50.js";
@@ -186,6 +187,27 @@ const nip19Namespace = {
   naddr: () => classicCodec(nip19.naddrCodec),
 };
 
+// NIP-21 `nostr:` URIs — a scheme layer over the supported NIP-19 entities
+// (S = npub/note/nprofile/nevent/naddr; nsec excluded). `uri()` validates
+// without decoding; the entity codecs and `any()` decode/encode. Namespaced
+// under nip21 only (no root aliases), keeping the URI-vs-bare distinction
+// explicit. Leaf names mirror the NIP-19 entities to signal the relationship.
+const nip21Namespace = {
+  // Validation-only string schema (any supported entity, or a specific one)
+  uri: (prefix?: nip21.Nip21Prefix) =>
+    classicSchema(z.ZodString, nip21.uriSchema(prefix)),
+
+  // Per-entity codecs (nostr:<entity> <-> the NIP-19 output)
+  npub: () => classicCodec(nip21.npubUriCodec),
+  note: () => classicCodec(nip21.noteUriCodec),
+  nprofile: () => classicCodec(nip21.nprofileUriCodec),
+  nevent: () => classicCodec(nip21.neventUriCodec),
+  naddr: () => classicCodec(nip21.naddrUriCodec),
+
+  // Codec over all supported entities -> a `{ type, data }` discriminated union
+  any: () => classicCodec(nip21.anyUriCodec),
+};
+
 export const zostr = {
   // Generic codec: JSON string <-> the given schema's value (cross-spec utility)
   jsonCodec: <T extends core.SomeType>(schema: T) =>
@@ -194,6 +216,7 @@ export const zostr = {
   // Canonical spec namespaces
   nip01: nip01Namespace,
   nip19: nip19Namespace,
+  nip21: nip21Namespace,
 
   // NIP-05
   nip05: nip05Namespace,

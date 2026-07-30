@@ -6,8 +6,8 @@
 
 Zod schemas and codecs for [Nostr](https://nostr.com) — NIP-01 events, NIP-05
 identifiers, NIP-10 text notes, NIP-11 relay information documents, NIP-19 bech32
-entities, NIP-42 authentication, NIP-45 event counts, NIP-50 search, and NIP-67
-EOSE completeness hints.
+entities, NIP-21 `nostr:` URIs, NIP-42 authentication, NIP-45 event counts,
+NIP-50 search, and NIP-67 EOSE completeness hints.
 
 Validation logic is written once against `zod/v4/core` and re-exposed through
 two entry points, so the exact same rules work with both
@@ -145,6 +145,10 @@ aliased at the root (`zostr.event`, `zostr.npub`, …).
 - **NIP-11** — relay information document (`nip11.relayInformationDocument`)
 - **NIP-19** — bech32 entities (`nip19.npub`, `nip19.nsec`, `nip19.note`,
   `nip19.nprofile`, `nip19.nevent`, `nip19.naddr`)
+- **NIP-21** — `nostr:` URIs over the supported NIP-19 entities (`nsec`
+  excluded): validation-only `nip21.uri`, per-entity codecs (`nip21.npub`,
+  `nip21.note`, `nip21.nprofile`, `nip21.nevent`, `nip21.naddr`), and
+  `nip21.any` decoding to a `{ type, data }` discriminated union
 - **NIP-42** — authentication (`AUTH`): the `kind: 22242` auth event
   (`nip42.authEvent`), the relay/client `AUTH` messages
   (`nip42.relayMessage.auth`, `nip42.clientMessage.auth`), and opt-in
