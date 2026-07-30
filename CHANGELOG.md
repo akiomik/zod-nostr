@@ -75,6 +75,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     always emitted lowercase on encode (RFC 3986 §3.1); whitespace, a query, a
     fragment, a trailing suffix, and a doubled scheme are rejected.
 
+### Fixed
+
+- **`zostr.nip42.challengeTagCheck` / `relayTagCheck` fail closed on a non-string
+  expected value.** A non-string `challenge`/`relayUrl` (e.g. an `undefined`
+  reaching the factory through untyped JavaScript, outside the `string` type
+  contract) previously let an auth event carrying no matching tag compare
+  `undefined !== undefined` and silently pass, disabling the check. The factory
+  now throws at composition time, the same fail-closed guard `createdAtCheck`
+  applies. Callers passing a real string (every type-checked use) are unaffected.
+
 ## [0.5.0] - 2026-07-29
 
 This release reorganizes the public API around **canonical owner paths**. Every

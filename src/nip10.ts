@@ -1,5 +1,10 @@
 import type * as core from "zod/v4/core";
-import { makeCheck, type NostrEventLike } from "./core/checks.js";
+import {
+  guardEventTags,
+  isNamedTag,
+  makeCheck,
+  type NostrEventLike,
+} from "./core/checks.js";
 import {
   zodLiteral,
   zodNever,
@@ -218,20 +223,36 @@ function qTag() {
  */
 function threadCheck(): core.$ZodCheck<NostrEventLike> {
   return makeCheck<NostrEventLike>((payload) => {
+    // A non-array `tags` is a malformed event, not a threadless one.
+    const tags = guardEventTags(payload);
+    if (tags === undefined) return;
     let rootCount = 0;
     let replyCount = 0;
     let rootIndex = -1;
     let replyIndex = -1;
-    payload.value.tags.forEach((tag, index) => {
-      if (tag[0] !== "e") return;
+    tags.forEach((tag, index) => {
+      if (!isNamedTag(tag, "e")) return;
       const value = tag[3];
       // Unmarked (positional scheme) or present-but-empty: not our concern.
       if (value === undefined || value === "") return;
-      if (!E_TAG_MARKER_SET.has(value)) {
+      // isNamedTag narrows only the tag name, so the marker stays `unknown`; a
+      // non-string value on the untyped path is an invalid marker. Echo the
+      // offending value, but never let building the message throw: `String()`
+      // (like template coercion) throws on a null-prototype object or one whose
+      // `toString` throws, so fall back to a type label only for those. A
+      // string, number, boolean, symbol, or ordinary object still shows its
+      // actual value, keeping the safeParse-never-throws contract.
+      if (typeof value !== "string" || !E_TAG_MARKER_SET.has(value)) {
+        let actual: string;
+        try {
+          actual = String(value);
+        } catch {
+          actual = `<non-string:${typeof value}>`;
+        }
         payload.issues.push({
           code: "custom",
           input: payload.value,
-          message: `Invalid "e" tag marker (expected "root" or "reply"): ${value}`,
+          message: `Invalid "e" tag marker (expected "root" or "reply"): ${actual}`,
         });
         return;
       }
@@ -288,9 +309,15 @@ function participantsCheck(
 ): core.$ZodCheck<NostrEventLike> {
   const required = new Set(expected);
   return makeCheck<NostrEventLike>((payload) => {
+    // A non-array `tags` is a malformed event, not one with no participants.
+    const tags = guardEventTags(payload);
+    if (tags === undefined) return;
     const present = new Set<string>();
-    for (const tag of payload.value.tags) {
-      if (tag[0] === "p" && tag[1] !== undefined) {
+    for (const tag of tags) {
+      // isNamedTag narrows only the tag name; the pubkey stays `unknown`, so add
+      // it only when it's actually a string (skips a non-string untyped-path
+      // value rather than polluting the participant set).
+      if (isNamedTag(tag, "p") && typeof tag[1] === "string") {
         present.add(tag[1]);
       }
     }
