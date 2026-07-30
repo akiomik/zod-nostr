@@ -298,7 +298,8 @@ describe("zostr.nip13 check input validation", () => {
       }).success,
     ).toBe(false);
     expect(
-      check.safeParse({ ...eventWith(ID_8), tags: [["nonce", "1", 8]] }).success,
+      check.safeParse({ ...eventWith(ID_8), tags: [["nonce", "1", 8]] })
+        .success,
     ).toBe(false);
   });
 });
