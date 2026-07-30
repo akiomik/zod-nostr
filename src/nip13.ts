@@ -11,17 +11,23 @@ import {
 const NONCE_TAG_NAME = "nonce";
 
 /**
- * Canonical non-negative decimal integer (no leading zeros): `"0"`, `"20"`, …
- * A NIP-13 target difficulty is a leading-zero-bit **count**, so its wire form
- * is a plain non-negative integer — the same canonical-decimal shape used for a
- * `<kind>` coordinate (see `nip10`'s event-address check).
+ * A non-negative decimal integer: `"0"`, `"5"`, `"20"`, … A NIP-13 target
+ * difficulty is a leading-zero-bit **count**, so it is a plain non-negative
+ * integer on the wire. NIP-13 defines **no** canonical encoding (it does not
+ * prohibit leading zeros), so `"05"` is accepted — the base schema must not
+ * reject a spec-valid value (design.md, "never reject spec-valid input"). Only
+ * non-numeric, signed, and fractional strings are rejected.
  */
-const DIFFICULTY_RE = /^(0|[1-9]\d*)$/;
+const DIFFICULTY_RE = /^\d+$/;
+
+/** A NIP-01 event id: exactly 64 lowercase hex chars (same as `eventId()`). */
+const EVENT_ID_RE = /^[0-9a-f]{64}$/;
 
 /**
  * The `nonce` tag's committed target difficulty (its third element): a string
- * validated as a non-negative decimal integer. Modeled strictly, the same way
- * `nip10.eTag()` validates its marker enum rather than accepting any string.
+ * validated as a non-negative integer (see {@link DIFFICULTY_RE}). A present-
+ * but-invalid value (non-numeric, signed, fractional) is rejected; the format is
+ * validated without imposing a canonical encoding.
  */
 function targetDifficulty(): core.$ZodString<string> {
   return zodString([
@@ -111,16 +117,19 @@ function assertDifficulty(fnName: string, minDifficulty: number): void {
  * `zostr.event().check(zostr.nip13.powCheck(20))`.
  *
  * `minDifficulty` fails closed (see {@link assertDifficulty}). `0` is valid and
- * accepts any event (no requirement). If the value carries no string `id` (e.g.
- * composed on an id-less schema through the untyped JS path), the check **fails**
- * rather than throwing, keeping zod's `safeParse`-never-throws contract — the
- * same graceful degradation as `signatureCheck()` on a malformed event.
+ * accepts any event (no requirement). An `id` that is not a 64-character
+ * lowercase hex string — a malformed id, or an id-less schema reached through
+ * the untyped JS path — **fails** the check rather than being miscounted as work
+ * (an invalid hex digit would otherwise `parseInt` to `NaN`, which
+ * `countLeadingZeroBits` would treat as 4 leading zero bits) or throwing, keeping
+ * zod's `safeParse`-never-throws contract (the same graceful degradation as
+ * `signatureCheck()` on a malformed event).
  */
 function powCheck(minDifficulty: number): core.$ZodCheck<NostrEventLike> {
   assertDifficulty("powCheck", minDifficulty);
   return makeCheck<NostrEventLike>((payload) => {
     const { id } = payload.value;
-    if (typeof id !== "string" || countLeadingZeroBits(id) < minDifficulty) {
+    if (!EVENT_ID_RE.test(id) || countLeadingZeroBits(id) < minDifficulty) {
       payload.issues.push({
         code: "custom",
         input: payload.value,

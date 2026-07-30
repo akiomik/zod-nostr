@@ -53,17 +53,16 @@ describe.each(FLAVORS)("zostr.nip13.nonceTag ($name)", ({ zostr, z }) => {
   });
 
   it("validates the committed target as a non-negative integer string", () => {
-    // Accepts "0"; rejects non-numeric and non-canonical (leading-zero) decimals.
+    // Accepts "0" and leading-zero decimals — NIP-13 defines no canonical
+    // encoding, so "05" must not be rejected. Non-numeric, signed, fractional,
+    // and empty values are rejected.
     expect(z.parse(zostr.nip13.nonceTag(), ["nonce", "1", "0"])).toBeTruthy();
-    expect(
-      z.safeParse(zostr.nip13.nonceTag(), ["nonce", "1", "abc"]).success,
-    ).toBe(false);
-    expect(
-      z.safeParse(zostr.nip13.nonceTag(), ["nonce", "1", "-1"]).success,
-    ).toBe(false);
-    expect(
-      z.safeParse(zostr.nip13.nonceTag(), ["nonce", "1", "05"]).success,
-    ).toBe(false);
+    expect(z.parse(zostr.nip13.nonceTag(), ["nonce", "1", "05"])).toBeTruthy();
+    for (const bad of ["abc", "-1", "1.5", ""]) {
+      expect(
+        z.safeParse(zostr.nip13.nonceTag(), ["nonce", "1", bad]).success,
+      ).toBe(false);
+    }
   });
 
   it("rejects a wrong tag name and a fourth element (fixed tuple)", () => {
@@ -206,6 +205,32 @@ describe.each(FLAVORS)("zostr.nip13 end-to-end ($name)", ({ zostr, z }) => {
       .check(zostr.nip13.powCheck(difficulty))
       .check(zostr.nip13.commitmentCheck(difficulty));
     expect(z.parse(verified, signed)).toBeTruthy();
+  });
+});
+
+describe("zostr.nip13.powCheck id validation", () => {
+  it("fails on a malformed (non-hex) id rather than miscounting it as work", () => {
+    // A consumer's own loosely-typed event schema can carry a non-hex id past
+    // base parse. Invalid hex digits parseInt to NaN, and
+    // Math.clz32(NaN) - 28 === 4 would otherwise let "g".repeat(64) pass
+    // powCheck(4); the check validates the id format itself. powCheck is one
+    // shared check object across both flavors, so classic covers the guard.
+    const looseEvent = zc.object({
+      id: zc.string(),
+      pubkey: zc.string(),
+      created_at: zc.number(),
+      kind: zc.number(),
+      tags: zc.array(zc.array(zc.string())),
+      content: zc.string(),
+      sig: zc.string(),
+    });
+    const schema = looseEvent.check(classicZostr.nip13.powCheck(4));
+
+    expect(
+      schema.safeParse({ ...eventWith(ID_8), id: "g".repeat(64) }).success,
+    ).toBe(false);
+    // Sanity: the same loose schema accepts a real mined id.
+    expect(schema.safeParse(eventWith(ID_8)).success).toBe(true);
   });
 });
 
