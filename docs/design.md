@@ -306,3 +306,6 @@ Longer-form records of specific past decisions live in
 - [0002 — Documentation altitudes and one-way references](./decisions/0002-documentation-altitudes.md)
   — how the reference, how-to, and rationale docs are split, and why references
   flow one way (how-to → reference → rationale).
+- [0003 — JSDoc on the public surface](./decisions/0003-jsdoc-on-the-public-surface.md)
+  — editor hover text as an altitude below the reference, required on every
+  public path in both flavors and enforced over the built declarations.

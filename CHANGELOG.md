@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **JSDoc across the whole public surface.** Every `zostr` path — each schema,
+  codec, and check factory, each namespace, and the root object itself — now
+  carries a doc comment, so editors show a summary on hover and in completion.
+  Previously the built declarations carried none, and the explanations only
+  existed in `docs/API.md`. The comments lead with what a name can't carry:
+  whether unknown keys are rejected or preserved, which arguments fail closed at
+  composition time, where encode and decode are asymmetric, and how
+  similarly-named siblings differ (`metadata()` vs. `metadataContent()`,
+  `nip13.powCheck()` vs. `nip13.commitmentCheck()`). `docs/API.md` remains the
+  full reference; a hover summary is a lossy view of it.
+
+  Both entry points document every path identically. `npm run test:jsdoc`
+  checks that over the built declarations — no path undocumented, no path in one
+  flavor only, no two comments disagreeing — and runs in CI and before publish.
+  The rationale is recorded in
+  `docs/decisions/0003-jsdoc-on-the-public-surface.md`.
+
 ## [0.5.1] - 2026-07-31
 
 ### Added
