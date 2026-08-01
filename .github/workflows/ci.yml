@@ -41,5 +41,8 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Public JSDoc check (built declarations)
+        run: npm run test:jsdoc
+
       - name: External consumer compile (packed tarball)
         run: npm run test:consumer
