@@ -92,16 +92,21 @@ const DOCUMENT = /^[0-9A-Z]{2}$/;
 const LABEL = /^[A-Za-z]+$/;
 
 /**
- * Whether `date` is a real day, not merely digit-shaped. A transposed month
- * (`2026-90-04`) is copied into the README cell by the normal workflow, so the
- * cell comparison agrees with it and nothing else here would notice.
+ * Whether `date` is a day that has happened, not merely digit-shaped. A
+ * transposed month (`2026-90-04`) or year (`2062-06-13`) is copied into the
+ * README cell by the normal workflow, so the cell comparison agrees with it
+ * and nothing else here would notice.
  */
 function isCalendarDate(date) {
   if (!DATE.test(date ?? "")) return false;
   const parsed = new Date(`${date}T00:00:00Z`);
   return (
     !Number.isNaN(parsed.getTime()) &&
-    parsed.toISOString().slice(0, 10) === date
+    parsed.toISOString().slice(0, 10) === date &&
+    // A revision cannot have landed later than now, so a transposed year is
+    // caught along with a transposed month — both are real days otherwise, and
+    // the README cell is copied from the same field, so it agrees either way.
+    parsed.getTime() <= Date.now()
   );
 }
 
@@ -161,6 +166,9 @@ function sectionLines(readme) {
   let offset = 0;
   let fence = null;
   let found = false;
+  // A second heading of the same name would hold rows this scan never reads,
+  // and reading only the first of them is a silent answer to a broken README.
+  let twice = false;
   for (const [index, line] of all.entries()) {
     const after = fenceAfter(line, fence);
     if (after !== fence) {
@@ -178,7 +186,13 @@ function sectionLines(readme) {
         }
         continue;
       }
-      if (HEADING.test(line)) break;
+      if (HEADING.test(line)) {
+        twice = readme
+          .split("\n")
+          .slice(index)
+          .some((rest) => rest.trim().replace(/\s+#+$/, "") === TABLE_HEADING);
+        break;
+      }
       const above = lines.at(-1) ?? "";
       const paragraph = above.trim() !== "" && !NOT_A_PARAGRAPH.test(above);
       if (UNDERLINE.test(line) && paragraph) {
@@ -188,7 +202,7 @@ function sectionLines(readme) {
     }
     if (found) lines.push(line);
   }
-  return found ? { lines, offset } : null;
+  return found ? { lines, offset, twice } : null;
 }
 
 /**
@@ -273,7 +287,7 @@ function rowsUnder(lines, index) {
 function supportedNipsTables(readme, column) {
   const section = sectionLines(readme);
   if (section === null) return null;
-  const { lines, offset } = section;
+  const { lines, offset, twice } = section;
   const tables = [];
   let fence = null;
   for (let index = 0; index < lines.length; index += 1) {
@@ -306,7 +320,7 @@ function supportedNipsTables(readme, column) {
     });
     index = end - 1; // the loop's own step moves past it
   }
-  return tables;
+  return { tables, twice };
 }
 
 /**
@@ -471,7 +485,12 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
     problems.push(`${BASELINE}: \`sources.${TABLE_FAMILY}\` has no repository`);
   const repository = trimmed === "" ? undefined : trimmed;
 
-  const tables = supportedNipsTables(readme, series);
+  const section = supportedNipsTables(readme, series);
+  if (section?.twice)
+    problems.push(
+      `${README}: more than one "Supported NIPs" section, so what the table says is not all of it`,
+    );
+  const tables = section?.tables ?? null;
   if (tables === null || tables.length === 0) {
     problems.push(`${README}: no "Supported NIPs" section with a NIP table`);
     return problems;

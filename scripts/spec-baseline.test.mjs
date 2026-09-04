@@ -96,6 +96,14 @@ describe("specBaselineProblems", () => {
       ]);
     });
 
+    it("rejects a day that has not happened", () => {
+      const input = withEntry("nips", "01", { date: "2999-01-01" });
+      input.readme = input.readme.replace("[2026-09-04]", "[2999-01-01]");
+      expect(specBaselineProblems(input)).toEqual([
+        "spec-baseline.json: `nips.01` has no YYYY-MM-DD calendar date",
+      ]);
+    });
+
     it("accepts a leap day that does exist", () => {
       const input = withEntry("nips", "01", { date: "2024-02-29" });
       input.readme = input.readme.replace("[2026-09-04]", "[2024-02-29]");
@@ -1016,6 +1024,25 @@ describe("specBaselineProblems", () => {
       expect(specBaselineProblems(input)).toEqual([
         "README.md: cannot read a NIP number from row: |  |  |  |",
         expect.stringContaining("NIP-01's spec baseline cell disagrees"),
+      ]);
+    });
+
+    it("reports a second section of the same name", () => {
+      const input = repository();
+      input.readme = input.readme.replace(
+        "## Development",
+        [
+          "## Supported NIPs",
+          "",
+          "| NIP | Spec baseline | Coverage |",
+          "| --- | --- | --- |",
+          "| **NIP-99** | x | Example |",
+          "",
+          "## Development",
+        ].join("\n"),
+      );
+      expect(specBaselineProblems(input)).toEqual([
+        expect.stringContaining('more than one "Supported NIPs" section'),
       ]);
     });
 

@@ -73,7 +73,8 @@ the single source of truth for provenance.
   referencing `nip05.identifier()`.
 - **`src/` is the authority on what must be baselined, family by family.**
   Four places name the same set of specs — the modules, the baseline, the
-  `Supported NIPs` table, and the README's opening `Covers NIP-…` sentence —
+  `Supported NIPs` table, and the README's prose outside it, where the opening
+  `Covers NIP-…` sentence names them all —
   and the modules of a registered family decide:
   `src/nip67.ts` calls for a `nips.67` entry, and an entry with no module is
   dead weight. Registering the family stays a judgement, for the reason under
@@ -121,9 +122,9 @@ the single source of truth for provenance.
 ## Consequences
 
 Adding `src/nipXX.ts` now means adding a baseline entry, a table row, and a
-mention outside that table — the README's opening `Covers NIP-…` sentence names
-them all — or the build fails. A document from a new family needs a `sources`
-entry as well — a requirement this record carries, not one the check can
+mention anywhere outside that table — the opening `Covers NIP-…` sentence is
+where they are named today — or the build fails. A document from a new family
+needs a `sources` entry as well — a requirement this record carries, not one the check can
 demand, for the reason below. Re-reading a spec is a reviewable change with a
 diff, rather than an undocumented act of diligence. The baseline is a claim
 about the text a schema targets, not a guarantee that upstream has not moved
