@@ -1,5 +1,5 @@
 {
-  "note": "The revision of each specification that zod-nostr's schemas are written against. `commit` identifies that revision in the document family's source repository and `date` is when it landed there \u2014 the commit's committer date, which is not always the author date a commit page shows; neither is the date zod-nostr looked at it. `sha256` is the SHA-256 of the document's Markdown at that commit, so a checker can detect when the upstream text changes. An entry is bumped when the document is re-read and the schemas are confirmed against it \u2014 git history and CHANGELOG.md record when that happened. `npm run test:spec-baseline` keeps this file and README.md from disagreeing.",
+  "note": "The revision of each specification that zod-nostr's schemas are written against. `commit` identifies that revision in the document family's source repository and `date` is when it landed there \u2014 the commit's committer date, which is not always the author date a commit page shows; neither is the date zod-nostr looked at it. `sha256` is the SHA-256 of the document's Markdown at that commit, so a checker can detect when the upstream text changes. An entry is bumped when the document is re-read and the schemas are confirmed against it \u2014 git history and CHANGELOG.md record when that happened.",
   "sources": {
     "nips": {
       "label": "NIP",
