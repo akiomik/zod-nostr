@@ -95,6 +95,26 @@ describe("specBaselineProblems", () => {
       ]);
     });
 
+    // Judged on a commit that is one, as the paste check is on a hash that is:
+    // two placeholders disagreeing about a date they do not have is noise.
+    it("does not date entries by a commit that is not one", () => {
+      const input = repository();
+      for (const [id, date] of [
+        ["01", "2026-01-01"],
+        ["05", "2026-02-02"],
+      ])
+        input.baseline.documents.nips[id] = {
+          commit: "TODO",
+          date,
+          sha256: HASH.replace(/^6/, id === "01" ? "7" : "8"),
+        };
+      input.files.push("nip05.ts");
+      expect(specBaselineProblems(input)).toEqual([
+        expect.stringContaining("`nips.01` has no 40-character commit"),
+        expect.stringContaining("`nips.05` has no 40-character commit"),
+      ]);
+    });
+
     it("reports one disagreement per commit, not per entry", () => {
       const input = repository();
       for (const id of ["05", "10"])

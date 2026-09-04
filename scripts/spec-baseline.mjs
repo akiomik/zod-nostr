@@ -71,7 +71,9 @@ function holds(value) {
 /**
  * The documents a family implements, as id → path, from `<label><id>.ts`
  * anywhere under `src/`. Matched case-insensitively, since neither the
- * lowercase filename nor the flat layout is enforced by anything.
+ * lowercase filename nor the flat layout is enforced by anything, and on two
+ * id characters, which is what a document id is — `DOCUMENT` says the same of
+ * the baseline's keys. A module of another width is not one of these.
  */
 function moduleIds(label, files) {
   const module = new RegExp(`^${label}([0-9a-z]{2})\\.ts$`, "i");
@@ -163,8 +165,9 @@ export function specBaselineProblems({ baseline, files }) {
       // over two. Tested for being strings first, for the reason the label is:
       // a regex coerces what it tests, and an array of one hash would key the
       // maps below by the array, quietly excusing itself from both checks.
-      if (typeof entry.commit !== "string" || !COMMIT.test(entry.commit))
-        problems.push(`${where} has no 40-character commit`);
+      const committed =
+        typeof entry.commit === "string" && COMMIT.test(entry.commit);
+      if (!committed) problems.push(`${where} has no 40-character commit`);
       if (!isCalendarDate(entry.date))
         problems.push(`${where} has no YYYY-MM-DD calendar date`);
       const hashed =
@@ -180,7 +183,7 @@ export function specBaselineProblems({ baseline, files }) {
 
       // One commit has one committer date, so two entries recording it must
       // agree about when it landed.
-      if (typeof entry.commit === "string" && isCalendarDate(entry.date)) {
+      if (committed && isCalendarDate(entry.date)) {
         const first = dated.get(entry.commit);
         if (first === undefined)
           dated.set(entry.commit, { date: entry.date, at: `${family}.${id}` });
