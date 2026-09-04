@@ -101,6 +101,17 @@ describe("specBaselineProblems", () => {
       ).toEqual([]);
     });
 
+    // A regex coerces what it tests, so an array of one hash would pass and
+    // then key the paste check by the array rather than by the hash.
+    it.each([
+      [{ commit: [COMMIT] }, "has no 40-character commit"],
+      [{ sha256: [HASH] }, "has no 64-character sha256"],
+    ])("rejects %o", (patch, message) => {
+      expect(specBaselineProblems(withEntry("nips", "01", patch))).toEqual([
+        `spec-baseline.json: \`nips.01\` ${message}`,
+      ]);
+    });
+
     it.each([
       ["null", null],
       ["a string", "todo"],
@@ -153,14 +164,16 @@ describe("specBaselineProblems", () => {
       ]);
     });
 
-    it("names the module it looked for the way the id is spelled", () => {
+    // Suggested the way every module here is written, which the ADR states
+    // and the check accepts either spelling of.
+    it("names the module it looked for in lowercase", () => {
       const input = repository();
       input.baseline.documents.nips = {
         "7D": { commit: COMMIT, date: "2026-09-04", sha256: HASH },
       };
       input.files = ["lud16.ts"];
       expect(specBaselineProblems(input)).toEqual([
-        expect.stringContaining("`nips.7D` has no `src/nip7D.ts`"),
+        expect.stringContaining("`nips.7D` has no `src/nip7d.ts`"),
       ]);
     });
 

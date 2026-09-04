@@ -152,17 +152,21 @@ export function specBaselineProblems({ baseline, files }) {
         excused.add(id.toUpperCase());
         continue;
       }
-      if (!COMMIT.test(entry.commit))
+      // Tested for being strings first, for the reason the label is: a regex
+      // coerces what it tests, and an array of one hash would key the map
+      // below by the array, quietly excusing itself from the paste check.
+      if (typeof entry.commit !== "string" || !COMMIT.test(entry.commit))
         problems.push(`${where} has no 40-character commit`);
       if (!isCalendarDate(entry.date))
         problems.push(`${where} has no YYYY-MM-DD calendar date`);
-      if (!SHA256.test(entry.sha256))
-        problems.push(`${where} has no 64-character sha256`);
+      const hashed =
+        typeof entry.sha256 === "string" && SHA256.test(entry.sha256);
+      if (!hashed) problems.push(`${where} has no 64-character sha256`);
 
       // Two documents sharing a hash means one was pasted from the other — the
       // likeliest corruption of the field the baseline rests on, and one of the
       // few things about it judgeable without the text.
-      if (SHA256.test(entry.sha256)) {
+      if (hashed) {
         const pasted = hashes.get(entry.sha256);
         if (pasted)
           problems.push(`${where} and \`${pasted}\` record the same sha256`);
@@ -172,7 +176,7 @@ export function specBaselineProblems({ baseline, files }) {
       if (!named) continue; // the check below needs a usable label
       if (!modules.has(id))
         problems.push(
-          `${where} has no \`${SOURCE}/${label.toLowerCase()}${id}.ts\``,
+          `${where} has no \`${SOURCE}/${label.toLowerCase()}${id.toLowerCase()}.ts\``,
         );
     }
 

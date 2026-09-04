@@ -65,16 +65,15 @@ the single source of truth for provenance.
   README as Markdown. That parser grew larger than the record it guarded, so
   the duplication goes rather than the guard.
 - **A module is named for the document it implements.** Provenance is read from
-  filenames, so a spec module is `src/<label><id>.ts` — `src/nip67.ts` for
-  NIP-67, `src/lud01.ts` for LUD-01, matched without regard for case or how
-  deep under `src/` it sits — and it must name the document whose rules the
-  module encodes, not the field that happens to carry the value. The kind:0
-  `lud06` field carries an LNURL, but the encoding is LUD-01's and LUD-06
-  defines only what the decoded URL answers
-  with, so the module is
-  `lud01.ts` and the field keeps its ecosystem name at
-  `metadataFields.lud06()` — the same split as `metadataFields.nip05()`
-  referencing `nip05.identifier()`.
+  filenames, so a spec module is `src/<label><id>.ts`, written lowercase as
+  every one of them is — `src/nip67.ts` for NIP-67, `src/lud01.ts` for LUD-01,
+  though the check matches without regard for case or for how deep under `src/`
+  it sits — and it must name the document whose rules the module encodes, not
+  the field that happens to carry the value. The kind:0 `lud06` field carries
+  an LNURL, but the encoding is LUD-01's and LUD-06 defines only what the
+  decoded URL answers with, so the module is `lud01.ts` and the field keeps its
+  ecosystem name at `metadataFields.lud06()` — the same split as
+  `metadataFields.nip05()` referencing `nip05.identifier()`.
 - **`src/` is the authority on what must be baselined, family by family.** Two
   places name the same set of specs — the modules and the baseline — and the
   modules of a registered family decide: `src/nip67.ts` calls for a `nips.67`
@@ -122,24 +121,24 @@ the single source of truth for provenance.
 
 Adding `src/nipXX.ts` now means adding a baseline entry, or the build fails.
 The README's `Supported NIPs` table and its opening `Covers NIP-…` sentence
-still name the specs this library implements, and stay hand-maintained prose —
-what they say about coverage is not a revision, so nothing there can fall out
-of step with the baseline. A document from a new family
-needs a `sources` entry as well — a requirement this record carries, not one
-the check can demand, for the reason below. Re-reading a spec is a reviewable
-change with a diff, rather than an undocumented act of diligence. The baseline
-is a claim about the text a schema targets, not a guarantee that upstream has
-not moved since — until the scheduled comparison exists, an entry going stale
-is still noticed by hand.
+still name the specs this library implements, and stay hand-maintained prose.
+No revision is written there, so none can fall out of step with the baseline;
+what they list is coverage, and a NIP missing from either is support a reader
+cannot find rather than provenance gone stale. `docs/design.md` carries that
+requirement. A document from a new family needs a `sources` entry as well — a
+requirement this record carries, not one the check can demand, for the reason
+below. Re-reading a spec is a reviewable change with a diff, rather than an
+undocumented act of diligence. The baseline is a claim about the text a schema
+targets, not a guarantee that upstream has not moved since — until the
+scheduled comparison exists, an entry going stale is still noticed by hand.
 
 Three gaps stay open whatever is checked. The first is that nothing offline can
 tie an entry's `sha256` or `date` to its `commit`: both are facts about a
-repository this one does not vendor, so a bump that updates `commit` and the
-README but carries the old hash — or a plausible wrong day — is not detectable
-here. It is the field the design
-rests on, so the scheduled comparison should hash the recorded commit too rather
-than only the current head — otherwise a stale hash reads as an upstream change
-that never happened.
+repository this one does not vendor, so a bump that updates `commit` but
+carries the old hash — or a plausible wrong day that is still a real date — is
+not detectable here. It is the field the design rests on, so the scheduled
+comparison should hash the recorded commit too rather than only the current
+head — otherwise a stale hash reads as an upstream change that never happened.
 
 The other two follow from provenance being read from filenames and nothing
 more. A specification implemented **inside an existing module** rather
