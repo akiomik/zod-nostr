@@ -61,16 +61,18 @@ const TABLE_LINK = "](#supported-nips)";
 const NAMES_A_NIP = /NIP-[0-9A-Z]{2}/;
 
 /**
- * The texts of the README's links to `repository`. A family with no table row
- * enumerates its documents in that link text (`[LUD-01 and LUD-16](…/luds)`),
+ * The texts of the README's links to `repository` itself. A family with no table
+ * row enumerates its documents in that link text (`[LUD-01 and LUD-16](…/luds)`),
  * which is where the check reads them from: scanning the whole README instead
  * would misread any passing mention — "does not decode to a LUD-01 URL" — as a
- * missing baseline.
+ * missing baseline. Only the repository root counts, so a deep link into one of
+ * its documents stays ordinary prose rather than becoming an enumeration the
+ * baseline has to match.
  */
 function linkTexts(readme, repository) {
   const escaped = repository.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const link = new RegExp(`\\[([^\\]]*)\\]\\(${escaped}[^)]*\\)`, "g");
-  return [...readme.matchAll(link)].map(([, text]) => text).join("\n");
+  const link = new RegExp(`\\[([^\\]]*)\\]\\(${escaped}/?\\)`, "g");
+  return [...readme.matchAll(link)].map(([, text]) => text);
 }
 
 /**
@@ -179,14 +181,21 @@ for (const family of families) {
   const named = label && LABEL.test(label);
   if (!repository)
     errors.push(`${BASELINE}: \`sources.${family}\` has no repository`);
-  else if (!readme.includes(repository))
-    errors.push(`${README}: does not link ${repository} (\`${family}\`)`);
 
-  // Without a repository there is no link to read, and reporting each document
-  // as unnamed would bury the one real problem under a message per entry.
-  const enumerated = repository ? linkTexts(readme, repository) : null;
+  // Without a link there is nothing to read the family's documents out of, and
+  // reporting each one as unnamed would bury that under a message per entry.
+  const links = repository ? linkTexts(readme, repository) : [];
+  if (repository && links.length === 0)
+    errors.push(`${README}: does not link ${repository} (\`${family}\`)`);
+  const enumerated = links.length > 0 ? links.join("\n") : null;
+
   const documents = baseline[family];
-  if (!documents || Object.keys(documents).length === 0) {
+  if (
+    !documents ||
+    typeof documents !== "object" ||
+    Array.isArray(documents) ||
+    Object.keys(documents).length === 0
+  ) {
     errors.push(`${BASELINE}: \`sources.${family}\` has no matching entries`);
     continue;
   }
@@ -271,6 +280,14 @@ for (const family of Object.keys(baseline)) {
 // and forgotten in the other is the failure this check exists for.
 const tabled = new Set();
 const repository = sources[TABLE_FAMILY]?.repository;
+// A `nips` family that is not a usable object has already been reported once;
+// comparing every row against it would repeat that as a message per NIP.
+const baselined =
+  baseline[TABLE_FAMILY] &&
+  typeof baseline[TABLE_FAMILY] === "object" &&
+  !Array.isArray(baseline[TABLE_FAMILY])
+    ? baseline[TABLE_FAMILY]
+    : null;
 const table = supportedNipsTable(readme);
 if (table === null) errors.push(`${README}: no "Supported NIPs" section`);
 
@@ -304,7 +321,8 @@ for (const row of rows ?? []) {
   if (tabled.has(nip))
     errors.push(`${README}: NIP-${nip} has more than one row in the table`);
   tabled.add(nip);
-  const entry = baseline[TABLE_FAMILY]?.[nip];
+  if (baselined === null) continue; // already reported
+  const entry = baselined[nip];
   if (!entry) {
     errors.push(`${README}: NIP-${nip} has no entry in ${BASELINE}`);
     continue;
@@ -339,7 +357,7 @@ const covered = new Set(
 
 // A section reported as missing above would otherwise make every baselined NIP
 // look individually absent, burying the one problem there is.
-for (const nip of Object.keys(baseline[TABLE_FAMILY] ?? {})) {
+for (const nip of Object.keys(baselined ?? {})) {
   if (rows && !tabled.has(nip))
     errors.push(
       `${README}: NIP-${nip} is baselined in ${BASELINE} but absent from the Supported NIPs table`,
