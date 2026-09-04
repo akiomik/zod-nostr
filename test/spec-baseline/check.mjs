@@ -47,6 +47,10 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/;
 // already numbers some NIPs in hex (`7D`, `C0`). Module filenames spell the
 // same id in lowercase (`nip7d.ts`).
 const DOCUMENT = /^[0-9A-Z]{2}$/;
+// A family label names a document series (`NIP`, `LUD`) and is interpolated
+// into the patterns that find its modules and mentions, so it is held to
+// letters: anything else is not a label, and would reach `RegExp` as syntax.
+const LABEL = /^[A-Za-z]+$/;
 const TABLE_ROW = /^\*\*NIP-([0-9A-Z]{2})\*\*$/;
 const BASELINE_COLUMN = "Spec baseline";
 const TABLE_HEADING = "\n## Supported NIPs\n";
@@ -160,6 +164,11 @@ if (families.length === 0) errors.push(`${BASELINE}: no \`sources\` recorded`);
 for (const family of families) {
   const { label, repository } = sources[family] ?? {};
   if (!label) errors.push(`${BASELINE}: \`sources.${family}\` has no label`);
+  else if (!LABEL.test(label))
+    errors.push(
+      `${BASELINE}: \`sources.${family}.label\` is \`${label}\`, which is not a series name`,
+    );
+  const named = label && LABEL.test(label);
   if (!repository)
     errors.push(`${BASELINE}: \`sources.${family}\` has no repository`);
   else if (!readme.includes(repository))
@@ -184,7 +193,7 @@ for (const family of families) {
     // require at least that the README's link to the family enumerates them.
     if (
       family !== TABLE_FAMILY &&
-      label &&
+      named &&
       !enumerated.includes(`${label}-${id}`)
     )
       errors.push(
@@ -194,7 +203,7 @@ for (const family of families) {
 
   // The other direction for a family with no table: the link enumerating a
   // document that was never baselined.
-  if (family !== TABLE_FAMILY && label) {
+  if (family !== TABLE_FAMILY && named) {
     const mentions = enumerated.matchAll(
       new RegExp(`${label}-([0-9A-Z]{2})`, "g"),
     );
@@ -208,7 +217,7 @@ for (const family of families) {
 
   // `src/` decides what must be baselined: a spec module with no entry ships
   // with no recorded provenance, and an entry with no module is dead weight.
-  if (!label) continue;
+  if (!named) continue;
   const modules = implemented(label);
   for (const [id, file] of modules) {
     if (!(id in documents))
