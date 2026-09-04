@@ -27,8 +27,8 @@
     "format": "biome format --write .",
     "check": "biome check .",
     "check:write": "biome check --write .",
-    "test:consumer": "node test/consumer/check.mjs",
-    "test:jsdoc": "node test/public-jsdoc/check.mjs",
+    "test:consumer": "node scripts/consumer-check.mjs",
+    "test:jsdoc": "node scripts/public-jsdoc-check.mjs",
     "test:spec-baseline": "node scripts/spec-baseline-check.mjs",
     "prepublishOnly": "npm run typecheck && npm run check && npm test && npm run test:spec-baseline && npm run build && npm run test:jsdoc && npm run test:consumer"
   },

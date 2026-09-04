@@ -23,6 +23,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   moves only when the document is re-read and the schemas are confirmed against
   it; git history and this file record when that happened.
 
+- **`scripts/` for the checks that gate the build.** `npm run test:jsdoc` and
+  `npm run test:consumer` ran from `test/`, beside the fixture one of them
+  compiles, which read as tests of test code once one of these checks grew
+  tests of its own. They move to `scripts/public-jsdoc-check.mjs` and
+  `scripts/consumer-check.mjs`; `test/` keeps the consumer fixture and the
+  vitest suites. No behaviour changes.
+
 - **`npm run test:spec-baseline`**, which keeps the two places that name the
   same set of specs in step: the spec modules under `src/` and
   `spec-baseline.json`. The modules of a registered family decide what must be
