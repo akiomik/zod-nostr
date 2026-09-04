@@ -321,13 +321,17 @@ const nip01Namespace = {
 
     /**
      * The kind:0 `lud16` field (LUD-16): a `<username>[+<tag>]@<domain>`
-     * lightning address.
+     * lightning address. The canonical default identifier `_@<domain>` is
+     * accepted like any other username; LUD-16's optional `@<domain>`
+     * shorthand for it is rejected, which the spec permits.
      */
     lud16: () => miniSchema(z.ZodMiniString, nip01.metadataFields.lud16()),
 
     /**
-     * The kind:0 `lud06` field (LUD-06): a bech32 `lnurl` string. It validates
-     * the checksum and HRP only; it does not decode to a LUD-01 URL.
+     * The kind:0 `lud06` field: a bech32 `lnurl` string, whose encoding LUD-01
+     * defines (the field is named for LUD-06, which defines what the decoded
+     * URL answers with). It validates the checksum and HRP only; it does not
+     * decode to a URL.
      */
     lud06: () => miniSchema(z.ZodMiniString, nip01.metadataFields.lud06()),
   },
@@ -732,8 +736,8 @@ export const zostr = {
        * `["EOSE", subscriptionId]` or `["EOSE", subscriptionId, hints]` — a
        * union of the two exact wire shapes, so an explicit `undefined` third
        * element is rejected. It is a strict superset of NIP-01's EOSE. The
-       * hints are plain strings, not an enum: NIP-67 defines `"finish"` and
-       * `"more"` but requires clients to accept unknown values.
+       * hints are plain strings, not an enum: NIP-67 defines `"finish"`,
+       * `"more"`, and `"auth"` but requires clients to accept unknown values.
        */
       eose: () => z.union(nip67.nip67.relayMessage.eose()._zod.def.options),
     },

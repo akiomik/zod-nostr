@@ -190,7 +190,7 @@ which layer it extends.
 
 Fields and schemas live under their canonical owner path (see *Canonical owner
 paths*); their spec provenance is recorded in the docs and tests rather than
-forced into the path (e.g. the NIP-24 / LUD-16 / LUD-06 profile fields live in
+forced into the path (e.g. the NIP-24 / LUD-16 / LUD-01 profile fields live in
 the `nip01.metadataFields` catalog, with their defining spec noted per field).
 
 ### Naming
@@ -276,9 +276,13 @@ A public API addition ships with:
   every object schema (no silent strip);
 - input/output **type** tests (precise-inference assertions in both flavors);
 - passing the release gates below;
-- updated `API.md` and `CHANGELOG.md`.
+- updated `API.md` and `CHANGELOG.md`;
+- for a new spec module (`src/nipXX.ts`, `src/ludXX.ts`), its entry in
+  `spec-baseline.json` — plus, for a NIP, a `Supported NIPs` row; see
+  [decision 0004](./decisions/0004-spec-baselines.md) for why provenance is
+  recorded per document.
 
-Two release gates run in CI:
+Two release-surface gates run in CI:
 
 - **External consumer compile** (`npm run test:consumer`, `test/consumer/`) —
   compiles a fixture that imports the package by its published specifiers
@@ -309,3 +313,7 @@ Longer-form records of specific past decisions live in
 - [0003 — JSDoc on the public surface](./decisions/0003-jsdoc-on-the-public-surface.md)
   — editor hover text as an altitude below the reference, required on every
   public path in both flavors and enforced over the built declarations.
+- [0004 — Spec baselines](./decisions/0004-spec-baselines.md)
+  — recording, per specification, the exact revision the schemas are written
+  against, and why that lives in one machine-readable file rather than in
+  comments.

@@ -1,0 +1,99 @@
+{
+  "note": "The revision of each specification that zod-nostr's schemas are written against. `sources` names each document family and its repository, `documents` holds that family's entries under the same key, and `commit` identifies a revision in that repository and `date` is when it landed there \u2014 the commit's committer date, which is not always the author date a commit page shows; neither is the date zod-nostr looked at it. `sha256` is the SHA-256 of the document's Markdown at that commit, so a checker can detect when the upstream text changes. An entry is bumped when the document is re-read and the schemas are confirmed against it \u2014 git history and CHANGELOG.md record when that happened.",
+  "sources": {
+    "nips": {
+      "label": "NIP",
+      "repository": "https://github.com/nostr-protocol/nips"
+    },
+    "luds": {
+      "label": "LUD",
+      "repository": "https://github.com/lnurl/luds"
+    }
+  },
+  "documents": {
+    "nips": {
+      "01": {
+        "commit": "c3fd9af17939316bf6d0d83a5759100f8b0a1bdb",
+        "date": "2026-09-04",
+        "sha256": "6cd76682e7ec2d635f1f46b3660f621cdad1193d9174d316674b91f8d683af26"
+      },
+      "05": {
+        "commit": "999f9bfbf5fe00d5c2711fd24badb4e56748c9bc",
+        "date": "2026-06-13",
+        "sha256": "6eee88e6848aafc825995d8a85ab648c0195eb267af8e6c8540e4e8b2d10f450"
+      },
+      "10": {
+        "commit": "0023ca818c759f46cd357a812dca98abfd9824b8",
+        "date": "2025-02-07",
+        "sha256": "655501f90e70e838561f3b63134f1b0a9ddcbf6e4de05fbbacc0990bcbe5a5d8"
+      },
+      "11": {
+        "commit": "999f9bfbf5fe00d5c2711fd24badb4e56748c9bc",
+        "date": "2026-06-13",
+        "sha256": "0592cf4eb5891f60ae4c7dc815c21bd23d18404cbe21615c7e6c26d75c8cce30"
+      },
+      "13": {
+        "commit": "f5a15ea27e06ce8f5635117931f06318f532a713",
+        "date": "2025-12-23",
+        "sha256": "1f2e541fd4171bf708256be43e2edcd22a4fd8b3c2b38d43b57e9cd19dce1239"
+      },
+      "19": {
+        "commit": "7d9908018eabb260e794174349e834199030bfd1",
+        "date": "2026-03-12",
+        "sha256": "5b53c98637ae0cb8e6d99e1570e32da2c5842154ba898393439f334f1fd90aad"
+      },
+      "21": {
+        "commit": "699e7a28f4d6e2df10660184c4f8c159adf1582d",
+        "date": "2026-03-21",
+        "sha256": "e9a15c24e7bf61883fdf9af3b77c84a99761903f7237dc9124d0bde5744daf91"
+      },
+      "24": {
+        "commit": "739f3c5263584770f098440855d9364a779e7f9d",
+        "date": "2025-08-11",
+        "sha256": "97baf0a1675638237b42c60fee3391e28a6f91dc8bc923430a3483cd13b9c25f"
+      },
+      "40": {
+        "commit": "f5a15ea27e06ce8f5635117931f06318f532a713",
+        "date": "2025-12-23",
+        "sha256": "1e88a08583391084fc95b842932119555cb270988612261fbb78017e84a0dc78"
+      },
+      "42": {
+        "commit": "e65954922b28eff0e04b4e9020a5474f493793d2",
+        "date": "2026-09-01",
+        "sha256": "176458314bb0cd3b9c673b43b6bf05e4cb2354f5d56880d8d6627713d6fd4f87"
+      },
+      "45": {
+        "commit": "3d71a4a78c376a5a71bf44708cd6b02c1773ae0b",
+        "date": "2026-02-06",
+        "sha256": "61371c04daf263509b230586e91a86a6688cb01609dd70d137362b381fb57ff8"
+      },
+      "50": {
+        "commit": "999f9bfbf5fe00d5c2711fd24badb4e56748c9bc",
+        "date": "2026-06-13",
+        "sha256": "64c393e0146f11564505ba8dd73e4798a34762b0d35a02663dd678a98941240e"
+      },
+      "67": {
+        "commit": "e65954922b28eff0e04b4e9020a5474f493793d2",
+        "date": "2026-09-01",
+        "sha256": "c3a028556b2211c9ec97c973f20d2a0cd6aa9f1aebc1cbc76245a8dec40cf640"
+      },
+      "70": {
+        "commit": "999f9bfbf5fe00d5c2711fd24badb4e56748c9bc",
+        "date": "2026-06-13",
+        "sha256": "d69e05a0948aae4255d97f57e96dc560de230614ed1a3955d108b22c093bbdb2"
+      }
+    },
+    "luds": {
+      "01": {
+        "commit": "bd93433261872bf69bbe75e29376504b848d5353",
+        "date": "2026-02-05",
+        "sha256": "e4e5b4f130a0f902cd295f8917f907a3bd53f0c37ad2117508716798464194ad"
+      },
+      "16": {
+        "commit": "8985bc2ac06f9417ab46fce40623b3f6d3e2fcc0",
+        "date": "2026-07-16",
+        "sha256": "abf008cbb492ce04a77ddce32c39269a1c48686b1a51526de7453749bfc18491"
+      }
+    }
+  }
+}

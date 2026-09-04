@@ -7,6 +7,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Spec baselines for every specification the schemas are built on.**
+  `spec-baseline.json` records, per document, the exact revision these schemas
+  are written against: the commit in its source repository, that commit's date,
+  and the SHA-256 of the document's Markdown at that commit. It covers the 14
+  NIPs and, because the kind:0 profile fields are not all defined by NIPs,
+  LUD-01 and LUD-16 from `lnurl/luds`. `sources` names each family and its
+  repository; `documents` holds that family's entries under the same key. The
+  `Supported NIPs` table in `README.md` gains a `Spec baseline` column linking
+  each NIP at its recorded revision, so
+  the text a schema was built for is one click away instead of being implicit.
+  The SHA-256 is what makes the file more than documentation — it lets upstream
+  edits be detected mechanically rather than noticed by accident. An entry moves
+  only when the document is re-read and the schemas are confirmed against it;
+  git history and this file record when that happened.
+
+- **NIP-24 in the `Supported NIPs` table.** Its extra kind:0 profile metadata
+  fields (`display_name`, `website`, `banner`, `bot`, `birthday`) were already
+  exposed as `zostr.nip01.metadataFields.*` and documented in `docs/API.md`, but
+  the table listed only the NIPs with a namespace of their own, leaving NIP-24
+  support undiscoverable from the README.
+
+- **`docs/decisions/0004-spec-baselines.md`**, recording why provenance lives in
+  one machine-readable file rather than in per-module comments, why an entry
+  carries no review date, and why the check stays offline.
+
+### Fixed
+
+- **NIP-67 documentation listed only two of the three defined hints.** NIP-67
+  added an `"auth"` hint (the relay may hold more stored events for a client
+  that completes NIP-42 authentication) alongside `"finish"` and `"more"`. The
+  JSDoc on `zostr.nip67.relayMessage.eose()` and the NIP-67 section of
+  `docs/API.md` still described the earlier two-value set. No schema change: the
+  hints array is validated as plain strings precisely because NIP-67 requires
+  clients to accept unknown hint values, so `"auth"` already parsed.
+
+- **The `lud06` profile field was attributed to the wrong specification.** The
+  field is named for LUD-06, but LUD-06 defines what a decoded LNURL answers
+  with and never mentions the encoding; the bech32 `lnurl` format the schema
+  actually validates is LUD-01's. The docs said LUD-06 throughout and the module
+  was `src/lud06.ts`, so a reader — and the planned upstream comparison — would
+  have watched the wrong document: silent if LUD-01 changed the encoding,
+  noisy on `payRequest` churn this library does not implement. The module is now
+  `src/lud01.ts` exporting `lud01Schema`, baselined against LUD-01. No schema
+  change, and the public path is unchanged: the field keeps its ecosystem name
+  at `zostr.nip01.metadataFields.lud06()`, the same way `metadataFields.nip05()`
+  references `nip05.identifier()`.
+
+- **LUD-16's default identifier was undocumented.** LUD-16 added a `@<domain>`
+  shorthand for the canonical `_@<domain>` default identifier. `lud16()` accepts
+  `_@<domain>` like any other username and rejects the shorthand, which the spec
+  permits (a wallet that does not implement it MAY reject the address); that
+  reading is now stated in the JSDoc, in `docs/API.md`, and pinned by tests
+  rather than left implicit. No schema change.
+
 ## [0.5.2] - 2026-08-01
 
 ### Added

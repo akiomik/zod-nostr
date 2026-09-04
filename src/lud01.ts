@@ -4,12 +4,14 @@ import { makeCheck } from "./core/checks.js";
 import { zodString } from "./core/primitives.js";
 
 /**
- * LUD-06 LNURL: a bech32 string with the `lnurl` HRP. Validates the bech32
- * checksum and data-word/padding validity (an explicit 2000-char limit is
- * required; `@scure/base`'s default of 90 rejects real LNURLs). Not decoded to
- * a URL — LUD-01 URL validation is out of scope.
+ * LUD-01 LNURL: a bech32 string with the `lnurl` HRP. LUD-01 owns the encoding;
+ * the kind:0 `lud06` field that carries one is named for LUD-06, which defines
+ * what the decoded URL answers with and is not validated here. Validates the
+ * bech32 checksum and data-word/padding validity (an explicit 2000-char limit
+ * is required; `@scure/base`'s default of 90 rejects real LNURLs). Not decoded
+ * to a URL, so the target is never checked.
  */
-export function lud06Schema(): core.$ZodString<string> {
+export function lud01Schema(): core.$ZodString<string> {
   return zodString([
     makeCheck<string>((payload) => {
       const value = payload.value;

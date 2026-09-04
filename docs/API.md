@@ -189,7 +189,7 @@ by extending [`metadata()`](#zostrnip01metadata).
 | `metadataFields.birthday()` | NIP-24 | `{ year?, month?, day? }` (numbers) |
 | `metadataFields.nip05()` | NIP-05 | NIP-05 identifier |
 | `metadataFields.lud16()` | LUD-16 | `<username>[+<tag>]@<domain>` lightning address |
-| `metadataFields.lud06()` | LUD-06 | bech32 `lnurl` string (checksum + data words) |
+| `metadataFields.lud06()` | LUD-01 | bech32 `lnurl` string (checksum + data words) |
 
 `metadataFields.nip05()` is a **direct reference** to
 [`zostr.nip05.identifier()`](#zostrnip05identifier) (the NIP-05 identifier's
@@ -199,7 +199,14 @@ not two copies.
 Each schema is **strict and non-optional** — a deliberate choice so you can add
 `optional`/`catch`/`default` yourself (a pre-weakened field can't be recovered).
 `lud06()` validates the bech32 checksum and `lnurl` HRP only; it does not decode
-to a LUD-01 URL.
+to a URL. The field is named for LUD-06, which defines what the decoded URL
+answers with, but the value's format is LUD-01's LNURL encoding — that is the
+spec `lud06()` implements, and neither the target nor the payRequest exchange is
+checked. `lud16()` accepts the canonical default identifier
+`_@<domain>` like any other username, but rejects LUD-16's optional `@<domain>`
+shorthand for it — the spec says a wallet that does not implement the shorthand
+MAY reject it, so the strict reading is the default here; compose a union to
+accept it.
 
 ```ts
 // classic — build a lenient profile schema from the strict field atoms
@@ -935,14 +942,17 @@ JSON wire — an explicit `undefined` third element is rejected — and infers t
 precise `["EOSE", string] | ["EOSE", string, string[]]`.
 
 The `hints` are plain strings, not a fixed enum. NIP-67 defines `"finish"` (the
-relay has sent every stored event matching the filters — do not paginate) and
-`"more"` (the relay holds more — paginate), but requires clients to accept
-unknown hint values without error, so no enum is baked in. The array MAY be
-empty and MAY carry multiple hints. Only the **presence** of `"finish"`/`"more"`
-is definitive; a missing third element, an empty array, or unknown-only hints
-leave completeness unknown, in which case NIP-67 says the client SHOULD paginate
-with `until` set to the oldest received event's `created_at`. Interpreting the
-hints is the consumer's job — the schema validates structure only.
+relay has sent every stored event matching the filters — do not paginate),
+`"more"` (the relay holds more — paginate), and `"auth"` (the relay may hold
+more for a client that completes [NIP-42](#nip-42--authentication)
+authentication), but requires clients to accept unknown hint values without
+error, so no enum is baked in. The array MAY be empty and MAY carry multiple
+hints. Only the **presence** of `"finish"`/`"more"` is definitive; a missing
+third element, an empty array, and a hints array carrying neither of those two —
+`["auth"]` on its own included — leave completeness unknown, in which case
+NIP-67 says the client SHOULD paginate with `until` set to the oldest received
+event's `created_at`. Interpreting the hints is the consumer's job — the schema
+validates structure only.
 
 `zostr.nip67.relayMessage.eose()` is a strict superset of
 [`zostr.nip01.relayMessage.eose()`](#zostrnip01relaymessage) (it also accepts the bare

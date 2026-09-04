@@ -23,7 +23,7 @@ import {
   zodUrl,
 } from "./core/primitives.js";
 import { jsonCodec } from "./json.js";
-import { lud06Schema } from "./lud06.js";
+import { lud01Schema } from "./lud01.js";
 import { lud16Schema } from "./lud16.js";
 import { nip05IdentifierSchema } from "./nip05.js";
 import * as nip24 from "./nip24.js";
@@ -169,7 +169,7 @@ export function signatureCheck(): core.$ZodCheck<NostrEventLike> {
  * Each is strict and non-optional so consumers can layer their own
  * optional/catch/default policy (a pre-weakened field can't be recovered).
  * Fields defined by other specs live in their own modules (`nip24.ts`,
- * `nip05.ts`, `lud16.ts`, `lud06.ts`); this object only aggregates them.
+ * `nip05.ts`, `lud16.ts`, `lud01.ts`); this object only aggregates them.
  */
 export const metadataFields = {
   name: () => zodString(), // NIP-01
@@ -182,7 +182,7 @@ export const metadataFields = {
   birthday: () => nip24.birthday(), // NIP-24
   nip05: () => nip05IdentifierSchema(), // NIP-05
   lud16: () => lud16Schema(), // LUD-16
-  lud06: () => lud06Schema(), // LUD-06
+  lud06: () => lud01Schema(), // LUD-01 encoding, LUD-06 field name
 };
 
 /**

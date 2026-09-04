@@ -14,7 +14,13 @@ const FLAVORS = [
   { name: "mini", zostr: miniZostr, z: zm },
 ] as const;
 
-const VALID = ["alice@example.com", "alice+tag@example.com", "a@b.onion"];
+const VALID = [
+  "alice@example.com",
+  "alice+tag@example.com",
+  "a@b.onion",
+  // LUD-16's canonical default identifier is an ordinary username
+  "_@example.com",
+];
 const INVALID: [string, string][] = [
   ["an empty username", "+@example.com"],
   ["an empty +tag", "alice+@example.com"],
@@ -23,6 +29,9 @@ const INVALID: [string, string][] = [
   ["a domain carrying a path", "alice@example.com/path"],
   ["an uppercase local part", "Alice@example.com"],
   ["no '@' separator", "no-at-sign"],
+  // LUD-16 makes the `@<domain>` shorthand for `_@<domain>` optional and
+  // lets a wallet that does not implement it reject the address
+  ["the optional bare-domain default-identifier shorthand", "@example.com"],
 ];
 
 describe.each(FLAVORS)(

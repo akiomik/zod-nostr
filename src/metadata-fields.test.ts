@@ -91,9 +91,9 @@ describe.each(FLAVORS)(
       expect(accepts(f.lud16(), "no-at-sign")).toBe(false);
     });
 
-    it("delegates lud06 to the LUD-06 LNURL schema", () => {
+    it("delegates lud06 to the LUD-01 LNURL schema", () => {
       // A short but valid bech32 lnurl; the plain-string default would accept
-      // "not-bech32", so its rejection confirms the LUD-06 schema is wired in.
+      // "not-bech32", so its rejection confirms the LUD-01 schema is wired in.
       expect(parse(f.lud06(), "lnurl1qypqxadgqpq")).toBe("lnurl1qypqxadgqpq");
       expect(accepts(f.lud06(), "not-bech32")).toBe(false);
     });
