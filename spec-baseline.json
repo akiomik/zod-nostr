@@ -83,10 +83,10 @@
     }
   },
   "luds": {
-    "06": {
-      "commit": "ca798e0f6d774887fd60d0e6d94c06b9c57a69df",
-      "date": "2026-05-30",
-      "sha256": "96491eddc7c75efedc94f56f53ed8322acd719c35a53e644dc9408347f5980c2"
+    "01": {
+      "commit": "bd93433261872bf69bbe75e29376504b848d5353",
+      "date": "2026-02-05",
+      "sha256": "e4e5b4f130a0f902cd295f8917f907a3bd53f0c37ad2117508716798464194ad"
     },
     "16": {
       "commit": "8985bc2ac06f9417ab46fce40623b3f6d3e2fcc0",

@@ -328,8 +328,10 @@ const nip01Namespace = {
     lud16: () => miniSchema(z.ZodMiniString, nip01.metadataFields.lud16()),
 
     /**
-     * The kind:0 `lud06` field (LUD-06): a bech32 `lnurl` string. It validates
-     * the checksum and HRP only; it does not decode to a LUD-01 URL.
+     * The kind:0 `lud06` field: a bech32 `lnurl` string, whose encoding LUD-01
+     * defines (the field is named for LUD-06, which defines what the decoded
+     * URL answers with). It validates the checksum and HRP only; it does not
+     * decode to a URL.
      */
     lud06: () => miniSchema(z.ZodMiniString, nip01.metadataFields.lud06()),
   },

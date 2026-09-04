@@ -166,8 +166,9 @@ shows). The same data lives in
 [spec-baseline.json](spec-baseline.json), which also records the
 SHA-256 of each spec's text so that upstream changes can be detected
 mechanically, and covers the two specs that have no row here because they are
-not NIPs: [LUD-06 and LUD-16](https://github.com/lnurl/luds), behind
-`nip01.metadataFields.lud06()` and `nip01.metadataFields.lud16()`. An entry
+not NIPs: [LUD-01 and LUD-16](https://github.com/lnurl/luds), behind
+`nip01.metadataFields.lud06()` and `nip01.metadataFields.lud16()` — the kind:0
+field is named `lud06`, but what it carries is a LUD-01 LNURL. An entry
 moves only when the spec is re-read and the schemas are confirmed against it;
 `npm run test:spec-baseline` keeps the table and the JSON from disagreeing.
 

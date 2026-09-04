@@ -145,6 +145,14 @@ function cellsOf(line) {
 let baseline;
 try {
   baseline = JSON.parse(readFileSync(join(root, BASELINE), "utf8"));
+  // `null` parses fine and would reach the first property read as a TypeError,
+  // which is the stack trace this whole branch exists to avoid.
+  if (
+    baseline === null ||
+    typeof baseline !== "object" ||
+    Array.isArray(baseline)
+  )
+    throw new Error("does not hold an object");
 } catch (cause) {
   // Reported the same way as every other disagreement, rather than as a stack
   // trace from a file this check exists to read.

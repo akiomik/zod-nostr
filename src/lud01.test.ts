@@ -5,7 +5,7 @@ import * as zm from "zod/mini";
 import { zostr as classicZostr } from "./classic.js";
 import { zostr as miniZostr } from "./mini.js";
 
-// LUD-06 LNURL: a bech32 string with the `lnurl` HRP. Reached publicly via the
+// LUD-01 LNURL: a bech32 string with the `lnurl` HRP. Reached publicly via the
 // kind:0 profile field catalog (`metadataFields.lud06()`); this file is its
 // canonical test home.
 const FLAVORS = [
@@ -32,7 +32,7 @@ const INVALID: [string, string][] = [
   ["garbage", "not-bech32"],
 ];
 
-describe.each(FLAVORS)("zostr LUD-06 LNURL ($name)", ({ zostr, z }) => {
+describe.each(FLAVORS)("zostr LUD-01 LNURL ($name)", ({ zostr, z }) => {
   it("accepts a real (long) LNURL beyond the default 90-char decode limit", () => {
     expect(z.parse(zostr.nip01.metadataFields.lud06(), LONG_LNURL)).toBe(
       LONG_LNURL,

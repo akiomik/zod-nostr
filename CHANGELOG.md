@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   are written against: the commit in its source repository, that commit's date,
   and the SHA-256 of the document's Markdown at that commit. It covers the 14
   NIPs and, because the kind:0 profile fields are not all defined by NIPs,
-  LUD-06 and LUD-16 from `lnurl/luds`. The `Supported NIPs` table in `README.md`
+  LUD-01 and LUD-16 from `lnurl/luds`. The `Supported NIPs` table in `README.md`
   gains a `Spec baseline` column linking each NIP at its recorded revision, so
   the text a schema was built for is one click away instead of being implicit.
   The SHA-256 is what makes the file more than documentation — it lets upstream
@@ -57,6 +57,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `docs/API.md` still described the earlier two-value set. No schema change: the
   hints array is validated as plain strings precisely because NIP-67 requires
   clients to accept unknown hint values, so `"auth"` already parsed.
+
+- **The `lud06` profile field was attributed to the wrong specification.** The
+  field is named for LUD-06, but LUD-06 defines what a decoded LNURL answers
+  with and never mentions the encoding; the bech32 `lnurl` format the schema
+  actually validates is LUD-01's. The docs said LUD-06 throughout and the module
+  was `src/lud06.ts`, so a reader — and the planned upstream comparison — would
+  have watched the wrong document: silent if LUD-01 changed the encoding,
+  noisy on `payRequest` churn this library does not implement. The module is now
+  `src/lud01.ts` exporting `lud01Schema`, baselined against LUD-01. No schema
+  change, and the public path is unchanged: the field keeps its ecosystem name
+  at `zostr.nip01.metadataFields.lud06()`, the same way `metadataFields.nip05()`
+  references `nip05.identifier()`.
 
 - **LUD-16's default identifier was undocumented.** LUD-16 added a `@<domain>`
   shorthand for the canonical `_@<domain>` default identifier. `lud16()` accepts

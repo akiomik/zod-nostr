@@ -189,7 +189,7 @@ by extending [`metadata()`](#zostrnip01metadata).
 | `metadataFields.birthday()` | NIP-24 | `{ year?, month?, day? }` (numbers) |
 | `metadataFields.nip05()` | NIP-05 | NIP-05 identifier |
 | `metadataFields.lud16()` | LUD-16 | `<username>[+<tag>]@<domain>` lightning address |
-| `metadataFields.lud06()` | LUD-06 | bech32 `lnurl` string (checksum + data words) |
+| `metadataFields.lud06()` | LUD-01 | bech32 `lnurl` string (checksum + data words) |
 
 `metadataFields.nip05()` is a **direct reference** to
 [`zostr.nip05.identifier()`](#zostrnip05identifier) (the NIP-05 identifier's
@@ -199,7 +199,10 @@ not two copies.
 Each schema is **strict and non-optional** — a deliberate choice so you can add
 `optional`/`catch`/`default` yourself (a pre-weakened field can't be recovered).
 `lud06()` validates the bech32 checksum and `lnurl` HRP only; it does not decode
-to a LUD-01 URL. `lud16()` accepts the canonical default identifier
+to a URL. The field is named for LUD-06, which defines what the decoded URL
+answers with, but the value's format is LUD-01's LNURL encoding — that is the
+spec `lud06()` implements, and neither the target nor the payRequest exchange is
+checked. `lud16()` accepts the canonical default identifier
 `_@<domain>` like any other username, but rejects LUD-16's optional `@<domain>`
 shorthand for it — the spec says a wallet that does not implement the shorthand
 MAY reject it, so the strict reading is the default here; compose a union to

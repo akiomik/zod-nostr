@@ -56,6 +56,14 @@ the single source of truth for provenance.
 - **Surfaced in the README.** The `Supported NIPs` table carries a `Spec
   baseline` column linking each NIP at its recorded revision, because a consumer
   reads the README, not a JSON file at the repository root.
+- **A module is named for the document it implements.** The check reads
+  provenance from filenames, so `src/<label><id>.ts` must name the document
+  whose rules the module encodes — not the field that happens to carry the
+  value. The kind:0 `lud06` field carries an LNURL, but the encoding is LUD-01's
+  and LUD-06 defines only what the decoded URL answers with, so the module is
+  `lud01.ts` and the field keeps its ecosystem name at
+  `metadataFields.lud06()` — the same split as `metadataFields.nip05()`
+  referencing `nip05.identifier()`.
 - **Enforcement, with `src/` as the authority.** Four places name the same set
   of specs: the modules, the baseline, the `Supported NIPs` table, and the
   coverage paragraph above it. `test/spec-baseline/check.mjs` derives the
