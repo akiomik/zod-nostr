@@ -945,10 +945,11 @@ more for a client that completes [NIP-42](#nip-42--authentication)
 authentication), but requires clients to accept unknown hint values without
 error, so no enum is baked in. The array MAY be empty and MAY carry multiple
 hints. Only the **presence** of `"finish"`/`"more"` is definitive; a missing
-third element, an empty array, or unknown-only hints leave completeness unknown,
-in which case NIP-67 says the client SHOULD paginate with `until` set to the
-oldest received event's `created_at`. Interpreting the hints is the consumer's
-job — the schema validates structure only.
+third element, an empty array, and any hints other than those two — `["auth"]`
+on its own included — leave completeness unknown, in which case NIP-67 says the
+client SHOULD paginate with `until` set to the oldest received event's
+`created_at`. Interpreting the hints is the consumer's job — the schema
+validates structure only.
 
 `zostr.nip67.relayMessage.eose()` is a strict superset of
 [`zostr.nip01.relayMessage.eose()`](#zostrnip01relaymessage) (it also accepts the bare

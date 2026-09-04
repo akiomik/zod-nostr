@@ -309,3 +309,7 @@ Longer-form records of specific past decisions live in
 - [0003 — JSDoc on the public surface](./decisions/0003-jsdoc-on-the-public-surface.md)
   — editor hover text as an altitude below the reference, required on every
   public path in both flavors and enforced over the built declarations.
+- [0004 — Spec baselines](./decisions/0004-spec-baselines.md)
+  — recording, per specification, the exact revision the schemas are written
+  against, and why that lives in one machine-readable file rather than in
+  comments.

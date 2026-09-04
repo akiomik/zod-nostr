@@ -27,16 +27,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   revision recorded for that NIP — in both directions, so a NIP added to one
   file and forgotten in the other fails the build. The README repeats each
   commit and date so a reader can click straight through to the spec text, and
-  without this nothing would notice the two copies drifting apart. It runs in CI
-  and before publish, and stays offline: whether upstream has moved since a
-  baseline was recorded is a separate question from whether the repository
-  agrees with itself.
+  without this nothing would notice the two copies drifting apart. A document
+  from a family with no table row (LUD-06, LUD-16) is held to what the README
+  can carry: the family's repository and every one of its documents must be
+  named in the prose. It runs in CI and before publish, and stays offline:
+  whether upstream has moved since a baseline was recorded is a separate
+  question from whether the repository agrees with itself.
 
 - **NIP-24 in the `Supported NIPs` table.** Its extra kind:0 profile metadata
   fields (`display_name`, `website`, `banner`, `bot`, `birthday`) were already
   exposed as `zostr.nip01.metadataFields.*` and documented in `docs/API.md`, but
   the table listed only the NIPs with a namespace of their own, leaving NIP-24
   support undiscoverable from the README.
+
+- **`docs/decisions/0004-spec-baselines.md`**, recording why provenance lives in
+  one machine-readable file rather than in per-module comments, why an entry
+  carries no review date, and why the check stays offline.
 
 ### Fixed
 

@@ -159,9 +159,11 @@ aliased at the root (`zostr.event`, `zostr.npub`, …).
 | **NIP-70** | [2026-06-13](https://github.com/nostr-protocol/nips/blob/999f9bfbf5fe00d5c2711fd24badb4e56748c9bc/70.md) | Protected events: the `["-"]` marker tag schema and an opt-in check that a protected event's author is an authenticated pubkey | `nip70.protectedTag`, `nip70.protectedCheck` |
 
 **Spec baseline** links the exact revision of each NIP these schemas are written
-against; the date shown is that revision's commit date in
-[nostr-protocol/nips](https://github.com/nostr-protocol/nips). The same data
-lives in [spec-baseline.json](spec-baseline.json), which also records the
+against; the date shown is when that revision landed in
+[nostr-protocol/nips](https://github.com/nostr-protocol/nips) (its committer
+date, which for a long-open pull request is later than the author date GitHub
+shows). The same data lives in
+[spec-baseline.json](spec-baseline.json), which also records the
 SHA-256 of each spec's text so that upstream changes can be detected
 mechanically, and covers the two specs that have no row here because they are
 not NIPs: [LUD-06 and LUD-16](https://github.com/lnurl/luds), behind
