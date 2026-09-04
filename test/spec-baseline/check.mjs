@@ -148,8 +148,10 @@ function supportedNipsTable(readme) {
   // lines start with `|`, into this one and report its rows as malformed.
   const lines = section.split("\n");
   const start = lines.findIndex((line) => line.startsWith("|"));
+  // No table at all is one problem, distinct from a table with no rows: `null`
+  // keeps it from being retold once per NIP below.
   if (start === -1)
-    return { header: undefined, delimiter: undefined, rows: [] };
+    return { header: undefined, delimiter: undefined, rows: null };
   const end = lines.findIndex(
     (line, index) => index > start && !line.startsWith("|"),
   );
@@ -319,18 +321,21 @@ const baselined =
     : null;
 const table = supportedNipsTable(readme);
 if (table === null) errors.push(`${README}: no "Supported NIPs" section`);
+else if (table.rows === null)
+  errors.push(`${README}: the Supported NIPs section has no table`);
+const rows = table?.rows ?? null;
 
 // Which column carries the revision is read from the header rather than assumed,
 // so dropping or moving it is reported instead of silently changing what is
 // compared. A body row wider than the header renders with its extra cells cut.
-const header = table?.header ? cellsOf(table.header) : [];
+const header = rows && table.header ? cellsOf(table.header) : [];
 const column = header.indexOf(BASELINE_COLUMN);
-if (table && column === -1)
+if (rows && column === -1)
   errors.push(
     `${README}: the Supported NIPs table has no \`${BASELINE_COLUMN}\` column`,
   );
 const widths = new Set(
-  [table?.header, table?.delimiter, ...(table?.rows ?? [])]
+  (rows ? [table.header, table.delimiter, ...rows] : [])
     .filter(Boolean)
     .map((line) => cellsOf(line).length),
 );
@@ -338,8 +343,6 @@ if (widths.size > 1)
   errors.push(
     `${README}: the Supported NIPs table's rows do not all have the same number of columns, so Markdown drops the cells past its header`,
   );
-
-const rows = table?.rows ?? null;
 for (const row of rows ?? []) {
   const cells = cellsOf(row);
   const nip = cells[1]?.match(TABLE_ROW)?.[1];
@@ -397,7 +400,9 @@ for (const nip of Object.keys(baselined ?? {})) {
     );
 }
 for (const nip of covered) {
-  if (rows && !tabled.has(nip))
+  // A baselined NIP missing from the table is already reported once above;
+  // saying it again from the paragraph's side would double every message.
+  if (rows && !tabled.has(nip) && !(nip in (baselined ?? {})))
     errors.push(
       `${README}: the intro coverage paragraph names NIP-${nip}, which has no row in the Supported NIPs table`,
     );
