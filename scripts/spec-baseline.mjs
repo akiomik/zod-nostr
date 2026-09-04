@@ -183,9 +183,24 @@ function supportedNipsTable(readme) {
     let interrupted = false;
     for (let line = index + 2; line < lines.length; line += 1) {
       const text = lines[line];
-      if (FENCE.test(text)) break; // the table cannot continue inside one
+      if (FENCE.test(text)) {
+        // A fence ends the table where it renders. Skip its content, then keep
+        // reading only if rows follow — those still name NIPs, and only then
+        // has anything been cut off. A fence merely following the last row
+        // costs the table nothing.
+        line += 1;
+        while (line < lines.length && !FENCE.test(lines[line])) line += 1;
+        const beyond = lines.slice(line + 1);
+        const next = beyond.find((following) => following.trim() !== "");
+        if (next === undefined || !ROW.test(next.trimStart())) break;
+        if (DELIMITER.test(beyond[beyond.indexOf(next) + 1] ?? "")) break;
+        interrupted = true;
+        continue;
+      }
+      // A row of dashes is a row: Markdown only reads a delimiter directly
+      // under the header, so one further down does not start a table of its
+      // own, and breaking on it would drop every row below it.
       if (ROW.test(text)) {
-        if (DELIMITER.test(text)) break; // a table of its own
         rows.push(text);
         continue;
       }

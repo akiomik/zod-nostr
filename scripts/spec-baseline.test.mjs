@@ -457,6 +457,44 @@ describe("specBaselineProblems", () => {
       expect(specBaselineProblems(input)).toEqual([]);
     });
 
+    // Markdown reads a delimiter only under the header, so one further down is
+    // an ordinary row — breaking on it would drop every row below.
+    it("keeps reading past a second delimiter row", () => {
+      const input = repository();
+      input.baseline.documents.nips["05"] = {
+        commit: OTHER_COMMIT,
+        date: "2026-06-13",
+        sha256: HASH.replace(/^6/, "9"),
+      };
+      input.files.push("nip05.ts");
+      input.readme = input.readme.replace(
+        `| **NIP-01** | [2026-09-04](${NIPS}/blob/${COMMIT}/01.md) | Events |`,
+        `| **NIP-01** | [2026-09-04](${NIPS}/blob/${COMMIT}/01.md) | Events |\n| --- | --- | --- |\n| **NIP-05** | [2020-01-01](${NIPS}/blob/${COMMIT}/05.md) | Ids |`,
+      );
+      expect(specBaselineProblems(input)).toEqual([
+        "README.md: cannot read a NIP number from row: | --- | --- | --- |",
+        expect.stringContaining("NIP-05's spec baseline cell disagrees"),
+      ]);
+    });
+
+    it("keeps reading rows past a fence between them", () => {
+      const input = repository();
+      input.baseline.documents.nips["05"] = {
+        commit: OTHER_COMMIT,
+        date: "2026-06-13",
+        sha256: HASH.replace(/^6/, "a"),
+      };
+      input.files.push("nip05.ts");
+      input.readme = input.readme.replace(
+        `| **NIP-01** | [2026-09-04](${NIPS}/blob/${COMMIT}/01.md) | Events |`,
+        `| **NIP-01** | [2026-09-04](${NIPS}/blob/${COMMIT}/01.md) | Events |\n\`\`\`\n| not | a | row |\n\`\`\`\n| **NIP-05** | [2020-01-01](${NIPS}/blob/${COMMIT}/05.md) | Ids |`,
+      );
+      expect(specBaselineProblems(input)).toEqual([
+        expect.stringContaining("breaks off before its rows end"),
+        expect.stringContaining("NIP-05's spec baseline cell disagrees"),
+      ]);
+    });
+
     it("does not read a fence abutting its last row as rows", () => {
       const input = repository();
       input.readme = input.readme.replace(
