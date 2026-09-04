@@ -41,7 +41,7 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/;
 // same id in lowercase (`nip7d.ts`).
 const DOCUMENT = /^[0-9A-Z]{2}$/;
 const TABLE_ROW = /^\*\*NIP-([0-9A-Z]{2})\*\*$/;
-const COVERS_SENTENCE = /^Covers NIP-[\s\S]*?\.$/m;
+const COVERS_OPENING = "\nCovers NIP-";
 
 /** Ids of the documents a family implements, read from `src/<label><id>.ts`. */
 function implemented(label) {
@@ -52,6 +52,18 @@ function implemented(label) {
       .filter(Boolean)
       .map((id) => id.toUpperCase()),
   );
+}
+
+/**
+ * The `Covers NIP-…` paragraph, or null. Taken up to the blank line that ends
+ * it rather than to the first `.` at a line end, so rewrapping the paragraph
+ * cannot silently truncate what the check reads.
+ */
+function coversParagraph(readme) {
+  const start = readme.indexOf(COVERS_OPENING);
+  if (start === -1) return null;
+  const end = readme.indexOf("\n\n", start + 1);
+  return readme.slice(start + 1, end === -1 ? undefined : end);
 }
 
 /** The rows of README's `Supported NIPs` table, as raw Markdown lines. */
@@ -138,6 +150,8 @@ for (const row of supportedNipsRows(readme)) {
     errors.push(`${README}: cannot read a NIP number from row: ${row}`);
     continue;
   }
+  if (tabled.has(nip))
+    errors.push(`${README}: NIP-${nip} has more than one row in the table`);
   tabled.add(nip);
   const entry = baseline[TABLE_FAMILY]?.[nip];
   if (!entry) {
@@ -156,7 +170,7 @@ for (const row of supportedNipsRows(readme)) {
 
 // The intro sentence is the README's third copy of the NIP list, and the one a
 // reader meets first.
-const covers = readme.match(COVERS_SENTENCE)?.[0];
+const covers = coversParagraph(readme);
 const covered = new Set(
   covers ? [...covers.matchAll(/NIP-([0-9A-Z]{2})/g)].map(([, id]) => id) : [],
 );

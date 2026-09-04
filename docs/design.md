@@ -276,9 +276,15 @@ A public API addition ships with:
   every object schema (no silent strip);
 - input/output **type** tests (precise-inference assertions in both flavors);
 - passing the release gates below;
-- updated `API.md` and `CHANGELOG.md`.
+- updated `API.md` and `CHANGELOG.md`;
+- for a new spec module (`src/nipXX.ts`, `src/ludXX.ts`), its entry in
+  `spec-baseline.json` — plus, for a NIP, a `Supported NIPs` row and a mention
+  in the README's `Covers …` paragraph. `npm run test:spec-baseline` fails the
+  build otherwise; see
+  [decision 0004](./decisions/0004-spec-baselines.md) for why provenance is
+  recorded per document.
 
-Two release gates run in CI:
+Two release-surface gates run in CI:
 
 - **External consumer compile** (`npm run test:consumer`, `test/consumer/`) —
   compiles a fixture that imports the package by its published specifiers
