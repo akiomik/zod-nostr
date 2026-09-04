@@ -83,25 +83,35 @@ the single source of truth for provenance.
 - *Checking upstream in the same script* — worth doing, but not here: a network
   call makes the check non-deterministic and turns an unrelated upstream edit
   into a red build on an innocent pull request. A scheduled job that reports the
-  diff is the right shape for that, and the `sha256` field is what it will read.
+  diff is the right shape for that, and the `sha256` field is what it will read
+  — against the text at the recorded commit as well as at the current head, so
+  that it also answers whether the entry is internally consistent.
 
 ## Consequences
 
 Adding `src/nipXX.ts` now means adding a baseline entry, a table row, and a
-mention in the coverage paragraph, or the build fails; adding a document from a
-new family means adding a `sources` entry too.
-Re-reading a spec is a reviewable change with a diff, rather than an
-undocumented act of diligence. The baseline is a claim about the text a schema
-targets, not a guarantee that upstream has not moved since — until the scheduled
-comparison exists, an entry going stale is still noticed by hand.
+mention in the coverage paragraph, or the build fails. A document from a new
+family needs a `sources` entry as well — a requirement this record carries, not
+one the check can demand, for the reason below. Re-reading a spec is a
+reviewable change with a diff, rather than an undocumented act of diligence. The
+baseline is a claim about the text a schema targets, not a guarantee that
+upstream has not moved since — until the scheduled comparison exists, an entry
+going stale is still noticed by hand.
 
-Two gaps are left open deliberately, because the check decides what it can read
-from filenames and nothing more. A specification implemented **inside an
-existing module** rather than in its own file is invisible to it: NIP-24 is
-caught only because `src/nip24.ts` exists, and folding those fields into
-`src/nip01.ts` instead would have shipped them unbaselined. So is a module of a
-**family `sources` never declares** — no filename rule separates a `bolt11.ts`
-worth baselining from a `bech32.ts` that is an ordinary helper, and a guess in
-either direction was tried and produced worse diagnostics than it prevented.
-Both are judgements made when the spec is added, and this record is where the
-requirement lives.
+Three gaps are left open deliberately. The first is that nothing offline can tie
+an entry's `sha256` to its `commit`: the hash is a fact about text this
+repository does not vendor, so a bump that updates `commit`, `date`, and the
+README but forgets the hash passes every check here. It is the field the design
+rests on, so the scheduled comparison should hash the recorded commit too rather
+than only the current head — otherwise a stale hash reads as an upstream change
+that never happened.
+
+The other two follow from the check deciding what it can read from filenames and
+nothing more. A specification implemented **inside an existing module** rather
+than in its own file is invisible to it: NIP-24 is caught only because
+`src/nip24.ts` exists, and folding those fields into `src/nip01.ts` instead
+would have shipped them unbaselined. So is a module of a **family `sources`
+never declares** — no filename rule separates a `bolt11.ts` worth baselining
+from a `bech32.ts` that is an ordinary helper, and a guess in either direction
+was tried and produced worse diagnostics than it prevented. Both are judgements
+made when the spec is added, and this record is where the requirement lives.
