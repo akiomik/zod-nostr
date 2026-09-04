@@ -31,7 +31,7 @@
 // check only asserts that the repository agrees with itself, so it can run in
 // the same CI step as the rest of the suite without a network dependency.
 import { readdirSync, readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -70,17 +70,19 @@ function linkTexts(readme, repository) {
 }
 
 /**
- * The documents a family implements, as id → filename, read from
- * `src/<label><id>.ts`. Matched case-insensitively: the lowercase filename is a
- * convention nothing enforces, and a `nip7D.ts` that failed to match would be
- * exempt from baselining rather than reported. The filename is kept so a
- * diagnostic can name the file that exists rather than the one it assumed.
+ * The documents a family implements, as id → path, read from
+ * `<label><id>.ts` anywhere under `src/`. Matched case-insensitively and
+ * recursively, because neither the lowercase filename nor the flat layout is
+ * enforced by anything: a `nip7D.ts`, or a module filed under a subdirectory,
+ * would otherwise be exempt from baselining rather than reported. The path is
+ * kept so a diagnostic can name the file that exists rather than the one it
+ * assumed.
  */
 function implemented(label) {
   const module = new RegExp(`^${label}([0-9a-z]{2})\\.ts$`, "i");
   return new Map(
-    readdirSync(join(root, SOURCE))
-      .map((file) => [file.match(module)?.[1], file])
+    readdirSync(join(root, SOURCE), { recursive: true })
+      .map((file) => [basename(file).match(module)?.[1], file])
       .filter(([id]) => id)
       .map(([id, file]) => [id.toUpperCase(), file]),
   );
@@ -136,7 +138,16 @@ function cellsOf(line) {
   return line.split(/(?<!\\)\|/).map((cell) => cell.trim());
 }
 
-const baseline = JSON.parse(readFileSync(join(root, BASELINE), "utf8"));
+let baseline;
+try {
+  baseline = JSON.parse(readFileSync(join(root, BASELINE), "utf8"));
+} catch (cause) {
+  // Reported the same way as every other disagreement, rather than as a stack
+  // trace from a file this check exists to read.
+  console.error(`Spec baseline check failed (1 problem(s)):\n`);
+  console.error(`  - ${BASELINE}: ${cause.message}`);
+  process.exit(1);
+}
 // Normalized so a CRLF checkout fails on a real disagreement rather than on
 // line endings, which would otherwise read as a missing section.
 const readme = readFileSync(join(root, README), "utf8").replace(/\r\n/g, "\n");
@@ -210,6 +221,22 @@ for (const family of families) {
       errors.push(
         `${BASELINE}: \`${family}.${id}\` has no \`${SOURCE}/${label.toLowerCase()}${id.toLowerCase()}.ts\``,
       );
+  }
+}
+
+// Two documents sharing a hash means one was pasted from the other — the most
+// likely way the field the whole design rests on gets corrupted, and one of the
+// few things about it that can be judged without the text.
+const hashes = new Map();
+for (const family of families) {
+  for (const [id, entry] of Object.entries(baseline[family] ?? {})) {
+    const where = `${family}.${id}`;
+    const first = hashes.get(entry?.sha256);
+    if (first)
+      errors.push(
+        `${BASELINE}: \`${where}\` and \`${first}\` record the same sha256; two documents cannot have identical text`,
+      );
+    else if (entry?.sha256) hashes.set(entry.sha256, where);
   }
 }
 

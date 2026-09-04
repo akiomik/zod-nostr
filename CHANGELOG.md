@@ -32,7 +32,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   shipping with no recorded provenance. A document from a family with no table
   row (LUD-06, LUD-16) is held to what the README can carry: the text of the
   README's link to the family's repository must enumerate exactly the family's
-  baselined documents. It runs
+  baselined documents. Entries are also checked for the corruption a hash can be
+  judged for without the text: no two documents may record the same one. It runs
   in CI and before publish, and stays offline: whether upstream has moved since
   a baseline was recorded is a separate question from whether the repository
   agrees with itself.
