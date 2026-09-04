@@ -31,8 +31,8 @@ import { subscriptionId } from "./nip01.js";
  * element, an empty array, and any hints other than those two — `["auth"]` on
  * its own included — leave completeness unknown, in which case NIP-67 says the
  * client SHOULD paginate with `until` set to the oldest received event's
- * `created_at`. Interpreting the hints is the
- * consumer's responsibility — this schema validates structure only.
+ * `created_at`. Interpreting the hints is the consumer's responsibility — this
+ * schema validates structure only.
  *
  * This is a strict superset of `zostr.nip01.relayMessage.eose()`: it also
  * accepts the bare two-element form a NIP-67 relay still sends.

@@ -59,10 +59,10 @@ the single source of truth for provenance.
 - **Enforcement, with `src/` as the authority.** Four places name the same set
   of specs: the modules, the baseline, the `Supported NIPs` table, and the
   coverage paragraph above it. `test/spec-baseline/check.mjs` derives the
-  required set from the module filenames — `src/nip67.ts` demands a `nips.67`
-  entry, an entry with no module is dead weight, and a module whose family is
-  not declared at all is reported — then asserts the file is well formed and
-  that both README copies quote it, in both directions. A spec
+  required set from the module filenames of a declared family — `src/nip67.ts`
+  demands a `nips.67` entry, and an entry with no module is dead weight — then
+  asserts the file is well formed and that both README copies quote it, in both
+  directions. A spec
   added to one place and forgotten in another fails the build. It runs in CI and
   `prepublishOnly`, and stays offline: whether upstream has moved since a
   baseline was recorded is a different question, with a different answer over
@@ -94,3 +94,14 @@ Re-reading a spec is a reviewable change with a diff, rather than an
 undocumented act of diligence. The baseline is a claim about the text a schema
 targets, not a guarantee that upstream has not moved since — until the scheduled
 comparison exists, an entry going stale is still noticed by hand.
+
+Two gaps are left open deliberately, because the check decides what it can read
+from filenames and nothing more. A specification implemented **inside an
+existing module** rather than in its own file is invisible to it: NIP-24 is
+caught only because `src/nip24.ts` exists, and folding those fields into
+`src/nip01.ts` instead would have shipped them unbaselined. So is a module of a
+**family `sources` never declares** — no filename rule separates a `bolt11.ts`
+worth baselining from a `bech32.ts` that is an ordinary helper, and a guess in
+either direction was tried and produced worse diagnostics than it prevented.
+Both are judgements made when the spec is added, and this record is where the
+requirement lives.

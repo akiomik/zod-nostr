@@ -11,8 +11,14 @@
 // through to superseded spec text — both with CI green. This check makes each a
 // build failure.
 //
-// `src/` is the authority on what is implemented, so the module files decide
-// which documents must be baselined. A NIP is then cross-checked cell by cell,
+// `src/` is the authority on what is implemented, so the module files of a
+// declared family decide which of its documents must be baselined. Two things
+// that follows from, both deliberate: a specification implemented inside an
+// existing module rather than its own file is invisible here, and so is a
+// module of a family `sources` never declares — no filename rule separates a
+// `bolt11.ts` from a `bech32.ts`, so guessing produced worse diagnostics than
+// it prevented. Both are human steps that 0004 records; this check covers what
+// it can decide. A NIP is then cross-checked cell by cell,
 // since the table quotes its whole revision. A document from any other family
 // (LUD-06, LUD-16) has no row to quote, so the check asserts the weaker thing
 // the README can carry: that the README links the family's repository and that
@@ -42,13 +48,6 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/;
 // same id in lowercase (`nip7d.ts`).
 const DOCUMENT = /^[0-9A-Z]{2}$/;
 const TABLE_ROW = /^\*\*NIP-([0-9A-Z]{2})\*\*$/;
-// A spec module is a family label of any length followed by a two-character
-// document id — `nip01.ts`, `lud16.ts`, `nip7d.ts`, and a hypothetical
-// `bolt11.ts`. Used only to spot a module whose family `sources` does not
-// declare; a declared family is matched exactly by `implemented()` instead. The
-// id must carry a digit, which is what separates a document from an ordinary
-// helper — `types.ts` and `utils.ts` end in two characters too.
-const SPEC_MODULE = /^([a-z]+)([0-9a-z]{2})\.ts$/;
 const TABLE_HEADING = "\n## Supported NIPs\n";
 // What identifies the intro's coverage paragraph is that it links to the table
 // and names NIPs, not its wording: anchoring on the prose would fail a
@@ -195,19 +194,6 @@ for (const family of Object.keys(baseline)) {
   if (["note", "sources"].includes(family)) continue;
   if (!families.includes(family))
     errors.push(`${BASELINE}: \`${family}\` has no entry in \`sources\``);
-}
-
-// A module whose family is not declared at all would otherwise sit outside
-// every per-family check above and be baselined by nobody.
-const labels = new Set(
-  families.map((family) => sources[family]?.label?.toLowerCase()),
-);
-for (const file of readdirSync(join(root, SOURCE))) {
-  const [, prefix, id] = file.match(SPEC_MODULE) ?? [];
-  if (!prefix || !/\d/.test(id) || labels.has(prefix)) continue;
-  errors.push(
-    `${BASELINE}: \`${SOURCE}/${file}\` reads as document ${prefix.toUpperCase()}-${id.toUpperCase()}, whose family \`sources\` does not declare (a helper that is not a spec module belongs under \`${SOURCE}/core/\`)`,
-  );
 }
 
 // Every table row must name a baselined NIP and quote its recorded revision,
