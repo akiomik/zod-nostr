@@ -46,6 +46,10 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const DELIMITER = /^\|[\s:|-]+\|$/;
 const FENCE = /^\s*(```|~~~)/;
 const TABLE_ROW = /^\*\*NIP-([0-9A-Z]{2})\*\*$/;
+// A document id is the stem of its upstream filename, so it is spelled the way
+// the file is: two characters, digits or uppercase (`01`, `7D`). A lowercase
+// key would build a permalink to a file that does not exist.
+const DOCUMENT = /^[0-9A-Z]{2}$/;
 
 /**
  * Whether `date` is a real day, not merely digit-shaped. A transposed month
@@ -146,6 +150,12 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
 
     for (const [id, entry] of Object.entries(documents)) {
       const where = `${BASELINE}: \`${family}.${id}\``;
+      if (!DOCUMENT.test(id)) {
+        // Cross-checking a misspelled id against modules and the table would
+        // bury this under messages naming files and rows that do exist.
+        problems.push(`${where} is not a two-character document id`);
+        continue;
+      }
       if (!COMMIT.test(entry.commit))
         problems.push(`${where} has no 40-character commit`);
       if (!isCalendarDate(entry.date))
@@ -180,6 +190,12 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
           `${BASELINE}: \`${SOURCE}/${file}\` has no \`${family}.${id}\` entry`,
         );
   }
+
+  // Everything below reads the table family by name, so a `sources`/`documents`
+  // mismatch involving it is reported above and stops here rather than throwing
+  // past the report.
+  if (!baseline.sources[TABLE_FAMILY] || !baseline.documents[TABLE_FAMILY])
+    return problems;
 
   const table = supportedNipsTable(readme);
   if (table === null) {
@@ -220,8 +236,10 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
       );
   }
 
+  // A misspelled id is reported as such above; asking the table for a row it
+  // could not name would repeat that as a second, misleading message.
   for (const nip of Object.keys(baseline.documents[TABLE_FAMILY]))
-    if (!tabled.has(nip))
+    if (DOCUMENT.test(nip) && !tabled.has(nip))
       problems.push(
         `${README}: NIP-${nip} is baselined in ${BASELINE} but absent from the Supported NIPs table`,
       );

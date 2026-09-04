@@ -171,6 +171,52 @@ describe("specBaselineProblems", () => {
         "spec-baseline.json: `sources.buds` has no `documents` entry",
       ]);
     });
+
+    // Everything about the table reads the `nips` family by name, so a
+    // mismatch there must stop before it, not throw past its own report.
+    it("reports a misspelled `documents` key for the table family", () => {
+      const input = repository();
+      input.baseline.documents.nip = input.baseline.documents.nips;
+      delete input.baseline.documents.nips;
+      expect(specBaselineProblems(input)).toEqual([
+        "spec-baseline.json: `documents.nip` has no `sources` entry",
+        "spec-baseline.json: `sources.nips` has no `documents` entry",
+      ]);
+    });
+
+    it("reports a misspelled `sources` key for the table family", () => {
+      const input = repository();
+      input.baseline.sources.nip = input.baseline.sources.nips;
+      delete input.baseline.sources.nips;
+      expect(specBaselineProblems(input)).toEqual([
+        "spec-baseline.json: `documents.nips` has no `sources` entry",
+        "spec-baseline.json: `sources.nip` has no `documents` entry",
+      ]);
+    });
+  });
+
+  describe("a document id is spelled like its upstream filename", () => {
+    it("rejects a lowercase hex id without blaming files that exist", () => {
+      const input = repository();
+      input.baseline.documents.nips = {
+        "7d": { commit: COMMIT, date: "2026-09-04", sha256: HASH },
+      };
+      input.files = ["nip7d.ts", "lud16.ts"];
+      input.readme = input.readme
+        .replace("**NIP-01**", "**NIP-7D**")
+        .replace("/01.md", "/7D.md")
+        .replace("Covers NIP-01,", "Covers NIP-7D,");
+      const problems = specBaselineProblems(input);
+      expect(problems).toContainEqual(
+        "spec-baseline.json: `nips.7d` is not a two-character document id",
+      );
+      expect(problems).not.toContainEqual(
+        expect.stringContaining("`nips.7d` has no `src/nip7d.ts`"),
+      );
+      expect(problems).not.toContainEqual(
+        expect.stringContaining("NIP-7d is baselined"),
+      );
+    });
   });
 
   describe("a family with no table row", () => {
