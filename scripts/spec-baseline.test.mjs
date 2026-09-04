@@ -873,6 +873,15 @@ describe("specBaselineProblems", () => {
       expect(specBaselineProblems(input)).toEqual([]);
     });
 
+    it("finds a heading written with a closing run of hashes", () => {
+      const input = repository();
+      input.readme = input.readme.replace(
+        "## Supported NIPs",
+        "## Supported NIPs ##",
+      );
+      expect(specBaselineProblems(input)).toEqual([]);
+    });
+
     it("keeps its heading under a thematic break", () => {
       const input = repository();
       input.readme = input.readme.replace(

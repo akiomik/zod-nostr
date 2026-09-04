@@ -160,7 +160,9 @@ function sectionLines(readme) {
       fence = after;
     } else if (fence === null) {
       if (!found) {
-        found = line.trim() === TABLE_HEADING;
+        // Markdown lets a heading close with a run of hashes, which changes
+        // nothing about what it says.
+        found = line.trim().replace(/\s+#+$/, "") === TABLE_HEADING;
         if (found) {
           // From where the scan is: the heading's text may appear earlier, in
           // a fence this loop has already stepped over.
