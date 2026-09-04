@@ -43,10 +43,11 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const DOCUMENT = /^[0-9A-Z]{2}$/;
 const TABLE_ROW = /^\*\*NIP-([0-9A-Z]{2})\*\*$/;
 const TABLE_HEADING = "\n## Supported NIPs\n";
-// What identifies the intro's coverage paragraph is its link to the table, not
-// its wording: anchoring on the prose would fail a rewording that changed
-// nothing about the list.
+// What identifies the intro's coverage paragraph is that it links to the table
+// and names NIPs, not its wording: anchoring on the prose would fail a
+// rewording that changed nothing about the list.
 const TABLE_LINK = "](#supported-nips)";
+const NAMES_A_NIP = /NIP-[0-9A-Z]{2}/;
 
 /** Ids of the documents a family implements, read from `src/<label><id>.ts`. */
 function implemented(label) {
@@ -60,19 +61,22 @@ function implemented(label) {
 }
 
 /**
- * The intro paragraph that summarizes coverage and links to the table, or null.
- * Found by that link and taken whole, between the blank lines that bound it, so
- * neither rewrapping nor rewording it can truncate what the check reads.
+ * The paragraphs above the table that both link to it and name NIPs — the
+ * coverage summary, and nothing else. Paragraphs are taken whole, so neither
+ * rewrapping nor rewording one can truncate what the check reads, and every
+ * candidate is returned rather than the nearest: picking one would let a second
+ * such paragraph quietly become the thing enforced while the real summary went
+ * stale.
  */
-function coverageParagraph(readme) {
-  const link = readme.lastIndexOf(TABLE_LINK, readme.indexOf(TABLE_HEADING));
-  if (link === -1) return null;
-  const start = readme.lastIndexOf("\n\n", link);
-  const end = readme.indexOf("\n\n", link);
-  return readme.slice(
-    start === -1 ? 0 : start + 2,
-    end === -1 ? undefined : end,
-  );
+function coverageParagraphs(readme) {
+  const heading = readme.indexOf(TABLE_HEADING);
+  return readme
+    .slice(0, heading === -1 ? undefined : heading)
+    .split("\n\n")
+    .filter(
+      (paragraph) =>
+        paragraph.includes(TABLE_LINK) && NAMES_A_NIP.test(paragraph),
+    );
 }
 
 /**
@@ -198,14 +202,21 @@ for (const row of rows ?? []) {
 
 // The coverage paragraph is the README's third copy of the NIP list, and the
 // one a reader meets first.
-const covers = coverageParagraph(readme);
+const candidates = coverageParagraphs(readme);
+// More than one and there is no telling which summarizes coverage — enforcing
+// either would leave the other free to go stale.
+if (candidates.length > 1)
+  errors.push(
+    `${README}: ${candidates.length} paragraphs above the Supported NIPs table link to it and name NIPs; only the coverage summary should`,
+  );
+if (candidates.length === 0)
+  errors.push(
+    `${README}: no paragraph above the Supported NIPs table both links to it and names the covered NIPs`,
+  );
+const covers = candidates.length === 1 ? candidates[0] : null;
 const covered = new Set(
   covers ? [...covers.matchAll(/NIP-([0-9A-Z]{2})/g)].map(([, id]) => id) : [],
 );
-if (!covers)
-  errors.push(
-    `${README}: no intro paragraph linking to the Supported NIPs table`,
-  );
 
 // A section reported as missing above would otherwise make every baselined NIP
 // look individually absent, burying the one problem there is.
