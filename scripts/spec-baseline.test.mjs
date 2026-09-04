@@ -182,6 +182,17 @@ describe("specBaselineProblems", () => {
       ]);
     });
 
+    it("reports the table family missing from both sides", () => {
+      const input = repository();
+      input.baseline.sources.nip = input.baseline.sources.nips;
+      input.baseline.documents.nip = input.baseline.documents.nips;
+      delete input.baseline.sources.nips;
+      delete input.baseline.documents.nips;
+      expect(specBaselineProblems(input)).toEqual([
+        expect.stringContaining("no `nips` family"),
+      ]);
+    });
+
     it("reports a misspelled `sources` key for the table family", () => {
       const input = repository();
       input.baseline.sources.nip = input.baseline.sources.nips;
@@ -220,6 +231,16 @@ describe("specBaselineProblems", () => {
       ]);
     });
 
+    it("reports a label that is not a series name", () => {
+      const input = repository();
+      input.baseline.sources.luds.label = "LUD(";
+      // Reported once: the checks that would use the label are skipped, not
+      // attempted with a label that cannot name anything.
+      expect(specBaselineProblems(input)).toEqual([
+        expect.stringContaining("is not a series name"),
+      ]);
+    });
+
     it("reports a family that is not an object instead of crashing on it", () => {
       const input = repository();
       input.baseline.sources.luds = null;
@@ -228,11 +249,23 @@ describe("specBaselineProblems", () => {
       ]);
     });
 
-    it("reports an entry that is not an object", () => {
+    it.each([
+      ["null", null],
+      ["a string", "todo"],
+    ])("reports an entry that is %s", (_label, entry) => {
       const input = repository();
-      input.baseline.documents.luds["16"] = null;
+      input.baseline.documents.luds["16"] = entry;
       expect(specBaselineProblems(input)).toEqual([
         "spec-baseline.json: `luds.16` records no revision",
+      ]);
+    });
+
+    // The row is there, so telling its reader the NIP has no entry is false.
+    it("does not also call a malformed entry's row unbaselined", () => {
+      const input = repository();
+      input.baseline.documents.nips["01"] = null;
+      expect(specBaselineProblems(input)).toEqual([
+        "spec-baseline.json: `nips.01` records no revision",
       ]);
     });
   });
@@ -486,6 +519,26 @@ describe("specBaselineProblems", () => {
         "\n| Legend | Meaning |\n| --- | --- |\n| x | y |\n\n## Development",
       );
       expect(specBaselineProblems(input)).toEqual([]);
+    });
+
+    // Rows past prose still say which NIPs the README names, so drift in them
+    // is reported rather than lost behind a row that looks absent.
+    it("keeps reading rows past a line that is not one", () => {
+      const input = repository();
+      input.baseline.documents.nips["05"] = {
+        commit: OTHER_COMMIT,
+        date: "2026-06-13",
+        sha256: HASH.replace(/^6/, "8"),
+      };
+      input.files.push("nip05.ts");
+      input.readme = input.readme.replace(
+        `| **NIP-01** | [2026-09-04](${NIPS}/blob/${COMMIT}/01.md) | Events |`,
+        `| **NIP-01** | [2026-09-04](${NIPS}/blob/${COMMIT}/01.md) | Events |\n<!-- a note -->\n| **NIP-05** | [2020-01-01](${NIPS}/blob/${COMMIT}/05.md) | Identifiers |`,
+      );
+      expect(specBaselineProblems(input)).toEqual([
+        expect.stringContaining("breaks off before its rows end"),
+        expect.stringContaining("NIP-05's spec baseline cell disagrees"),
+      ]);
     });
 
     it("treats an escaped pipe as cell content, not a column boundary", () => {

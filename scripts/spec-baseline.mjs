@@ -54,6 +54,10 @@ const TABLE_ROW = /^\*\*NIP-([0-9A-Z]{2})\*\*$/;
 // the file is: two characters, digits or uppercase (`01`, `7D`). A lowercase
 // key would build a permalink to a file that does not exist.
 const DOCUMENT = /^[0-9A-Z]{2}$/;
+// A label names a document series and is interpolated into the pattern that
+// finds its modules, so it is held to letters: `LUD(` would reach `RegExp` as
+// syntax, and `L.D` would quietly match modules of another family.
+const LABEL = /^[A-Za-z]+$/;
 
 /**
  * Whether `date` is a real day, not merely digit-shaped. A transposed month
@@ -124,20 +128,29 @@ function supportedNipsTable(readme) {
     const rows = [];
     let interrupted = false;
     for (let line = index + 2; line < lines.length; line += 1) {
-      if (ROW.test(lines[line])) {
-        if (DELIMITER.test(lines[line])) break; // a table of its own
-        rows.push(lines[line]);
+      const text = lines[line];
+      if (ROW.test(text)) {
+        if (DELIMITER.test(text)) break; // a table of its own
+        rows.push(text);
         continue;
       }
-      const ahead = lines.slice(line);
-      const rest = ahead.find((text) => text.trim() !== "");
+      // Indented past what Markdown reads as a row: the table has ended here,
+      // but the line still says which NIP it names.
+      if (text.trim() !== "" && ROW.test(text.trimStart())) {
+        interrupted = true;
+        rows.push(text.trimStart());
+        continue;
+      }
+      // Blank, or prose — an HTML comment, a stray sentence. Keep reading only
+      // while rows follow, so what they name is still known.
+      const ahead = lines.slice(line + 1);
+      const rest = ahead.find((following) => following.trim() !== "");
       if (rest === undefined || !ROW.test(rest.trimStart())) break;
       // Located from here, not from the section start: a line that repeats an
       // earlier one — a header pasted below the table — would otherwise be
       // found at its first occurrence, whose successor is the real delimiter.
-      if (DELIMITER.test(lines[line + ahead.indexOf(rest) + 1] ?? "")) break;
+      if (DELIMITER.test(ahead[ahead.indexOf(rest) + 1] ?? "")) break;
       interrupted = true;
-      if (lines[line].trim() !== "") rows.push(lines[line].trimStart());
     }
     return { header, rows, nip, interrupted };
   }
@@ -157,6 +170,9 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
   // uses, so the modules and rows that do match them are not reported as
   // orphans of an entry that is right there under the wrong key.
   const misspelled = new Set();
+  // Ids whose entry holds nothing to compare, for the same reason: the row is
+  // there, so telling its reader the NIP has no entry would be false.
+  const malformed = new Set();
 
   // `sources` says what a family is and `documents` holds its entries, so a
   // family in one and not the other is the same "updated one file and not the
@@ -190,14 +206,20 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
     // would take the rest of the report with it.
     if (!label)
       problems.push(`${BASELINE}: \`sources.${family}\` has no label`);
+    else if (!LABEL.test(label))
+      problems.push(
+        `${BASELINE}: \`sources.${family}.label\` is \`${label}\`, which is not a series name`,
+      );
     if (!repository)
       problems.push(`${BASELINE}: \`sources.${family}\` has no repository`);
-    const modules = label ? moduleIds(label, files) : new Map();
+    const named = label && LABEL.test(label);
+    const modules = named ? moduleIds(label, files) : new Map();
 
     for (const [id, entry] of Object.entries(documents)) {
       const where = `${BASELINE}: \`${family}.${id}\``;
       if (entry === null || typeof entry !== "object") {
         problems.push(`${where} records no revision`);
+        malformed.add(id);
         continue;
       }
       if (!DOCUMENT.test(id)) {
@@ -224,7 +246,7 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
         else hashes.set(entry.sha256, `${family}.${id}`);
       }
 
-      if (!label) continue; // the checks below need one
+      if (!named) continue; // the checks below need a usable label
       if (!modules.has(id))
         problems.push(
           `${where} has no \`${SOURCE}/${label.toLowerCase()}${id.toLowerCase()}.ts\``,
@@ -243,9 +265,16 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
         );
   }
 
-  // Everything below reads the table family by name, so a `sources`/`documents`
-  // mismatch involving it is reported above and stops here rather than throwing
-  // past the report.
+  // Everything below reads the table family by name. Missing from one side it
+  // is reported above; missing from both it is reported here, because a
+  // renamed key would otherwise skip the whole table cross-check in silence.
+  if (
+    !(TABLE_FAMILY in baseline.sources) &&
+    !(TABLE_FAMILY in baseline.documents)
+  )
+    problems.push(
+      `${BASELINE}: no \`${TABLE_FAMILY}\` family, so nothing says what the ${README} table should quote`,
+    );
   if (!baseline.sources[TABLE_FAMILY] || !baseline.documents[TABLE_FAMILY])
     return problems;
 
@@ -281,8 +310,8 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
     }
     tabled.add(nip);
     const entry = baseline.documents[TABLE_FAMILY][nip];
-    if (!entry) {
-      if (!misspelled.has(nip))
+    if (!entry || malformed.has(nip)) {
+      if (!misspelled.has(nip) && !malformed.has(nip))
         problems.push(`${README}: NIP-${nip} has no entry in ${BASELINE}`);
       continue;
     }
@@ -317,6 +346,6 @@ export function specBaselineSummary({ baseline }) {
     .join(", ");
   return (
     `Spec baseline check passed — ${counts} baselined from ${SOURCE}/; ` +
-    `${Object.keys(baseline.documents[TABLE_FAMILY]).length} NIPs cross-checked against ${README}.`
+    `${Object.keys(baseline.documents[TABLE_FAMILY] ?? {}).length} NIPs cross-checked against ${README}.`
   );
 }
