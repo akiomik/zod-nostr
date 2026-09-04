@@ -1,8 +1,5 @@
-import { readdirSync, readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { specBaselineProblems } from "./spec-baseline.mjs";
+import { specBaselineProblems, specBaselineSummary } from "./spec-baseline.mjs";
 
 // The contract of `scripts/spec-baseline.mjs`. Every rule it enforces is
 // pinned here by the edit that should trip it, and every guarantee it makes
@@ -12,9 +9,10 @@ import { specBaselineProblems } from "./spec-baseline.mjs";
 // a deliberate change to one.
 //
 // The function takes its three inputs as data, so a case is a small object
-// rather than a fixture repository.
-
-const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+// rather than a fixture repository. Whether *this* repository agrees with
+// itself is `npm run test:spec-baseline`'s question, not this file's — asking
+// it here too would fail the earlier `npm test` step and hide the answer the
+// CLI is written to give.
 
 const COMMIT = "c3fd9af17939316bf6d0d83a5759100f8b0a1bdb";
 const OTHER_COMMIT = "bd93433261872bf69bbe75e29376504b848d5353";
@@ -224,16 +222,9 @@ describe("specBaselineProblems", () => {
         .replace("**NIP-01**", "**NIP-7D**")
         .replace("/01.md", "/7D.md")
         .replace("Covers NIP-01,", "Covers NIP-7D,");
-      const problems = specBaselineProblems(input);
-      expect(problems).toContainEqual(
+      expect(specBaselineProblems(input)).toEqual([
         "spec-baseline.json: `nips.7d` is not a two-character document id",
-      );
-      expect(problems).not.toContainEqual(
-        expect.stringContaining("`nips.7d` has no `src/nip7d.ts`"),
-      );
-      expect(problems).not.toContainEqual(
-        expect.stringContaining("NIP-7d is baselined"),
-      );
+      ]);
     });
   });
 
@@ -401,12 +392,50 @@ describe("specBaselineProblems", () => {
     // wrong fix.
     it.each([
       ["a blank line inside it", "\n| **NIP-01**"],
-      ["a row indented out of it", " | **NIP-01**"],
+      ["a row indented out of it", "    | **NIP-01**"],
     ])("reports being broken off by %s", (_label, replacement) => {
       const input = repository();
       input.readme = input.readme.replace("| **NIP-01**", replacement);
       expect(specBaselineProblems(input)).toEqual([
         expect.stringContaining("breaks off before its rows end"),
+      ]);
+    });
+
+    // Markdown allows a block three spaces of indentation and ignores trailing
+    // space, so neither is a break — and neither should fail the build.
+    it.each([
+      ["indented up to three spaces", (t) => t.replace(/^\| /gm, "  | ")],
+      ["trailing whitespace", (t) => t.replace(/^(\|.*\|)$/gm, "$1  ")],
+    ])("accepts a table %s", (_label, reformat) => {
+      const input = repository();
+      input.readme = reformat(input.readme);
+      expect(specBaselineProblems(input)).toEqual([]);
+    });
+
+    // A break stops the table rendering, but the rows past it still say which
+    // NIPs the README names, so a NIP missing from all of them is still its own
+    // problem rather than one hidden until the break is fixed.
+    it("still reports a NIP no row names at all", () => {
+      const input = repository();
+      input.baseline.documents.nips["05"] = {
+        commit: OTHER_COMMIT,
+        date: "2026-06-13",
+        sha256: HASH.replace(/^6/, "7"),
+      };
+      input.files.push("nip05.ts");
+      input.readme = input.readme.replace("| **NIP-01**", "\n| **NIP-01**");
+      expect(specBaselineProblems(input)).toEqual([
+        expect.stringContaining("breaks off before its rows end"),
+        expect.stringContaining("NIP-05 is baselined"),
+      ]);
+    });
+
+    it("reports a family whose entries are not an object", () => {
+      const input = repository();
+      input.baseline.documents.luds = null;
+      input.files.push("lud99.ts");
+      expect(specBaselineProblems(input)).toEqual([
+        "spec-baseline.json: `documents.luds` holds no entries",
       ]);
     });
 
@@ -431,16 +460,13 @@ describe("specBaselineProblems", () => {
       expect(specBaselineProblems(input)).toEqual([]);
     });
   });
+});
 
-  it("passes against this repository", () => {
-    expect(
-      specBaselineProblems({
-        baseline: JSON.parse(
-          readFileSync(join(root, "spec-baseline.json"), "utf8"),
-        ),
-        readme: readFileSync(join(root, "README.md"), "utf8"),
-        files: readdirSync(join(root, "src"), { recursive: true }),
-      }),
-    ).toEqual([]);
+describe("specBaselineSummary", () => {
+  it("counts each family and the NIPs cross-checked", () => {
+    expect(specBaselineSummary(repository())).toBe(
+      "Spec baseline check passed — 1 nips, 1 luds baselined from src/; " +
+        "1 NIPs cross-checked against README.md.",
+    );
   });
 });

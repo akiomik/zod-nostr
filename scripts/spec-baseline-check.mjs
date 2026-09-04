@@ -9,6 +9,7 @@ import {
   README,
   SOURCE,
   specBaselineProblems,
+  specBaselineSummary,
 } from "./spec-baseline.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -28,12 +29,4 @@ if (problems.length > 0) {
   process.exit(1);
 }
 
-const counts = Object.keys(baseline.documents)
-  .map(
-    (family) => `${Object.keys(baseline.documents[family]).length} ${family}`,
-  )
-  .join(", ");
-console.log(
-  `Spec baseline check passed — ${counts} baselined from ${SOURCE}/; ` +
-    `${Object.keys(baseline.documents.nips).length} NIPs cross-checked against ${README}.`,
-);
+console.log(specBaselineSummary({ baseline }));

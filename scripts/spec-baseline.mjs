@@ -43,7 +43,11 @@ const NIP_COLUMN = "NIP";
 const COMMIT = /^[0-9a-f]{40}$/;
 const SHA256 = /^[0-9a-f]{64}$/;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
-const DELIMITER = /^\|[\s:|-]+\|$/;
+// Markdown allows a block up to three leading spaces, and ignores what trails
+// it. A fourth space makes the line something else, and inside a table that
+// means the table stopped.
+const ROW = /^ {0,3}\|/;
+const DELIMITER = /^ {0,3}\|[\s:|-]+\|\s*$/;
 const FENCE = /^\s*(```|~~~)/;
 const TABLE_ROW = /^\*\*NIP-([0-9A-Z]{2})\*\*$/;
 // A document id is the stem of its upstream filename, so it is spelled the way
@@ -106,23 +110,31 @@ function supportedNipsTable(readme) {
       fenced = !fenced;
       continue;
     }
-    if (fenced || !header.startsWith("|")) continue;
+    if (fenced || !ROW.test(header)) continue;
     if (!DELIMITER.test(lines[index + 1] ?? "")) continue;
     const nip = cellsOf(header).indexOf(NIP_COLUMN);
     if (nip === -1) continue;
+
+    // A blank line, or an indent Markdown reads as something other than a row,
+    // ends the table where it renders — so it is worth reporting on its own.
+    // The rows past it are still collected, because they still say which NIPs
+    // the README names, and a NIP missing from all of them is a separate
+    // problem that should not wait for the break to be fixed. A genuine second
+    // table below carries its own delimiter and ends the scan instead.
     const rows = [];
-    let end = index + 2;
-    for (; lines[end]?.startsWith("|"); end += 1) rows.push(lines[end]);
-    // A blank line or an indented row ends the table for Markdown too, leaving
-    // what follows to render as text rather than as rows. Spotting that lets it
-    // be reported as itself instead of as every remaining NIP being absent —
-    // while a genuine second table, which carries its own delimiter, does not
-    // count.
-    let after = end;
-    while (lines[after]?.trim() === "") after += 1;
-    const interrupted =
-      lines[after]?.trim().startsWith("|") === true &&
-      !DELIMITER.test(lines[after + 1] ?? "");
+    let interrupted = false;
+    for (let line = index + 2; line < lines.length; line += 1) {
+      if (ROW.test(lines[line])) {
+        if (DELIMITER.test(lines[line])) break; // a table of its own
+        rows.push(lines[line]);
+        continue;
+      }
+      const rest = lines.slice(line).find((text) => text.trim() !== "");
+      if (rest === undefined || !ROW.test(rest.trimStart())) break;
+      if (DELIMITER.test(lines[lines.indexOf(rest) + 1] ?? "")) break;
+      interrupted = true;
+      if (lines[line].trim() !== "") rows.push(lines[line].trimStart());
+    }
     return { header, rows, nip, interrupted };
   }
   return null;
@@ -137,6 +149,10 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
   const readme = text.replace(/\r\n/g, "\n");
   const problems = [];
   const hashes = new Map();
+  // Ids reported as misspelled, in the spelling the rest of the repository
+  // uses, so the modules and rows that do match them are not reported as
+  // orphans of an entry that is right there under the wrong key.
+  const misspelled = new Set();
 
   // `sources` says what a family is and `documents` holds its entries, so a
   // family in one and not the other is the same "updated one file and not the
@@ -157,7 +173,11 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
     baseline.sources,
   )) {
     const documents = baseline.documents[family];
-    if (!documents) continue; // already reported
+    if (!(family in baseline.documents)) continue; // already reported
+    if (documents === null || typeof documents !== "object") {
+      problems.push(`${BASELINE}: \`documents.${family}\` holds no entries`);
+      continue;
+    }
     // Reported rather than thrown on: a family added without its label is the
     // same half-finished edit as one added without its entries, and crashing
     // would take the rest of the report with it.
@@ -170,9 +190,10 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
     for (const [id, entry] of Object.entries(documents)) {
       const where = `${BASELINE}: \`${family}.${id}\``;
       if (!DOCUMENT.test(id)) {
-        // Cross-checking a misspelled id against modules and the table would
-        // bury this under messages naming files and rows that do exist.
+        // Cross-checking a misspelled id would bury this under messages naming
+        // the module and row that do exist, under the id it should have had.
         problems.push(`${where} is not a two-character document id`);
+        misspelled.add(id.toUpperCase());
         continue;
       }
       if (!COMMIT.test(entry.commit))
@@ -205,7 +226,7 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
 
     // `src/` is the authority: a spec module with no entry has no provenance.
     for (const [id, file] of modules)
-      if (!(id in documents))
+      if (!(id in documents) && !misspelled.has(id))
         problems.push(
           `${BASELINE}: \`${SOURCE}/${file}\` has no \`${family}.${id}\` entry`,
         );
@@ -243,7 +264,8 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
     tabled.add(nip);
     const entry = baseline.documents[TABLE_FAMILY][nip];
     if (!entry) {
-      problems.push(`${README}: NIP-${nip} has no entry in ${BASELINE}`);
+      if (!misspelled.has(nip))
+        problems.push(`${README}: NIP-${nip} has no entry in ${BASELINE}`);
       continue;
     }
     if (column === -1) continue; // already reported
@@ -261,14 +283,27 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
       `${README}: the Supported NIPs table breaks off before its rows end, so what follows it does not render as part of it`,
     );
 
-  // A misspelled id is reported as such above, and rows lost to a broken-off
-  // table just above; asking the table for either would repeat that as a
-  // second, misleading message.
+  // A misspelled id is reported as such above; asking the table for a row it
+  // could not name would repeat that as a second, misleading message. A break
+  // does not suppress this — the rows past it were still read.
   for (const nip of Object.keys(baseline.documents[TABLE_FAMILY]))
-    if (!table.interrupted && DOCUMENT.test(nip) && !tabled.has(nip))
+    if (DOCUMENT.test(nip) && !tabled.has(nip))
       problems.push(
         `${README}: NIP-${nip} is baselined in ${BASELINE} but absent from the Supported NIPs table`,
       );
 
   return problems;
+}
+
+/** The line the CLI prints when nothing disagrees. */
+export function specBaselineSummary({ baseline }) {
+  const counts = Object.keys(baseline.documents)
+    .map(
+      (family) => `${Object.keys(baseline.documents[family]).length} ${family}`,
+    )
+    .join(", ");
+  return (
+    `Spec baseline check passed — ${counts} baselined from ${SOURCE}/; ` +
+    `${Object.keys(baseline.documents[TABLE_FAMILY]).length} NIPs cross-checked against ${README}.`
+  );
 }
