@@ -164,7 +164,11 @@ function moduleIds(label, files) {
  */
 function sectionLines(readme) {
   const all = readme.split("\n");
-  const heading = (line) => line.trim().replace(/\s+#+$/, "") === TABLE_HEADING;
+  // Indented four spaces it is a code block, not a heading — the same reason
+  // every other block matcher here is anchored at `^ {0,3}`.
+  const heading = (line) =>
+    /^ {0,3}\S/.test(line) &&
+    line.trim().replace(/\s+#+$/, "") === TABLE_HEADING;
   const lines = [];
   let offset = 0;
   let fence = null;
@@ -496,7 +500,7 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
   // silence rather than say so.
   const trimmed =
     typeof source === "string" ? source.replace(/\/+$/, "") : undefined;
-  if (source !== undefined && trimmed === "")
+  if (typeof source === "string" && source !== "" && trimmed === "")
     problems.push(`${BASELINE}: \`sources.${TABLE_FAMILY}\` has no repository`);
   const repository = trimmed === "" ? undefined : trimmed;
 
@@ -593,7 +597,9 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
       const after = fenceAfter(line, quoted);
       const inside = quoted !== null || after !== quoted;
       quoted = after;
-      return !inside && !rowLines.has(at);
+      // Indented four spaces is a code block, which shows a mention rather
+      // than making one, the same as a fenced block.
+      return !inside && !rowLines.has(at) && !/^ {4}\S/.test(line);
     })
     .join("\n");
   for (const [label, id] of mentions)

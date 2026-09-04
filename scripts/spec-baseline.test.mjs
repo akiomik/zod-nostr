@@ -370,6 +370,14 @@ describe("specBaselineProblems", () => {
       ]);
     });
 
+    it("reports an empty repository once, not twice", () => {
+      const input = repository();
+      input.baseline.sources.nips.repository = "";
+      expect(specBaselineProblems(input)).toEqual([
+        "spec-baseline.json: `sources.nips` has no repository",
+      ]);
+    });
+
     it("reports a repository that trims away to nothing", () => {
       const input = repository();
       input.baseline.sources.nips.repository = "/";
@@ -1036,6 +1044,27 @@ describe("specBaselineProblems", () => {
       expect(specBaselineProblems(input)).toEqual([
         "README.md: cannot read a NIP number from row: |  |  |  |",
         expect.stringContaining("NIP-01's spec baseline cell disagrees"),
+      ]);
+    });
+
+    // Indented four spaces it is a code block: it shows the heading rather
+    // than being one, the same as a fenced sample does.
+    it("is not anchored on an indented sample of its heading", () => {
+      const input = repository();
+      input.readme = input.readme.replace(
+        "## Supported NIPs",
+        "    ## Supported NIPs\n\n## Supported NIPs",
+      );
+      expect(specBaselineProblems(input)).toEqual([]);
+    });
+
+    it("does not accept a mention made in indented code", () => {
+      const input = repository();
+      input.readme = input.readme
+        .replace("Covers NIP-01, and", "Covers and")
+        .replace("## Supported NIPs", "    NIP-01\n\n## Supported NIPs");
+      expect(specBaselineProblems(input)).toEqual([
+        "README.md: never mentions NIP-01 outside the table",
       ]);
     });
 
