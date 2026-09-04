@@ -253,6 +253,32 @@ describe("specBaselineProblems", () => {
       ]);
     });
 
+    // One spelling for what has already been reported: the module and the row
+    // are both there, so neither is an orphan of a missing entry.
+    it("reports a lowercase id whose entry is also malformed just once", () => {
+      const input = repository();
+      input.baseline.documents.nips = { "7d": null };
+      input.files = ["nip7d.ts", "lud16.ts"];
+      input.readme = input.readme
+        .replace("**NIP-01**", "**NIP-7D**")
+        .replace("/01.md", "/7D.md")
+        .replace("Covers NIP-01,", "Covers NIP-7D,");
+      expect(specBaselineProblems(input)).toEqual([
+        "spec-baseline.json: `nips.7d` records no revision",
+      ]);
+    });
+
+    it.each([["sources"], ["documents"]])(
+      "reports a `%s` that is not an object",
+      (key) => {
+        const input = repository();
+        input.baseline[key] = "todo";
+        expect(specBaselineProblems(input)).toEqual([
+          "spec-baseline.json: has no `sources` and `documents` to compare",
+        ]);
+      },
+    );
+
     it("reports a label that is not a series name", () => {
       const input = repository();
       input.baseline.sources.luds.label = "LUD(";

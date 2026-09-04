@@ -75,10 +75,10 @@ the single source of truth for provenance.
   `Supported NIPs` table — and the modules of a registered family decide:
   `src/nip67.ts` calls for a `nips.67` entry, and an entry with no module is
   dead weight. Registering the family stays a judgement, for the reason under
-  Consequences. The table repeats each revision so
-  a reader can click through to it, which is a second copy of a fact, so the two
-  are kept in step by `scripts/spec-baseline-check.mjs`, in both directions, in
-  CI and `prepublishOnly`. It sits under `scripts/` rather than `test/` because
+  Consequences. The table repeats each revision so a reader can click through
+  to it, which is a second copy of a fact, so the two are kept in step by
+  `scripts/spec-baseline-check.mjs`, in both directions, in CI and
+  `prepublishOnly`. It sits under `scripts/` rather than `test/` because
   it is tooling with tests of its own, which would read as tests of test code
   there.
 
@@ -122,10 +122,9 @@ Adding `src/nipXX.ts` now means adding a baseline entry and a table row, or the
 build fails. A document from a new family needs a `sources` entry as well — a
 requirement this record carries, not one the check can demand, for the reason
 below. Re-reading a spec is a reviewable change with a diff, rather than an
-undocumented act of diligence. The
-baseline is a claim about the text a schema targets, not a guarantee that
-upstream has not moved since — until the scheduled comparison exists, an entry
-going stale is still noticed by hand.
+undocumented act of diligence. The baseline is a claim about the text a schema
+targets, not a guarantee that upstream has not moved since — until the
+scheduled comparison exists, an entry going stale is still noticed by hand.
 
 Three gaps stay open whatever is checked. The first is that nothing offline can
 tie an entry's `sha256` or `date` to its `commit`: both are facts about a

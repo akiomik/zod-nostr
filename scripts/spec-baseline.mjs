@@ -98,14 +98,6 @@ function moduleIds(label, files) {
 }
 
 /**
- * README's `Supported NIPs` table: its header line and its body rows, or null.
- *
- * Identified by shape rather than by position — the first block in the section,
- * outside any fence, that has a delimiter row and a `NIP` column. Taking the
- * first pipe-led block instead would read a legend table, or a fenced example
- * of this very table, as the table and report its rows as malformed NIPs.
- */
-/**
  * The lines of the `Supported NIPs` section, or null. Both ends are found
  * outside fences: a fenced sample of this heading before the real one would
  * otherwise anchor the section on the sample, and one after it would cut the
@@ -132,6 +124,14 @@ function sectionLines(readme) {
   return found ? lines : null;
 }
 
+/**
+ * README's `Supported NIPs` table: its header line and its body rows, or null.
+ *
+ * Identified by shape rather than by position — the first block in the section,
+ * outside any fence, that has a delimiter row and a `NIP` column. Taking the
+ * first pipe-led block instead would read a legend table, or a fenced example
+ * of this very table, as the table and report its rows as malformed NIPs.
+ */
 function supportedNipsTable(readme) {
   const lines = sectionLines(readme);
   if (lines === null) return null;
@@ -193,22 +193,24 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
   // Normalized so a CRLF checkout fails on a real disagreement, not on newlines.
   const readme = text.replace(/\r\n/g, "\n");
   const problems = [];
-  if (!baseline.sources || !baseline.documents)
+  // Checked for being objects, not merely present: the loops below reach them
+  // with `in` and `Object.entries`, which throw on anything else.
+  const holds = (value) => value !== null && typeof value === "object";
+  if (!holds(baseline.sources) || !holds(baseline.documents))
     return [`${BASELINE}: has no \`sources\` and \`documents\` to compare`];
   const hashes = new Map();
-  // Ids reported as misspelled, in the spelling the rest of the repository
-  // uses, so the modules and rows that do match them are not reported as
-  // orphans of an entry that is right there under the wrong key.
-  const misspelled = new Set();
-  // Ids whose entry holds nothing to compare, for the same reason: the row is
-  // there, so telling its reader the NIP has no entry would be false.
-  const malformed = new Set();
+  // Ids already reported at their entry — misspelled, or holding nothing to
+  // compare — in the spelling the rest of the repository uses. The module and
+  // the row that match them are there, so calling either an orphan of a
+  // missing entry would be false. One set, one spelling: keeping two, keyed
+  // differently, is how a lowercase id slipped past both.
+  const excused = new Set();
   // Ids whose entry was reported for the fields a link is built from, so the
   // comparison does not tell its reader to paste `blob/undefined` into the
   // README.
   const unusable = new Set();
-  // All three are keyed by family as well as id: `luds.01` saying nothing about
-  // a revision is no reason to stop reporting what `nips.01` says.
+  // Both are keyed by family as well as id: `luds.01` saying nothing about a
+  // revision is no reason to stop reporting what `nips.01` says.
 
   // `sources` says what a family is and `documents` holds its entries, so a
   // family in one and not the other is the same "updated one file and not the
@@ -255,14 +257,14 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
       const where = `${BASELINE}: \`${family}.${id}\``;
       if (entry === null || typeof entry !== "object") {
         problems.push(`${where} records no revision`);
-        malformed.add(`${family}.${id}`);
+        excused.add(`${family}.${id.toUpperCase()}`);
         continue;
       }
       if (!DOCUMENT.test(id)) {
         // Cross-checking a misspelled id would bury this under messages naming
         // the module and row that do exist, under the id it should have had.
         problems.push(`${where} is not a two-character document id`);
-        misspelled.add(`${family}.${id.toUpperCase()}`);
+        excused.add(`${family}.${id.toUpperCase()}`);
         continue;
       }
       if (!COMMIT.test(entry.commit)) {
@@ -299,7 +301,7 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
 
     // `src/` is the authority: a spec module with no entry has no provenance.
     for (const [id, file] of modules)
-      if (!(id in documents) && !misspelled.has(`${family}.${id}`))
+      if (!(id in documents) && !excused.has(`${family}.${id}`))
         problems.push(
           `${BASELINE}: \`${SOURCE}/${file}\` has no \`${family}.${id}\` entry`,
         );
@@ -351,9 +353,9 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
     tabled.add(nip);
     const entry = baseline.documents[TABLE_FAMILY][nip];
     const known = `${TABLE_FAMILY}.${nip}`;
-    if (!entry || malformed.has(known)) {
-      if (!misspelled.has(known) && !malformed.has(known))
-        problems.push(`${README}: NIP-${nip} has no entry in ${BASELINE}`);
+    if (excused.has(known)) continue; // reported at its entry
+    if (!entry) {
+      problems.push(`${README}: NIP-${nip} has no entry in ${BASELINE}`);
       continue;
     }
     if (column === -1 || !repository || unusable.has(known)) continue; // reported
