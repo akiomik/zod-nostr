@@ -70,11 +70,12 @@ the single source of truth for provenance.
   though the check matches without regard for case or for how deep under `src/`
   it sits — and it must name the document whose rules the module encodes, not
   the field that happens to carry the value. The baseline's own key is the
-  upstream filename's stem, so it is written as that file is: `7D`, not `7d`. The kind:0 `lud06` field carries
-  an LNURL, but the encoding is LUD-01's and LUD-06 defines only what the
-  decoded URL answers with, so the module is `lud01.ts` and the field keeps its
-  ecosystem name at `metadataFields.lud06()` — the same split as
-  `metadataFields.nip05()` referencing `nip05.identifier()`.
+  upstream filename's stem, so it is written as that file is: `7D`, not `7d`.
+  The kind:0 `lud06` field carries an LNURL, but the encoding is LUD-01's and
+  LUD-06 defines only what the decoded URL answers with, so the module is
+  `lud01.ts` and the field keeps its ecosystem name at `metadataFields.lud06()`
+  — the same split as `metadataFields.nip05()` referencing
+  `nip05.identifier()`.
 - **`src/` is the authority on what must be baselined, family by family.** Two
   places name the same set of specs — the modules and the baseline — and the
   modules of a registered family decide: `src/nip67.ts` calls for a `nips.67`
