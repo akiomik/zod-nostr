@@ -48,6 +48,7 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/;
 // same id in lowercase (`nip7d.ts`).
 const DOCUMENT = /^[0-9A-Z]{2}$/;
 const TABLE_ROW = /^\*\*NIP-([0-9A-Z]{2})\*\*$/;
+const BASELINE_COLUMN = "Spec baseline";
 const TABLE_HEADING = "\n## Supported NIPs\n";
 // What identifies the intro's coverage paragraph is that it links to the table
 // and names NIPs, not its wording: anchoring on the prose would fail a
@@ -99,18 +100,30 @@ function coverageParagraphs(readme) {
 }
 
 /**
- * The rows of README's `Supported NIPs` table as raw Markdown lines, or null if
- * the section is gone — reported like any other disagreement rather than thrown,
- * so a run that also has baseline problems still prints them.
+ * README's `Supported NIPs` table split into header, delimiter, and body rows,
+ * or null if the section is gone — reported like any other disagreement rather
+ * than thrown, so a run that also has baseline problems still prints them. The
+ * header and delimiter are returned because they decide what the table renders:
+ * Markdown drops body cells past the header's column count, so a header trimmed
+ * back to its pre-baseline form would erase every recorded revision from the
+ * rendered page while each row still read correctly here.
  */
-function supportedNipsRows(readme) {
+function supportedNipsTable(readme) {
   const heading = readme.indexOf(TABLE_HEADING);
   if (heading === -1) return null;
   // A section that runs to the end of the file has no following heading; slicing
   // to `-1` would silently swallow the rest of the README instead.
   const next = readme.indexOf("\n## ", heading + 1);
   const section = readme.slice(heading, next === -1 ? undefined : next);
-  return section.split("\n").filter((line) => line.startsWith("| **NIP-"));
+  const [header, delimiter, ...rows] = section
+    .split("\n")
+    .filter((line) => line.startsWith("|"));
+  return { header, delimiter, rows };
+}
+
+/** A Markdown table row's cells, including the empty ones its pipes bound. */
+function cellsOf(line) {
+  return line.split("|").map((cell) => cell.trim());
 }
 
 const baseline = JSON.parse(readFileSync(join(root, BASELINE), "utf8"));
@@ -201,10 +214,31 @@ for (const family of Object.keys(baseline)) {
 // and forgotten in the other is the failure this check exists for.
 const tabled = new Set();
 const repository = sources[TABLE_FAMILY]?.repository;
-const rows = supportedNipsRows(readme);
-if (rows === null) errors.push(`${README}: no "Supported NIPs" section`);
+const table = supportedNipsTable(readme);
+if (table === null) errors.push(`${README}: no "Supported NIPs" section`);
+
+// Which column carries the revision is read from the header rather than assumed,
+// so dropping or moving it is reported instead of silently changing what is
+// compared. A body row wider than the header renders with its extra cells cut.
+const header = table?.header ? cellsOf(table.header) : [];
+const column = header.indexOf(BASELINE_COLUMN);
+if (table && column === -1)
+  errors.push(
+    `${README}: the Supported NIPs table has no \`${BASELINE_COLUMN}\` column`,
+  );
+const widths = new Set(
+  [table?.header, table?.delimiter, ...(table?.rows ?? [])]
+    .filter(Boolean)
+    .map((line) => cellsOf(line).length),
+);
+if (widths.size > 1)
+  errors.push(
+    `${README}: the Supported NIPs table's rows do not all have the same number of columns, so Markdown drops the cells past its header`,
+  );
+
+const rows = table?.rows ?? null;
 for (const row of rows ?? []) {
-  const cells = row.split("|").map((cell) => cell.trim());
+  const cells = cellsOf(row);
   const nip = cells[1]?.match(TABLE_ROW)?.[1];
   if (!nip) {
     errors.push(`${README}: cannot read a NIP number from row: ${row}`);
@@ -218,12 +252,12 @@ for (const row of rows ?? []) {
     errors.push(`${README}: NIP-${nip} has no entry in ${BASELINE}`);
     continue;
   }
-  if (!repository) continue; // already reported; nothing to compare against
+  if (!repository || column === -1) continue; // already reported
   const expected = `[${entry.date}](${repository}/blob/${entry.commit}/${nip}.md)`;
-  if (cells[2] !== expected)
+  if (cells[column] !== expected)
     errors.push(
       `${README}: NIP-${nip}'s spec baseline cell disagrees with ${BASELINE}:\n` +
-        `    ${README}: ${cells[2]}\n` +
+        `    ${README}: ${cells[column]}\n` +
         `    expected: ${expected}`,
     );
 }
