@@ -77,7 +77,9 @@ the single source of truth for provenance.
   and an entry with no module is dead weight. The table repeats each revision so
   a reader can click through to it, which is a second copy of a fact, so the two
   are kept in step by `scripts/spec-baseline-check.mjs`, in both directions, in
-  CI and `prepublishOnly`.
+  CI and `prepublishOnly`. It sits under `scripts/` rather than `test/` because
+  it is tooling with tests of its own, which would read as tests of test code
+  there.
 
   The check compares the repository against itself and nothing else. It does not
   fetch upstream — whether a spec has moved since a baseline was recorded is a
@@ -88,11 +90,11 @@ the single source of truth for provenance.
   and not the ways a hand-corrupted file could be malformed. Those fail the
   build anyway, and guarding each one costs more than the case is worth.
 
-  Its rules are pinned by `scripts/spec-baseline-check.test.mjs`, which is why
-  the script exports what it decides as a function of its three inputs and
-  keeps reading files in the CLI. A script nothing exercises invites an
-  open-ended argument about how good each diagnostic is; one with a contract
-  answers that with a case, or with a deliberate change to one.
+  Its rules are pinned by `scripts/spec-baseline.test.mjs`, which is why they
+  live in `spec-baseline.mjs` as a function of the three inputs, with reading
+  files and exiting left to the CLI beside it. A script nothing exercises
+  invites an open-ended argument about how good each diagnostic is; one with a
+  contract answers that with a case, or with a deliberate change to one.
 
 ## Alternatives not chosen
 

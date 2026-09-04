@@ -2,9 +2,9 @@ import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { specBaselineProblems } from "./spec-baseline-check.mjs";
+import { specBaselineProblems } from "./spec-baseline.mjs";
 
-// The contract of `scripts/spec-baseline-check.mjs`. Every rule it enforces is
+// The contract of `scripts/spec-baseline.mjs`. Every rule it enforces is
 // pinned here by the edit that should trip it, and every guarantee it makes
 // about reading Markdown is pinned by an edit that should *not*. Without this,
 // "the diagnostic could be better" is an open-ended question about a script
@@ -93,6 +93,13 @@ describe("specBaselineProblems", () => {
       expect(specBaselineProblems(input)).toEqual([]);
     });
 
+    it("does not call two malformed entries a paste of each other", () => {
+      const input = withEntry("nips", "01", { sha256: "nope" });
+      input.baseline.documents.luds["16"].sha256 = "nope";
+      const problems = specBaselineProblems(input);
+      expect(problems.filter((p) => p.includes("same sha256"))).toEqual([]);
+    });
+
     it("rejects two documents recording the same sha256", () => {
       const problems = specBaselineProblems(
         withEntry("luds", "16", { sha256: HASH }),
@@ -143,6 +150,26 @@ describe("specBaselineProblems", () => {
       const input = repository();
       input.files.push("bech32.ts", "internet-identifier.ts", "nip01.test.ts");
       expect(specBaselineProblems(input)).toEqual([]);
+    });
+  });
+
+  describe("sources and documents must name the same families", () => {
+    it("reports a family that only `documents` knows about", () => {
+      const input = repository();
+      input.baseline.documents.buds = {
+        "01": { commit: COMMIT, date: "2026-09-04", sha256: HASH },
+      };
+      expect(specBaselineProblems(input)).toEqual([
+        "spec-baseline.json: `documents.buds` has no `sources` entry",
+      ]);
+    });
+
+    it("reports a family that only `sources` knows about", () => {
+      const input = repository();
+      input.baseline.sources.buds = { label: "BUD", repository: "https://x" };
+      expect(specBaselineProblems(input)).toEqual([
+        "spec-baseline.json: `sources.buds` has no `documents` entry",
+      ]);
     });
   });
 
@@ -227,10 +254,6 @@ describe("specBaselineProblems", () => {
       input.readme = input.readme.replace(
         "| NIP | Spec baseline | Coverage |",
         [
-          "```",
-          "| an example whose lines start with a pipe |",
-          "```",
-          "",
           "| Legend | Meaning |",
           "| --- | --- |",
           "| x | y |",
@@ -238,6 +261,37 @@ describe("specBaselineProblems", () => {
           "| NIP | Spec baseline | Coverage |",
         ].join("\n"),
       );
+      expect(specBaselineProblems(input)).toEqual([]);
+    });
+
+    it("is not a fenced example of itself", () => {
+      const input = repository();
+      input.readme = input.readme.replace(
+        "| NIP | Spec baseline | Coverage |",
+        [
+          "```markdown",
+          "| NIP | Spec baseline | Coverage |",
+          "| --- | --- | --- |",
+          "| **NIP-99** | [2020-01-01](https://example.com/99.md) | Example |",
+          "```",
+          "",
+          "| NIP | Spec baseline | Coverage |",
+        ].join("\n"),
+      );
+      expect(specBaselineProblems(input)).toEqual([]);
+    });
+
+    it("reads the NIP column from the header too, so it may move", () => {
+      const input = repository();
+      input.readme = input.readme
+        .replace(
+          "| NIP | Spec baseline | Coverage |",
+          "| Coverage | NIP | Spec baseline |",
+        )
+        .replace(
+          `| **NIP-01** | [2026-09-04](${NIPS}/blob/${COMMIT}/01.md) | Events |`,
+          `| Events | **NIP-01** | [2026-09-04](${NIPS}/blob/${COMMIT}/01.md) |`,
+        );
       expect(specBaselineProblems(input)).toEqual([]);
     });
 

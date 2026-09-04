@@ -9,25 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **`npm run test:spec-baseline`**, which keeps the three places that name the
-  same set of specs in step: the spec modules under `src/`,
-  `spec-baseline.json`, and the `Supported NIPs` table. The modules decide what
-  must be baselined (`src/nip67.ts` calls for a `nips.67` entry, and an entry
-  with no module is dead weight), and the table must quote the recorded revision
-  cell by cell — both directions, so a spec added to one place and forgotten in
-  another fails the build instead of shipping with no recorded provenance. It
-  also rejects what an entry can be judged for without the spec text: a date
-  that is not a real day, a malformed commit or hash, and a hash shared by two
-  documents. It runs in CI and before publish, and compares the repository
-  against itself only: whether upstream has moved since a baseline was recorded
-  is a separate question, answered by reading the spec rather than by a build.
-
-  The script keeps its decisions in one exported function of its three inputs,
-  and `scripts/spec-baseline-check.test.mjs` pins every rule and every
-  Markdown-reading guarantee it makes.
-
-### Added
-
 - **Spec baselines for every specification the schemas are built on.**
   `spec-baseline.json` records, per document, the exact revision these schemas
   are written against: the commit in its source repository, that commit's date,
@@ -42,6 +23,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   edits be detected mechanically rather than noticed by accident. An entry moves
   only when the document is re-read and the schemas are confirmed against it;
   git history and this file record when that happened.
+
+- **`npm run test:spec-baseline`**, which keeps the three places that name the
+  same set of specs in step: the spec modules under `src/`,
+  `spec-baseline.json`, and the `Supported NIPs` table. The modules decide what
+  must be baselined (`src/nip67.ts` calls for a `nips.67` entry, and an entry
+  with no module is dead weight), and the table must quote the recorded revision
+  cell by cell — both directions, so a spec added to one place and forgotten in
+  another fails the build instead of shipping with no recorded provenance. It
+  also rejects what an entry can be judged for without the spec text: a date
+  that is not a real day, a malformed commit or hash, and a hash shared by two
+  documents. It runs in CI and before publish, and compares the repository
+  against itself only: whether upstream has moved since a baseline was recorded
+  is a separate question, answered by reading the spec rather than by a build.
+
+  The script keeps its decisions in one exported function of its three inputs,
+  and `scripts/spec-baseline.test.mjs` pins every rule and every
+  Markdown-reading guarantee it makes.
 
 - **NIP-24 in the `Supported NIPs` table.** Its extra kind:0 profile metadata
   fields (`display_name`, `website`, `banner`, `bot`, `birthday`) were already
