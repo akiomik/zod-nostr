@@ -56,10 +56,14 @@ the single source of truth for provenance.
 - **Surfaced in the README.** The `Supported NIPs` table carries a `Spec
   baseline` column linking each NIP at its recorded revision, because a consumer
   reads the README, not a JSON file at the repository root.
-- **Enforcement.** `test/spec-baseline/check.mjs` asserts the file is well
-  formed and that the table quotes the recorded revision, in both directions, so
-  a NIP added to one file and forgotten in the other fails the build. It runs in
-  CI and `prepublishOnly`, and stays offline: whether upstream has moved since a
+- **Enforcement, with `src/` as the authority.** Four places name the same set
+  of specs: the modules, the baseline, the `Supported NIPs` table, and the
+  `Covers …` sentence above it. `test/spec-baseline/check.mjs` derives the
+  required set from the module filenames — `src/nip67.ts` demands a `nips.67`
+  entry, and an entry with no module is dead weight — then asserts the file is
+  well formed and that both README copies quote it, in both directions. A spec
+  added to one place and forgotten in another fails the build. It runs in CI and
+  `prepublishOnly`, and stays offline: whether upstream has moved since a
   baseline was recorded is a different question, with a different answer over
   time, from whether the repository agrees with itself.
 
@@ -82,8 +86,9 @@ the single source of truth for provenance.
 
 ## Consequences
 
-Adding a NIP now means adding a baseline entry and a table row, or the build
-fails; adding a document from a new family means adding a `sources` entry too.
+Adding `src/nipXX.ts` now means adding a baseline entry, a table row, and a
+mention in the `Covers …` sentence, or the build fails; adding a document from a
+new family means adding a `sources` entry too.
 Re-reading a spec is a reviewable change with a diff, rather than an
 undocumented act of diligence. The baseline is a claim about the text a schema
 targets, not a guarantee that upstream has not moved since — until the scheduled

@@ -22,17 +22,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   only when the document is re-read and the schemas are confirmed against it;
   git history and this file record when that happened.
 
-- **`npm run test:spec-baseline`**, which asserts that `spec-baseline.json` is
-  well formed and that every row of the `Supported NIPs` table quotes the
-  revision recorded for that NIP — in both directions, so a NIP added to one
-  file and forgotten in the other fails the build. The README repeats each
-  commit and date so a reader can click straight through to the spec text, and
-  without this nothing would notice the two copies drifting apart. A document
-  from a family with no table row (LUD-06, LUD-16) is held to what the README
-  can carry: the family's repository and every one of its documents must be
-  named in the prose. It runs in CI and before publish, and stays offline:
-  whether upstream has moved since a baseline was recorded is a separate
-  question from whether the repository agrees with itself.
+- **`npm run test:spec-baseline`**, which holds four copies of the same list
+  together: the spec modules under `src/`, `spec-baseline.json`, the
+  `Supported NIPs` table, and the `Covers …` sentence above it. The module
+  filenames decide what must be baselined (`src/nip67.ts` demands a `nips.67`
+  entry, and an entry with no module is dead weight), the table must quote the
+  recorded revision cell by cell, and every check runs in both directions — so a
+  spec added to one place and forgotten in another fails the build instead of
+  shipping with no recorded provenance. A document from a family with no table
+  row (LUD-06, LUD-16) is held to what the README can carry: the family's
+  repository and every one of its documents must be named in the prose. It runs
+  in CI and before publish, and stays offline: whether upstream has moved since
+  a baseline was recorded is a separate question from whether the repository
+  agrees with itself.
 
 - **NIP-24 in the `Supported NIPs` table.** Its extra kind:0 profile metadata
   fields (`display_name`, `website`, `banner`, `bot`, `birthday`) were already
