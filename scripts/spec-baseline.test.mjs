@@ -559,6 +559,30 @@ describe("specBaselineProblems", () => {
       },
     );
 
+    // A row is not a heading's content, so dashes under one break the page,
+    // not the table — deleting the row above them would be a false absence.
+    it("keeps its last row under a thematic break", () => {
+      const input = repository();
+      input.readme = input.readme.replace(
+        "\n\n## Development",
+        "\n---\n\n## Development",
+      );
+      expect(specBaselineProblems(input)).toEqual([]);
+    });
+
+    it("reports a renamed NIP column as one, not as a missing table", () => {
+      const input = repository();
+      input.readme = input.readme.replace(
+        "| NIP | Spec baseline | Coverage |",
+        "| **NIP** | Spec baseline | Coverage |",
+      );
+      // Once, not once per NIP: which row names which is exactly what the
+      // missing column made unknowable.
+      expect(specBaselineProblems(input)).toEqual([
+        "README.md: the Supported NIPs table has no `NIP` column",
+      ]);
+    });
+
     it("keeps reading past a subsection of its own", () => {
       const input = repository();
       input.readme = input.readme.replace(

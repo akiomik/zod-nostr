@@ -24,6 +24,9 @@
 // - It checks what a maintainer plausibly gets wrong — updating one file and
 //   not the other — not what a maintainer would have to go out of their way to
 //   write.
+// - It reads a table written with outer pipes, as this README's is. GFM allows
+//   them to be left off; a table without them is reported as no table, loudly
+//   rather than silently, and writing one is a choice nobody here has made.
 // - The modules it reads are those of a family `sources` registers. A module
 //   of a family nobody registered is invisible: no filename rule separates a
 //   `bolt11.ts` worth baselining from a `bech32.ts` that is an ordinary
@@ -131,7 +134,10 @@ function sectionLines(readme) {
         continue;
       }
       if (HEADING.test(line)) break;
-      if (UNDERLINE.test(line) && lines.at(-1)?.trim() !== "") {
+      // A row is not a heading's content, so dashes under one are a thematic
+      // break, not an underline — taking them for one would delete the row.
+      const above = lines.at(-1) ?? "";
+      if (UNDERLINE.test(line) && above.trim() !== "" && !ROW.test(above)) {
         lines.pop(); // the line it underlines is that heading, not our content
         break;
       }
@@ -160,8 +166,12 @@ function supportedNipsTable(readme) {
     }
     if (fenced || !ROW.test(header)) continue;
     if (!DELIMITER.test(lines[index + 1] ?? "")) continue;
-    const nip = cellsOf(header).indexOf(NIP_COLUMN);
-    if (nip === -1) continue;
+    const cells = cellsOf(header);
+    const nip = cells.indexOf(NIP_COLUMN);
+    // Either column marks this as the table rather than a legend beside it.
+    // Recognizing it on one of them lets the other be reported as renamed,
+    // instead of the table being reported as missing.
+    if (nip === -1 && !cells.includes(BASELINE_COLUMN)) continue;
 
     // A blank line, or an indent Markdown reads as something other than a row,
     // ends the table where it renders — so it is worth reporting on its own.
@@ -352,6 +362,10 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
     problems.push(
       `${README}: the Supported NIPs table has no \`${BASELINE_COLUMN}\` column`,
     );
+  if (table.nip === -1)
+    problems.push(
+      `${README}: the Supported NIPs table has no \`${NIP_COLUMN}\` column`,
+    );
 
   if (table.interrupted)
     problems.push(
@@ -362,7 +376,7 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
   // A missing repository is reported with its family; building `expected`
   // around it would report every row as disagreeing with a link to `undefined`.
   const tabled = new Set();
-  for (const row of table.rows) {
+  for (const row of table.nip === -1 ? [] : table.rows) {
     const cells = cellsOf(row);
     const nip = cells[table.nip]?.match(TABLE_ROW)?.[1];
     if (!nip) {
@@ -390,7 +404,10 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
   // A misspelled id is reported as such above; asking the table for a row it
   // could not name would repeat that as a second, misleading message. A break
   // does not suppress this — the rows past it were still read.
-  for (const nip of Object.keys(baseline.documents[TABLE_FAMILY]))
+  // Without the column naming them, which rows name which NIP is unknown, so
+  // calling each of them absent would be fourteen guesses at one problem.
+  const named = table.nip !== -1;
+  for (const nip of named ? Object.keys(baseline.documents[TABLE_FAMILY]) : [])
     if (DOCUMENT.test(nip) && !tabled.has(nip))
       problems.push(
         `${README}: NIP-${nip} is baselined in ${BASELINE} but absent from the Supported NIPs table`,
