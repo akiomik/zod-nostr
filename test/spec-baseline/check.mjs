@@ -66,10 +66,14 @@ function coversParagraph(readme) {
   return readme.slice(start + 1, end === -1 ? undefined : end);
 }
 
-/** The rows of README's `Supported NIPs` table, as raw Markdown lines. */
+/**
+ * The rows of README's `Supported NIPs` table as raw Markdown lines, or null if
+ * the section is gone — reported like any other disagreement rather than thrown,
+ * so a run that also has baseline problems still prints them.
+ */
 function supportedNipsRows(readme) {
   const heading = readme.indexOf("\n## Supported NIPs\n");
-  if (heading === -1) throw new Error(`${README}: no "Supported NIPs" section`);
+  if (heading === -1) return null;
   // A section that runs to the end of the file has no following heading; slicing
   // to `-1` would silently swallow the rest of the README instead.
   const next = readme.indexOf("\n## ", heading + 1);
@@ -118,14 +122,15 @@ for (const family of families) {
   // `src/` decides what must be baselined: a spec module with no entry ships
   // with no recorded provenance, and an entry with no module is dead weight.
   if (!label) continue;
-  for (const id of implemented(label)) {
+  const modules = implemented(label);
+  for (const id of modules) {
     if (!(id in documents))
       errors.push(
         `${BASELINE}: \`${SOURCE}/${label.toLowerCase()}${id.toLowerCase()}.ts\` has no \`${family}.${id}\` entry`,
       );
   }
   for (const id of Object.keys(documents)) {
-    if (!implemented(label).has(id))
+    if (!modules.has(id))
       errors.push(
         `${BASELINE}: \`${family}.${id}\` has no \`${SOURCE}/${label.toLowerCase()}${id.toLowerCase()}.ts\``,
       );
@@ -143,7 +148,9 @@ for (const family of Object.keys(baseline)) {
 // and forgotten in the other is the failure this check exists for.
 const tabled = new Set();
 const repository = sources[TABLE_FAMILY]?.repository;
-for (const row of supportedNipsRows(readme)) {
+const rows = supportedNipsRows(readme);
+if (rows === null) errors.push(`${README}: no "Supported NIPs" section`);
+for (const row of rows ?? []) {
   const cells = row.split("|").map((cell) => cell.trim());
   const nip = cells[1]?.match(TABLE_ROW)?.[1];
   if (!nip) {
@@ -176,8 +183,10 @@ const covered = new Set(
 );
 if (!covers) errors.push(`${README}: no "Covers NIP-…" sentence`);
 
+// A section reported as missing above would otherwise make every baselined NIP
+// look individually absent, burying the one problem there is.
 for (const nip of Object.keys(baseline[TABLE_FAMILY] ?? {})) {
-  if (!tabled.has(nip))
+  if (rows && !tabled.has(nip))
     errors.push(
       `${README}: NIP-${nip} is baselined in ${BASELINE} but absent from the Supported NIPs table`,
     );
@@ -187,7 +196,7 @@ for (const nip of Object.keys(baseline[TABLE_FAMILY] ?? {})) {
     );
 }
 for (const nip of covered) {
-  if (!tabled.has(nip))
+  if (rows && !tabled.has(nip))
     errors.push(
       `${README}: the "Covers NIP-…" sentence names NIP-${nip}, which has no row in the Supported NIPs table`,
     );
