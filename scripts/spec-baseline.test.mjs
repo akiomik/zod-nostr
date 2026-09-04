@@ -752,6 +752,33 @@ describe("specBaselineProblems", () => {
       ]);
     });
 
+    it("keeps its heading under a thematic break", () => {
+      const input = repository();
+      input.readme = input.readme.replace(
+        "## Supported NIPs\n",
+        "## Supported NIPs\n---\n",
+      );
+      expect(specBaselineProblems(input)).toEqual([]);
+    });
+
+    // The rows are read by the family's label, so renaming it renames both
+    // halves rather than letting the modules and the table drift apart.
+    it("reads rows by the family's label", () => {
+      const input = repository();
+      input.baseline.sources.nips.label = "NOSTR";
+      input.files = ["nostr01.ts", "lud16.ts"];
+      input.readme = input.readme
+        .replace("| NIP | Spec baseline", "| NOSTR | Spec baseline")
+        .replace("**NIP-01**", "**NOSTR-01**");
+      expect(specBaselineProblems(input)).toEqual([]);
+    });
+
+    it("builds a link from a repository written with a trailing slash", () => {
+      const input = repository();
+      input.baseline.sources.nips.repository = `${NIPS}/`;
+      expect(specBaselineProblems(input)).toEqual([]);
+    });
+
     it("keeps its last row under a thematic break", () => {
       const input = repository();
       input.readme = input.readme.replace(

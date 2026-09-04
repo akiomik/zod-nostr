@@ -45,7 +45,6 @@ export const SOURCE = "src";
 const TABLE_FAMILY = "nips";
 const TABLE_HEADING = "## Supported NIPs";
 const BASELINE_COLUMN = "Spec baseline";
-const NIP_COLUMN = "NIP";
 
 const COMMIT = /^[0-9a-f]{40}$/;
 const SHA256 = /^[0-9a-f]{64}$/;
@@ -68,7 +67,7 @@ const FENCE = /^ {0,3}(`{3,}|~{3,})/;
 // thematic break does not underline anything, so it needs a line above it.
 const HEADING = /^ {0,3}#{1,2} /;
 const UNDERLINE = /^ {0,3}(=+|-+)\s*$/;
-const TABLE_ROW = /^\*\*NIP-([0-9A-Z]{2})\*\*$/;
+
 // A document id is the stem of its upstream filename, so it is spelled the way
 // the file is: two characters, digits or uppercase (`01`, `7D`). A lowercase
 // key would build a permalink to a file that does not exist.
@@ -151,10 +150,13 @@ function sectionLines(readme) {
         continue;
       }
       if (HEADING.test(line)) break;
-      // A row is not a heading's content, so dashes under one are a thematic
-      // break, not an underline — taking them for one would delete the row.
+      // A setext underline needs a paragraph above it. Under a row or another
+      // heading, dashes are a thematic break — taking them for an underline
+      // would delete the line above and, for the heading, the whole section.
       const above = lines.at(-1) ?? "";
-      if (UNDERLINE.test(line) && above.trim() !== "" && !ROW.test(above)) {
+      const paragraph =
+        above.trim() !== "" && !ROW.test(above) && !HEADING.test(above);
+      if (UNDERLINE.test(line) && paragraph) {
         lines.pop(); // the line it underlines is that heading, not our content
         break;
       }
@@ -240,7 +242,7 @@ function rowsUnder(lines, index) {
  * extensions, say — names its NIPs across both, and reading only one would
  * report every row of the other as missing.
  */
-function supportedNipsTables(readme) {
+function supportedNipsTables(readme, column) {
   const lines = sectionLines(readme);
   if (lines === null) return null;
   const tables = [];
@@ -255,7 +257,7 @@ function supportedNipsTables(readme) {
     if (fence !== null || !ROW.test(header)) continue;
     if (!DELIMITER.test(lines[index + 1] ?? "")) continue;
     const cells = cellsOf(header);
-    const nip = cells.indexOf(NIP_COLUMN);
+    const nip = cells.indexOf(column);
     // Either column marks a block as one of these tables rather than a legend
     // beside them. Recognizing it on one lets the other be reported as
     // renamed, instead of the table being reported as missing.
@@ -404,18 +406,31 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
   )
     return problems;
 
-  const tables = supportedNipsTables(readme);
+  // The column heading a row is read by, and the row's own shape, follow the
+  // family's label rather than being spelled out here: naming the modules one
+  // way and the rows another would let the two halves drift apart in silence.
+  const { label: series, repository: source } = baseline.sources[TABLE_FAMILY];
+  if (!LABEL.test(series ?? "")) return problems; // reported with its family
+  const nipRow = new RegExp(`^\\*\\*${series}-([0-9A-Z]{2})\\*\\*$`);
+  // Trailing slashes are trimmed so a link is built the way one is written.
+  const repository = source?.replace(/\/+$/, "");
+
+  const tables = supportedNipsTables(readme, series);
   if (tables === null || tables.length === 0) {
     problems.push(`${README}: no "Supported NIPs" section with a NIP table`);
     return problems;
   }
-
-  const { repository } = baseline.sources[TABLE_FAMILY];
   const tabled = new Set();
   // Which rows name which NIP is what a missing `NIP` column makes unknowable,
   // so the absence check waits until every table in the section could be read:
   // one that could not may hold the very row it would call missing.
   const named = tables.every((table) => table.nip !== -1);
+
+  // One break is one problem, however many tables show it.
+  if (tables.some((table) => table.interrupted))
+    problems.push(
+      `${README}: the Supported NIPs table breaks off before its rows end, so what follows it does not render as part of it`,
+    );
 
   for (const table of tables) {
     // Both columns a table is read by are located from its own header rather
@@ -427,17 +442,12 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
       );
     if (table.nip === -1)
       problems.push(
-        `${README}: the Supported NIPs table has no \`${NIP_COLUMN}\` column`,
-      );
-
-    if (table.interrupted)
-      problems.push(
-        `${README}: the Supported NIPs table breaks off before its rows end, so what follows it does not render as part of it`,
+        `${README}: the Supported NIPs table has no \`${series}\` column`,
       );
 
     for (const row of table.nip === -1 ? [] : table.rows) {
       const cells = cellsOf(row);
-      const nip = cells[table.nip]?.match(TABLE_ROW)?.[1];
+      const nip = cells[table.nip]?.match(nipRow)?.[1];
       if (!nip) {
         problems.push(`${README}: cannot read a NIP number from row: ${row}`);
         continue;
