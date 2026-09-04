@@ -60,8 +60,9 @@ the single source of truth for provenance.
   of specs: the modules, the baseline, the `Supported NIPs` table, and the
   coverage paragraph above it. `test/spec-baseline/check.mjs` derives the
   required set from the module filenames — `src/nip67.ts` demands a `nips.67`
-  entry, and an entry with no module is dead weight — then asserts the file is
-  well formed and that both README copies quote it, in both directions. A spec
+  entry, an entry with no module is dead weight, and a module whose family is
+  not declared at all is reported — then asserts the file is well formed and
+  that both README copies quote it, in both directions. A spec
   added to one place and forgotten in another fails the build. It runs in CI and
   `prepublishOnly`, and stays offline: whether upstream has moved since a
   baseline was recorded is a different question, with a different answer over

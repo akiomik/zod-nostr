@@ -30,9 +30,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   recorded revision cell by cell, and every check runs in both directions — so a
   spec added to one place and forgotten in another fails the build instead of
   shipping with no recorded provenance. A document from a family with no table
-  row (LUD-06, LUD-16) is held to what the README can carry: the family's
-  repository and every one of its documents must be named in the prose, and the
-  prose may name no document the baseline is missing. It runs
+  row (LUD-06, LUD-16) is held to what the README can carry: the text of the
+  README's link to the family's repository must enumerate exactly the family's
+  baselined documents. A module belonging to no declared family at all is
+  reported too, so a new family cannot ship unbaselined. It runs
   in CI and before publish, and stays offline: whether upstream has moved since
   a baseline was recorded is a separate question from whether the repository
   agrees with itself.

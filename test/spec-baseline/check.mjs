@@ -15,10 +15,10 @@
 // which documents must be baselined. A NIP is then cross-checked cell by cell,
 // since the table quotes its whole revision. A document from any other family
 // (LUD-06, LUD-16) has no row to quote, so the check asserts the weaker thing
-// the README can carry: that the family's repository and each of its documents
-// are named in the prose, and that the prose names no document the baseline is
-// missing. That catches a document added or removed on either side, but not a
-// stale revision — for those, the JSON is the only source.
+// the README can carry: that the README links the family's repository and that
+// the link's text enumerates exactly the family's baselined documents. That
+// catches a document added or removed on either side, but not a stale revision
+// — for those, the JSON is the only source.
 //
 // Deliberately offline. Whether the upstream text has moved since a baseline
 // was recorded is a different question with a different answer over time; this
@@ -42,12 +42,29 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/;
 // same id in lowercase (`nip7d.ts`).
 const DOCUMENT = /^[0-9A-Z]{2}$/;
 const TABLE_ROW = /^\*\*NIP-([0-9A-Z]{2})\*\*$/;
+// A spec module is a three-letter family label and a two-character document id
+// (`nip01.ts`, `lud16.ts`, `nip7d.ts`) — the shape used to spot a module whose
+// family is not declared at all.
+const SPEC_MODULE = /^([a-z]{3})[0-9a-z]{2}\.ts$/;
 const TABLE_HEADING = "\n## Supported NIPs\n";
 // What identifies the intro's coverage paragraph is that it links to the table
 // and names NIPs, not its wording: anchoring on the prose would fail a
 // rewording that changed nothing about the list.
 const TABLE_LINK = "](#supported-nips)";
 const NAMES_A_NIP = /NIP-[0-9A-Z]{2}/;
+
+/**
+ * The texts of the README's links to `repository`. A family with no table row
+ * enumerates its documents in that link text (`[LUD-06 and LUD-16](…/luds)`),
+ * which is where the check reads them from: scanning the whole README instead
+ * would misread any passing mention — "does not decode to a LUD-01 URL" — as a
+ * missing baseline.
+ */
+function linkTexts(readme, repository) {
+  const escaped = repository.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const link = new RegExp(`\\[([^\\]]*)\\]\\(${escaped}[^)]*\\)`, "g");
+  return [...readme.matchAll(link)].map(([, text]) => text).join("\n");
+}
 
 /** Ids of the documents a family implements, read from `src/<label><id>.ts`. */
 function implemented(label) {
@@ -112,6 +129,7 @@ for (const family of families) {
   else if (!readme.includes(repository))
     errors.push(`${README}: does not link ${repository} (\`${family}\`)`);
 
+  const enumerated = repository ? linkTexts(readme, repository) : "";
   const documents = baseline[family];
   if (!documents || Object.keys(documents).length === 0) {
     errors.push(`${BASELINE}: \`sources.${family}\` has no matching entries`);
@@ -127,19 +145,27 @@ for (const family of families) {
     if (!SHA256.test(entry?.sha256 ?? ""))
       errors.push(`${where} has no 64-character sha256`);
     // The NIPs are cross-checked row by row below; the rest have no row, so
-    // require at least that the README names them.
-    if (family !== TABLE_FAMILY && label && !readme.includes(`${label}-${id}`))
-      errors.push(`${README}: never mentions ${label}-${id}`);
+    // require at least that the README's link to the family enumerates them.
+    if (
+      family !== TABLE_FAMILY &&
+      label &&
+      !enumerated.includes(`${label}-${id}`)
+    )
+      errors.push(
+        `${README}: its link to ${repository} does not name ${label}-${id}`,
+      );
   }
 
-  // The other direction for a family with no table: prose naming a document
-  // that was never baselined.
+  // The other direction for a family with no table: the link enumerating a
+  // document that was never baselined.
   if (family !== TABLE_FAMILY && label) {
-    const mentions = readme.matchAll(new RegExp(`${label}-([0-9A-Z]{2})`, "g"));
+    const mentions = enumerated.matchAll(
+      new RegExp(`${label}-([0-9A-Z]{2})`, "g"),
+    );
     for (const [, id] of mentions) {
       if (!(id in documents))
         errors.push(
-          `${README}: names ${label}-${id}, which has no entry in ${BASELINE}`,
+          `${README}: its link to ${repository} names ${label}-${id}, which has no entry in ${BASELINE}`,
         );
     }
   }
@@ -166,6 +192,19 @@ for (const family of Object.keys(baseline)) {
   if (["note", "sources"].includes(family)) continue;
   if (!families.includes(family))
     errors.push(`${BASELINE}: \`${family}\` has no entry in \`sources\``);
+}
+
+// A module whose family is not declared at all would otherwise sit outside
+// every per-family check above and be baselined by nobody.
+const labels = new Set(
+  families.map((family) => sources[family]?.label?.toLowerCase()),
+);
+for (const file of readdirSync(join(root, SOURCE))) {
+  const prefix = file.match(SPEC_MODULE)?.[1];
+  if (prefix && !labels.has(prefix))
+    errors.push(
+      `${BASELINE}: \`${SOURCE}/${file}\` belongs to no family in \`sources\``,
+    );
 }
 
 // Every table row must name a baselined NIP and quote its recorded revision,
