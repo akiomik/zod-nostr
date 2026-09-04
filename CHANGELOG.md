@@ -9,16 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Spec baselines for every supported NIP.** `spec-baseline.json` records, per
-  NIP, the exact revision of the specification these schemas are written
-  against: the commit in `nostr-protocol/nips`, that commit's date, and the
-  SHA-256 of the NIP's Markdown at that commit. The `Supported NIPs` table in
-  `README.md` gains a `Spec baseline` column linking each NIP at its recorded
-  revision, so the text a schema was built for is one click away instead of
-  being implicit. The SHA-256 is what makes the file more than documentation —
-  it lets upstream edits be detected mechanically rather than noticed by
-  accident. An entry moves only when the NIP is re-read and the schemas are
-  confirmed against it; git history and this file record when that happened.
+- **Spec baselines for every specification the schemas are built on.**
+  `spec-baseline.json` records, per document, the exact revision these schemas
+  are written against: the commit in its source repository, that commit's date,
+  and the SHA-256 of the document's Markdown at that commit. It covers the 14
+  NIPs and, because the kind:0 profile fields are not all defined by NIPs,
+  LUD-06 and LUD-16 from `lnurl/luds`. The `Supported NIPs` table in `README.md`
+  gains a `Spec baseline` column linking each NIP at its recorded revision, so
+  the text a schema was built for is one click away instead of being implicit.
+  The SHA-256 is what makes the file more than documentation — it lets upstream
+  edits be detected mechanically rather than noticed by accident. An entry moves
+  only when the document is re-read and the schemas are confirmed against it;
+  git history and this file record when that happened.
+
+- **`npm run test:spec-baseline`**, which asserts that `spec-baseline.json` is
+  well formed and that every row of the `Supported NIPs` table quotes the
+  revision recorded for that NIP — in both directions, so a NIP added to one
+  file and forgotten in the other fails the build. The README repeats each
+  commit and date so a reader can click straight through to the spec text, and
+  without this nothing would notice the two copies drifting apart. It runs in CI
+  and before publish, and stays offline: whether upstream has moved since a
+  baseline was recorded is a separate question from whether the repository
+  agrees with itself.
+
+- **NIP-24 in the `Supported NIPs` table.** Its extra kind:0 profile metadata
+  fields (`display_name`, `website`, `banner`, `bot`, `birthday`) were already
+  exposed as `zostr.nip01.metadataFields.*` and documented in `docs/API.md`, but
+  the table listed only the NIPs with a namespace of their own, leaving NIP-24
+  support undiscoverable from the README.
 
 ### Fixed
 
@@ -29,6 +47,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `docs/API.md` still described the earlier two-value set. No schema change: the
   hints array is validated as plain strings precisely because NIP-67 requires
   clients to accept unknown hint values, so `"auth"` already parsed.
+
+- **LUD-16's default identifier was undocumented.** LUD-16 added a `@<domain>`
+  shorthand for the canonical `_@<domain>` default identifier. `lud16()` accepts
+  `_@<domain>` like any other username and rejects the shorthand, which the spec
+  permits (a wallet that does not implement it MAY reject the address); that
+  reading is now stated in the JSDoc, in `docs/API.md`, and pinned by tests
+  rather than left implicit. No schema change.
 
 ## [0.5.2] - 2026-08-01
 

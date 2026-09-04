@@ -26,8 +26,9 @@ strict by default, loosen deliberately.**
   being baked into every parse.
 - **Framework-agnostic** — a pure schema layer you can drop into any Nostr stack.
 
-Covers NIP-01, NIP-05, NIP-10, NIP-11, NIP-13, NIP-19, NIP-21, NIP-40, NIP-42,
-NIP-45, NIP-50, NIP-67, and NIP-70 — see [Supported NIPs](#supported-nips).
+Covers NIP-01, NIP-05, NIP-10, NIP-11, NIP-13, NIP-19, NIP-21, NIP-24, NIP-40,
+NIP-42, NIP-45, NIP-50, NIP-67, and NIP-70 — see
+[Supported NIPs](#supported-nips).
 
 ## Installation
 
@@ -149,6 +150,7 @@ aliased at the root (`zostr.event`, `zostr.npub`, …).
 | **NIP-13** | [2025-12-23](https://github.com/nostr-protocol/nips/blob/f5a15ea27e06ce8f5635117931f06318f532a713/13.md) | Proof of work: the `nonce` tag schema and opt-in checks for achieved difficulty and the committed target | `nip13.nonceTag`, `nip13.powCheck`, `nip13.commitmentCheck` |
 | **NIP-19** | [2026-03-12](https://github.com/nostr-protocol/nips/blob/7d9908018eabb260e794174349e834199030bfd1/19.md) | bech32 entities | `nip19.npub`, `nip19.nsec`, `nip19.note`, `nip19.nprofile`, `nip19.nevent`, `nip19.naddr` |
 | **NIP-21** | [2026-03-21](https://github.com/nostr-protocol/nips/blob/699e7a28f4d6e2df10660184c4f8c159adf1582d/21.md) | `nostr:` URIs over the supported NIP-19 entities (`nsec` excluded): validation-only, per-entity codecs, and decoding to a `{ type, data }` discriminated union | `nip21.any` |
+| **NIP-24** | [2025-08-11](https://github.com/nostr-protocol/nips/blob/739f3c5263584770f098440855d9364a779e7f9d/24.md) | Extra kind:0 profile metadata fields (`display_name`, `website`, `banner`, `bot`, `birthday`), exposed as field-level atoms alongside NIP-01's | `nip01.metadataFields.displayName`, `nip01.metadataFields.birthday` |
 | **NIP-40** | [2025-12-23](https://github.com/nostr-protocol/nips/blob/f5a15ea27e06ce8f5635117931f06318f532a713/40.md) | Expiration timestamps: the `expiration` tag schema and an opt-in not-expired check | `nip40.expirationTag`, `nip40.expirationCheck` |
 | **NIP-42** | [2026-09-01](https://github.com/nostr-protocol/nips/blob/e65954922b28eff0e04b4e9020a5474f493793d2/42.md) | Authentication (`AUTH`): the `kind: 22242` auth event, the relay/client `AUTH` messages, and opt-in verification checks | `nip42.authEvent` |
 | **NIP-45** | [2026-02-06](https://github.com/nostr-protocol/nips/blob/3d71a4a78c376a5a71bf44708cd6b02c1773ae0b/45.md) | Event counts (`COUNT`): request/response messages and the response body object | `nip45.count` |
@@ -160,9 +162,12 @@ aliased at the root (`zostr.event`, `zostr.npub`, …).
 against; the date shown is that revision's commit date in
 [nostr-protocol/nips](https://github.com/nostr-protocol/nips). The same data
 lives in [spec-baseline.json](spec-baseline.json), which also records the
-SHA-256 of each NIP's text so that upstream changes can be detected
-mechanically. An entry moves only when the NIP is re-read and the schemas are
-confirmed against it.
+SHA-256 of each spec's text so that upstream changes can be detected
+mechanically, and covers the two specs that have no row here because they are
+not NIPs: [LUD-06 and LUD-16](https://github.com/lnurl/luds), behind
+`nip01.metadataFields.lud06()` and `nip01.metadataFields.lud16()`. An entry
+moves only when the spec is re-read and the schemas are confirmed against it;
+`npm run test:spec-baseline` keeps the table and the JSON from disagreeing.
 
 See [docs/API.md](docs/API.md) for the full API reference, and
 [docs/guides.md](docs/guides.md) for task-oriented how-to guides (building a

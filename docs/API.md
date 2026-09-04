@@ -199,7 +199,11 @@ not two copies.
 Each schema is **strict and non-optional** — a deliberate choice so you can add
 `optional`/`catch`/`default` yourself (a pre-weakened field can't be recovered).
 `lud06()` validates the bech32 checksum and `lnurl` HRP only; it does not decode
-to a LUD-01 URL.
+to a LUD-01 URL. `lud16()` accepts the canonical default identifier
+`_@<domain>` like any other username, but rejects LUD-16's optional `@<domain>`
+shorthand for it — the spec says a wallet that does not implement the shorthand
+MAY reject it, so the strict reading is the default here; compose a union to
+accept it.
 
 ```ts
 // classic — build a lenient profile schema from the strict field atoms

@@ -318,7 +318,9 @@ const nip01Namespace = {
 
     /**
      * The kind:0 `lud16` field (LUD-16): a `<username>[+<tag>]@<domain>`
-     * lightning address.
+     * lightning address. The canonical default identifier `_@<domain>` is
+     * accepted like any other username; LUD-16's optional `@<domain>`
+     * shorthand for it is rejected, which the spec permits.
      */
     lud16: () => classicSchema(z.ZodString, nip01.metadataFields.lud16()),
 
