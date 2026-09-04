@@ -107,9 +107,9 @@ upstream has not moved since — until the scheduled comparison exists, an entry
 going stale is still noticed by hand.
 
 Three gaps are left open deliberately. The first is that nothing offline can tie
-an entry's `sha256` to its `commit`: the hash is a fact about text this
-repository does not vendor, so a bump that updates `commit`, `date`, and the
-README but forgets the hash passes every check here. It is the field the design
+an entry's `sha256` or `date` to its `commit`: both are facts about a repository
+this one does not vendor, so a bump that updates `commit` and the README but
+carries the old hash — or a plausible wrong day — passes every check here. It is the field the design
 rests on, so the scheduled comparison should hash the recorded commit too rather
 than only the current head — otherwise a stale hash reads as an upstream change
 that never happened.

@@ -43,6 +43,20 @@ const TABLE_FAMILY = "nips";
 const COMMIT = /^[0-9a-f]{40}$/;
 const SHA256 = /^[0-9a-f]{64}$/;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Whether `date` is a real day, not merely digit-shaped. A transposed month
+ * (`2026-90-04`) is copied into the README cell by the normal workflow, so the
+ * cell comparison would agree with it and nothing else offline would notice.
+ */
+function isCalendarDate(date) {
+  if (!DATE.test(date ?? "")) return false;
+  const parsed = new Date(`${date}T00:00:00Z`);
+  return (
+    !Number.isNaN(parsed.getTime()) &&
+    parsed.toISOString().slice(0, 10) === date
+  );
+}
 // Document ids are two characters, digits or uppercase letters: upstream
 // already numbers some NIPs in hex (`7D`, `C0`). Module filenames spell the
 // same id in lowercase (`nip7d.ts`).
@@ -129,9 +143,20 @@ function supportedNipsTable(readme) {
   // to `-1` would silently swallow the rest of the README instead.
   const next = readme.indexOf("\n## ", heading + 1);
   const section = readme.slice(heading, next === -1 ? undefined : next);
-  const [header, delimiter, ...rows] = section
-    .split("\n")
-    .filter((line) => line.startsWith("|"));
+  // The first contiguous run of pipe-led lines is the table. Filtering the
+  // whole section instead would fold a second table, or a fenced example whose
+  // lines start with `|`, into this one and report its rows as malformed.
+  const lines = section.split("\n");
+  const start = lines.findIndex((line) => line.startsWith("|"));
+  if (start === -1)
+    return { header: undefined, delimiter: undefined, rows: [] };
+  const end = lines.findIndex(
+    (line, index) => index > start && !line.startsWith("|"),
+  );
+  const [header, delimiter, ...rows] = lines.slice(
+    start,
+    end === -1 ? undefined : end,
+  );
   return { header, delimiter, rows };
 }
 
@@ -184,8 +209,12 @@ for (const family of families) {
 
   // Without a link there is nothing to read the family's documents out of, and
   // reporting each one as unnamed would bury that under a message per entry.
-  const links = repository ? linkTexts(readme, repository) : [];
-  if (repository && links.length === 0)
+  // Only a family without a table reads its documents out of a link, so only
+  // that family needs one: requiring it of the NIPs would dictate prose the
+  // check never uses.
+  const links =
+    repository && family !== TABLE_FAMILY ? linkTexts(readme, repository) : [];
+  if (repository && family !== TABLE_FAMILY && links.length === 0)
     errors.push(`${README}: does not link ${repository} (\`${family}\`)`);
   const enumerated = links.length > 0 ? links.join("\n") : null;
 
@@ -204,8 +233,8 @@ for (const family of families) {
     if (!DOCUMENT.test(id)) errors.push(`${where} is not a two-character id`);
     if (!COMMIT.test(entry?.commit ?? ""))
       errors.push(`${where} has no 40-character commit`);
-    if (!DATE.test(entry?.date ?? ""))
-      errors.push(`${where} has no YYYY-MM-DD date`);
+    if (!isCalendarDate(entry?.date))
+      errors.push(`${where} has no YYYY-MM-DD calendar date`);
     if (!SHA256.test(entry?.sha256 ?? ""))
       errors.push(`${where} has no 64-character sha256`);
     // The NIPs are cross-checked row by row below; the rest have no row, so
