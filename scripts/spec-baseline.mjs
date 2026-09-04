@@ -337,13 +337,13 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
     // would take the rest of the report with it.
     if (!label)
       problems.push(`${BASELINE}: \`sources.${family}\` has no label`);
-    else if (!LABEL.test(label))
+    else if (typeof label !== "string" || !LABEL.test(label))
       problems.push(
         `${BASELINE}: \`sources.${family}.label\` is \`${label}\`, which is not a series name`,
       );
     if (typeof repository !== "string" || repository === "")
       problems.push(`${BASELINE}: \`sources.${family}\` has no repository`);
-    const named = label && LABEL.test(label);
+    const named = typeof label === "string" && LABEL.test(label);
     const modules = named ? moduleIds(label, files) : new Map();
 
     for (const [id, entry] of Object.entries(documents)) {
@@ -420,7 +420,10 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
   // family's label rather than being spelled out here: naming the modules one
   // way and the rows another would let the two halves drift apart in silence.
   const { label: series, repository: source } = baseline.sources[TABLE_FAMILY];
-  if (!LABEL.test(series ?? "")) return problems; // reported with its family
+  // A regex coerces what it tests, so `true` reads as `"true"` and `["NIP"]` as
+  // `"NIP"` — one crashing later, the other matching modules while matching no
+  // column. Both are reported with the family rather than met halfway.
+  if (typeof series !== "string" || !LABEL.test(series)) return problems;
   const nipRow = new RegExp(`^\\*\\*${series}-([0-9A-Z]{2})\\*\\*$`);
   // Trailing slashes are trimmed so a link is built the way one is written.
   const repository =

@@ -323,6 +323,19 @@ describe("specBaselineProblems", () => {
       ]);
     });
 
+    // A regex coerces what it tests, so neither of these is a series name even
+    // though `LABEL` alone would say so.
+    it.each([
+      ["true", true],
+      ["an array", ["NIP"]],
+    ])("reports a label that is %s", (_description, label) => {
+      const input = repository();
+      input.baseline.sources.luds.label = label;
+      expect(specBaselineProblems(input)).toEqual([
+        expect.stringContaining("which is not a series name"),
+      ]);
+    });
+
     it("reports a repository that is not a string instead of crashing on it", () => {
       const input = repository();
       input.baseline.sources.nips.repository = 42;

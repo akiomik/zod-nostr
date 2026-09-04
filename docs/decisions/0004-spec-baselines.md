@@ -119,7 +119,8 @@ the single source of truth for provenance.
 
 ## Consequences
 
-Adding `src/nipXX.ts` now means adding a baseline entry and a table row, or the
+Adding `src/nipXX.ts` now means adding a baseline entry, a table row, and a
+mention outside that table — the sentence above it names them all — or the
 build fails. A document from a new family needs a `sources` entry as well — a
 requirement this record carries, not one the check can demand, for the reason
 below. Re-reading a spec is a reviewable change with a diff, rather than an
