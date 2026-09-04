@@ -36,6 +36,9 @@ import { basename } from "node:path";
 export const BASELINE = "spec-baseline.json";
 export const SOURCE = "src";
 
+// Lowercase hex, as git and `sha256sum` write them, and as every entry here
+// does: accepting either case would let one hash be written two ways, and the
+// paste check compares them as text.
 const COMMIT = /^[0-9a-f]{40}$/;
 const SHA256 = /^[0-9a-f]{64}$/;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -167,12 +170,14 @@ export function specBaselineProblems({ baseline, files }) {
       // maps below by the array, quietly excusing itself from both checks.
       const committed =
         typeof entry.commit === "string" && COMMIT.test(entry.commit);
-      if (!committed) problems.push(`${where} has no 40-character commit`);
+      if (!committed)
+        problems.push(`${where} has no 40-character lowercase-hex commit`);
       if (!isCalendarDate(entry.date))
         problems.push(`${where} has no YYYY-MM-DD calendar date`);
       const hashed =
         typeof entry.sha256 === "string" && SHA256.test(entry.sha256);
-      if (!hashed) problems.push(`${where} has no 64-character sha256`);
+      if (!hashed)
+        problems.push(`${where} has no 64-character lowercase-hex sha256`);
 
       if (hashed) {
         const pasted = hashes.get(entry.sha256);

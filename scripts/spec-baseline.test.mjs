@@ -53,9 +53,9 @@ describe("specBaselineProblems", () => {
 
   describe("the entries it can judge without the spec text", () => {
     it.each([
-      [{ commit: "c3fd9af" }, "has no 40-character commit"],
-      [{ commit: undefined }, "has no 40-character commit"],
-      [{ sha256: "abc" }, "has no 64-character sha256"],
+      [{ commit: "c3fd9af" }, "has no 40-character lowercase-hex commit"],
+      [{ commit: undefined }, "has no 40-character lowercase-hex commit"],
+      [{ sha256: "abc" }, "has no 64-character lowercase-hex sha256"],
       [{ date: "yesterday" }, "has no YYYY-MM-DD calendar date"],
       [{ date: "2026-90-04" }, "has no YYYY-MM-DD calendar date"],
       [{ date: "2026-02-30" }, "has no YYYY-MM-DD calendar date"],
@@ -110,8 +110,12 @@ describe("specBaselineProblems", () => {
         };
       input.files.push("nip05.ts");
       expect(specBaselineProblems(input)).toEqual([
-        expect.stringContaining("`nips.01` has no 40-character commit"),
-        expect.stringContaining("`nips.05` has no 40-character commit"),
+        expect.stringContaining(
+          "`nips.01` has no 40-character lowercase-hex commit",
+        ),
+        expect.stringContaining(
+          "`nips.05` has no 40-character lowercase-hex commit",
+        ),
       ]);
     });
 
@@ -174,8 +178,8 @@ describe("specBaselineProblems", () => {
     // A regex coerces what it tests, so an array of one hash would pass and
     // then key the paste check by the array rather than by the hash.
     it.each([
-      [{ commit: [COMMIT] }, "has no 40-character commit"],
-      [{ sha256: [HASH] }, "has no 64-character sha256"],
+      [{ commit: [COMMIT] }, "has no 40-character lowercase-hex commit"],
+      [{ sha256: [HASH] }, "has no 64-character lowercase-hex sha256"],
     ])("rejects %o", (patch, message) => {
       expect(specBaselineProblems(withEntry("nips", "01", patch))).toEqual([
         `spec-baseline.json: \`nips.01\` ${message}`,
