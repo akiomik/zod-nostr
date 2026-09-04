@@ -99,7 +99,12 @@ export function specBaselineProblems({ baseline, files }) {
     ];
 
   const problems = [];
+  // Two documents sharing a hash means one was pasted from the other, and two
+  // entries at one commit disagreeing about its date means one was mistyped —
+  // the likeliest corruptions of the fields the baseline rests on, and the ones
+  // judgeable without the upstream text.
   const hashes = new Map();
+  const dated = new Map();
 
   // `sources` says what a family is and `documents` holds its entries, so a
   // family in one and not the other is the same "updated one file and not the
@@ -152,18 +157,12 @@ export function specBaselineProblems({ baseline, files }) {
         excused.add(id.toUpperCase());
         continue;
       }
-      if (!DOCUMENT.test(id)) {
-        // Cross-checking a misspelled id against the modules would bury this
-        // under a message naming the module that does exist.
-        problems.push(
-          `${where} is not a document id: two characters, digits or uppercase, as the upstream filename is`,
-        );
-        excused.add(id.toUpperCase());
-        continue;
-      }
-      // Tested for being strings first, for the reason the label is: a regex
-      // coerces what it tests, and an array of one hash would key the map
-      // below by the array, quietly excusing itself from the paste check.
+
+      // The fields are judged before the key is, so an entry that is both
+      // mis-keyed and carries a pasted hash says so in one run rather than
+      // over two. Tested for being strings first, for the reason the label is:
+      // a regex coerces what it tests, and an array of one hash would key the
+      // maps below by the array, quietly excusing itself from both checks.
       if (typeof entry.commit !== "string" || !COMMIT.test(entry.commit))
         problems.push(`${where} has no 40-character commit`);
       if (!isCalendarDate(entry.date))
@@ -172,14 +171,37 @@ export function specBaselineProblems({ baseline, files }) {
         typeof entry.sha256 === "string" && SHA256.test(entry.sha256);
       if (!hashed) problems.push(`${where} has no 64-character sha256`);
 
-      // Two documents sharing a hash means one was pasted from the other — the
-      // likeliest corruption of the field the baseline rests on, and one of the
-      // few things about it judgeable without the text.
       if (hashed) {
         const pasted = hashes.get(entry.sha256);
         if (pasted)
           problems.push(`${where} and \`${pasted}\` record the same sha256`);
         else hashes.set(entry.sha256, `${family}.${id}`);
+      }
+
+      // One commit has one committer date, so two entries recording it must
+      // agree about when it landed.
+      if (typeof entry.commit === "string" && isCalendarDate(entry.date)) {
+        const first = dated.get(entry.commit);
+        if (first === undefined)
+          dated.set(entry.commit, { date: entry.date, at: `${family}.${id}` });
+        else if (first.date !== entry.date && !first.reported) {
+          // One disagreement about one commit is one problem, however many
+          // entries share it.
+          first.reported = true;
+          problems.push(
+            `${where} dates ${entry.commit.slice(0, 7)} to ${entry.date}, which \`${first.at}\` dates to ${first.date}`,
+          );
+        }
+      }
+
+      if (!DOCUMENT.test(id)) {
+        // Cross-checking a misspelled id against the modules would bury this
+        // under a message naming the module that does exist.
+        problems.push(
+          `${where} is not a document id: two characters, digits or uppercase, as the upstream filename is`,
+        );
+        excused.add(id.toUpperCase());
+        continue;
       }
 
       if (!named) continue; // the check below needs a usable label

@@ -83,6 +83,56 @@ describe("specBaselineProblems", () => {
         );
     });
 
+    // One commit has one committer date, so two entries recording it must
+    // agree — a transposed day is otherwise a real date at a real commit.
+    it("rejects two entries dating one commit differently", () => {
+      const input = withEntry("luds", 16, {
+        commit: COMMIT,
+        date: "2026-09-05",
+      });
+      expect(specBaselineProblems(input)).toEqual([
+        expect.stringContaining("dates c3fd9af to 2026-09-05"),
+      ]);
+    });
+
+    it("reports one disagreement per commit, not per entry", () => {
+      const input = repository();
+      for (const id of ["05", "10"])
+        input.baseline.documents.nips[id] = {
+          commit: COMMIT,
+          date: "2026-09-05",
+          sha256: HASH.replace(/^6/, id === "05" ? "7" : "8"),
+        };
+      input.files.push("nip05.ts", "nip10.ts");
+      expect(
+        specBaselineProblems(input).filter((problem) =>
+          problem.includes("dates c3fd9af"),
+        ),
+      ).toHaveLength(1);
+    });
+
+    it("accepts two entries agreeing about one commit", () => {
+      const input = withEntry("luds", 16, {
+        commit: COMMIT,
+        date: "2026-09-04",
+      });
+      expect(specBaselineProblems(input)).toEqual([]);
+    });
+
+    it("counts a mis-keyed entry in the paste check", () => {
+      const input = repository();
+      input.baseline.documents.nips["7d"] = {
+        commit: OTHER_COMMIT,
+        date: "2026-07-16",
+        sha256: HASH,
+      };
+      input.files.push("nip7d.ts");
+      expect(specBaselineProblems(input)).toEqual([
+        expect.stringContaining("`nips.7d` and `nips.01` record the same"),
+        expect.stringContaining("`nips.7d` is not a document id"),
+      ]);
+    });
+
     it("rejects two documents recording the same sha256", () => {
       expect(
         specBaselineProblems(withEntry("luds", "16", { sha256: HASH })),
