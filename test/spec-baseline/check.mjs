@@ -69,14 +69,20 @@ function linkTexts(readme, repository) {
   return [...readme.matchAll(link)].map(([, text]) => text).join("\n");
 }
 
-/** Ids of the documents a family implements, read from `src/<label><id>.ts`. */
+/**
+ * The documents a family implements, as id → filename, read from
+ * `src/<label><id>.ts`. Matched case-insensitively: the lowercase filename is a
+ * convention nothing enforces, and a `nip7D.ts` that failed to match would be
+ * exempt from baselining rather than reported. The filename is kept so a
+ * diagnostic can name the file that exists rather than the one it assumed.
+ */
 function implemented(label) {
-  const module = new RegExp(`^${label.toLowerCase()}([0-9a-z]{2})\\.ts$`);
-  return new Set(
+  const module = new RegExp(`^${label}([0-9a-z]{2})\\.ts$`, "i");
+  return new Map(
     readdirSync(join(root, SOURCE))
-      .map((file) => file.match(module)?.[1])
-      .filter(Boolean)
-      .map((id) => id.toUpperCase()),
+      .map((file) => [file.match(module)?.[1], file])
+      .filter(([id]) => id)
+      .map(([id, file]) => [id.toUpperCase(), file]),
   );
 }
 
@@ -121,9 +127,13 @@ function supportedNipsTable(readme) {
   return { header, delimiter, rows };
 }
 
-/** A Markdown table row's cells, including the empty ones its pipes bound. */
+/**
+ * A Markdown table row's cells, including the empty ones its pipes bound. An
+ * escaped `\\|` is cell content, not a boundary — splitting on it would both
+ * miscount the row's columns and shift every cell after it.
+ */
 function cellsOf(line) {
-  return line.split("|").map((cell) => cell.trim());
+  return line.split(/(?<!\\)\|/).map((cell) => cell.trim());
 }
 
 const baseline = JSON.parse(readFileSync(join(root, BASELINE), "utf8"));
@@ -189,10 +199,10 @@ for (const family of families) {
   // with no recorded provenance, and an entry with no module is dead weight.
   if (!label) continue;
   const modules = implemented(label);
-  for (const id of modules) {
+  for (const [id, file] of modules) {
     if (!(id in documents))
       errors.push(
-        `${BASELINE}: \`${SOURCE}/${label.toLowerCase()}${id.toLowerCase()}.ts\` has no \`${family}.${id}\` entry`,
+        `${BASELINE}: \`${SOURCE}/${file}\` has no \`${family}.${id}\` entry`,
       );
   }
   for (const id of Object.keys(documents)) {
