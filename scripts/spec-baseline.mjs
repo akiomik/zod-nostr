@@ -172,11 +172,84 @@ function sectionLines(readme) {
  * first pipe-led block instead would read a legend table, or a fenced example
  * of this very table, as the table and report its rows as malformed NIPs.
  */
-function supportedNipsTable(readme) {
+/**
+ * The rows under the header at `index`, whether the table broke off before
+ * they ended, and the line the scan stopped at — so the next table in the
+ * section is looked for after this one rather than inside it.
+ *
+ * A blank line, or an indent Markdown reads as something other than a row,
+ * ends the table where it renders, which is worth reporting on its own. The
+ * rows past it are still collected, because they still say which NIPs the
+ * README names, and a NIP missing from all of them is a separate problem that
+ * should not wait for the break to be fixed. A table of its own below, which
+ * carries its own delimiter, ends the scan instead.
+ */
+function rowsUnder(lines, index) {
+  const rows = [];
+  let interrupted = false;
+  let line = index + 2;
+  for (; line < lines.length; line += 1) {
+    const text = lines[line];
+    const opened = fenceAfter(text, null);
+    if (opened !== null) {
+      // A fence ends the table where it renders. Skip its content, then keep
+      // reading only if rows follow — those still name NIPs, and only then has
+      // anything been cut off. A fence merely following the last row costs the
+      // table nothing.
+      line += 1;
+      while (line < lines.length && fenceAfter(lines[line], opened) !== null)
+        line += 1;
+      const beyond = lines.slice(line + 1);
+      const next = beyond.find((following) => following.trim() !== "");
+      if (next === undefined || !ROW.test(next.trimStart())) break;
+      if (DELIMITER.test(beyond[beyond.indexOf(next) + 1] ?? "")) break;
+      interrupted = true;
+      continue;
+    }
+    // A row of dashes is a row: Markdown only reads a delimiter directly under
+    // the header, so one further down does not start a table of its own, and
+    // breaking on it would drop every row below it.
+    if (ROW.test(text)) {
+      rows.push(text);
+      continue;
+    }
+    // Indented past what Markdown reads as a row: the table has ended here,
+    // but the line still says which NIP it names.
+    if (text.trim() !== "" && ROW.test(text.trimStart())) {
+      interrupted = true;
+      rows.push(text.trimStart());
+      continue;
+    }
+    // Blank, or prose — an HTML comment, a stray sentence. Keep reading only
+    // while rows follow, so what they name is still known.
+    const ahead = lines.slice(line + 1);
+    const rest = ahead.find((following) => following.trim() !== "");
+    if (rest === undefined || !ROW.test(rest.trimStart())) break;
+    // Located from here, not from the section start: a line that repeats an
+    // earlier one — a header pasted below the table — would otherwise be found
+    // at its first occurrence, whose successor is the real delimiter.
+    if (DELIMITER.test(ahead[ahead.indexOf(rest) + 1] ?? "")) break;
+    interrupted = true;
+  }
+  return { rows, interrupted, end: line };
+}
+
+/**
+ * The `Supported NIPs` tables: every block in the section, outside a fence,
+ * with a delimiter row and one of the two columns this reads. Null if the
+ * section is not there at all.
+ *
+ * Every such block, not the first: a section split into two tables — core and
+ * extensions, say — names its NIPs across both, and reading only one would
+ * report every row of the other as missing.
+ */
+function supportedNipsTables(readme) {
   const lines = sectionLines(readme);
   if (lines === null) return null;
+  const tables = [];
   let fence = null;
-  for (const [index, header] of lines.entries()) {
+  for (let index = 0; index < lines.length; index += 1) {
+    const header = lines[index];
     const after = fenceAfter(header, fence);
     if (after !== fence) {
       fence = after;
@@ -186,65 +259,15 @@ function supportedNipsTable(readme) {
     if (!DELIMITER.test(lines[index + 1] ?? "")) continue;
     const cells = cellsOf(header);
     const nip = cells.indexOf(NIP_COLUMN);
-    // Either column marks this as the table rather than a legend beside it.
-    // Recognizing it on one of them lets the other be reported as renamed,
-    // instead of the table being reported as missing.
+    // Either column marks a block as one of these tables rather than a legend
+    // beside them. Recognizing it on one lets the other be reported as
+    // renamed, instead of the table being reported as missing.
     if (nip === -1 && !cells.includes(BASELINE_COLUMN)) continue;
-
-    // A blank line, or an indent Markdown reads as something other than a row,
-    // ends the table where it renders — so it is worth reporting on its own.
-    // The rows past it are still collected, because they still say which NIPs
-    // the README names, and a NIP missing from all of them is a separate
-    // problem that should not wait for the break to be fixed. A genuine second
-    // table below carries its own delimiter and ends the scan instead.
-    const rows = [];
-    let interrupted = false;
-    for (let line = index + 2; line < lines.length; line += 1) {
-      const text = lines[line];
-      const opened = fenceAfter(text, null);
-      if (opened !== null) {
-        // A fence ends the table where it renders. Skip its content, then keep
-        // reading only if rows follow — those still name NIPs, and only then
-        // has anything been cut off. A fence merely following the last row
-        // costs the table nothing.
-        line += 1;
-        while (line < lines.length && fenceAfter(lines[line], opened) !== null)
-          line += 1;
-        const beyond = lines.slice(line + 1);
-        const next = beyond.find((following) => following.trim() !== "");
-        if (next === undefined || !ROW.test(next.trimStart())) break;
-        if (DELIMITER.test(beyond[beyond.indexOf(next) + 1] ?? "")) break;
-        interrupted = true;
-        continue;
-      }
-      // A row of dashes is a row: Markdown only reads a delimiter directly
-      // under the header, so one further down does not start a table of its
-      // own, and breaking on it would drop every row below it.
-      if (ROW.test(text)) {
-        rows.push(text);
-        continue;
-      }
-      // Indented past what Markdown reads as a row: the table has ended here,
-      // but the line still says which NIP it names.
-      if (text.trim() !== "" && ROW.test(text.trimStart())) {
-        interrupted = true;
-        rows.push(text.trimStart());
-        continue;
-      }
-      // Blank, or prose — an HTML comment, a stray sentence. Keep reading only
-      // while rows follow, so what they name is still known.
-      const ahead = lines.slice(line + 1);
-      const rest = ahead.find((following) => following.trim() !== "");
-      if (rest === undefined || !ROW.test(rest.trimStart())) break;
-      // Located from here, not from the section start: a line that repeats an
-      // earlier one — a header pasted below the table — would otherwise be
-      // found at its first occurrence, whose successor is the real delimiter.
-      if (DELIMITER.test(ahead[ahead.indexOf(rest) + 1] ?? "")) break;
-      interrupted = true;
-    }
-    return { header, rows, nip, interrupted };
+    const { rows, interrupted, end } = rowsUnder(lines, index);
+    tables.push({ header, rows, nip, interrupted });
+    index = end - 1; // the loop's own step moves past it
   }
-  return null;
+  return tables;
 }
 
 /**
@@ -295,7 +318,7 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
     }
     const { label, repository } = source;
     const documents = baseline.documents[family];
-    if (!(family in baseline.documents)) continue; // already reported
+    if (!Object.hasOwn(baseline.documents, family)) continue; // reported
     if (!holds(documents)) {
       problems.push(`${BASELINE}: \`documents.${family}\` holds no entries`);
       continue;
@@ -384,64 +407,79 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
   )
     return problems;
 
-  const table = supportedNipsTable(readme);
-  if (table === null) {
+  const tables = supportedNipsTables(readme);
+  if (tables === null || tables.length === 0) {
     problems.push(`${README}: no "Supported NIPs" section with a NIP table`);
     return problems;
   }
 
-  // Both columns this reads are located from the header rather than assumed,
-  // so either may move; dropping the revision one is reported.
-  const column = cellsOf(table.header).indexOf(BASELINE_COLUMN);
-  if (column === -1)
-    problems.push(
-      `${README}: the Supported NIPs table has no \`${BASELINE_COLUMN}\` column`,
-    );
-  if (table.nip === -1)
-    problems.push(
-      `${README}: the Supported NIPs table has no \`${NIP_COLUMN}\` column`,
-    );
-
-  if (table.interrupted)
-    problems.push(
-      `${README}: the Supported NIPs table breaks off before its rows end, so what follows it does not render as part of it`,
-    );
-
   const { repository } = baseline.sources[TABLE_FAMILY];
-  // A missing repository is reported with its family; building `expected`
-  // around it would report every row as disagreeing with a link to `undefined`.
   const tabled = new Set();
-  for (const row of table.nip === -1 ? [] : table.rows) {
-    const cells = cellsOf(row);
-    const nip = cells[table.nip]?.match(TABLE_ROW)?.[1];
-    if (!nip) {
-      problems.push(`${README}: cannot read a NIP number from row: ${row}`);
-      continue;
-    }
-    tabled.add(nip);
-    const entry = baseline.documents[TABLE_FAMILY][nip];
-    const known = `${TABLE_FAMILY}.${nip}`;
-    if (excused.has(known)) continue; // reported at its entry
-    if (!entry) {
-      problems.push(`${README}: NIP-${nip} has no entry in ${BASELINE}`);
-      continue;
-    }
-    if (column === -1 || !repository || unusable.has(known)) continue; // reported
-    const expected = `[${entry.date}](${repository}/blob/${entry.commit}/${nip}.md)`;
-    if (cells[column] !== expected)
+  // Which rows name which NIP is what a missing `NIP` column makes unknowable,
+  // so a table without one leaves the absence check to the tables that have
+  // one rather than guessing on its behalf.
+  let named = false;
+
+  for (const table of tables) {
+    // Both columns a table is read by are located from its own header rather
+    // than assumed, so either may move; dropping one is reported.
+    const column = cellsOf(table.header).indexOf(BASELINE_COLUMN);
+    if (column === -1)
       problems.push(
-        `${README}: NIP-${nip}'s spec baseline cell disagrees with ${BASELINE}:\n` +
-          `    ${README}: ${cells[column]}\n` +
-          `    expected: ${expected}`,
+        `${README}: the Supported NIPs table has no \`${BASELINE_COLUMN}\` column`,
       );
+    if (table.nip === -1) {
+      problems.push(
+        `${README}: the Supported NIPs table has no \`${NIP_COLUMN}\` column`,
+      );
+    } else {
+      named = true;
+    }
+
+    if (table.interrupted)
+      problems.push(
+        `${README}: the Supported NIPs table breaks off before its rows end, so what follows it does not render as part of it`,
+      );
+
+    for (const row of table.nip === -1 ? [] : table.rows) {
+      const cells = cellsOf(row);
+      const nip = cells[table.nip]?.match(TABLE_ROW)?.[1];
+      if (!nip) {
+        problems.push(`${README}: cannot read a NIP number from row: ${row}`);
+        continue;
+      }
+      tabled.add(nip);
+      const entry = baseline.documents[TABLE_FAMILY][nip];
+      const known = `${TABLE_FAMILY}.${nip}`;
+      if (excused.has(known)) continue; // reported at its entry
+      if (!entry) {
+        problems.push(`${README}: NIP-${nip} has no entry in ${BASELINE}`);
+        continue;
+      }
+      // A missing repository is reported with its family; building `expected`
+      // around it would report every row as disagreeing with `undefined`.
+      if (column === -1 || !repository || unusable.has(known)) continue;
+      // The split leaves an empty cell either side of the outer pipes, so a
+      // row is short when the column falls on the trailing one or past it.
+      if (column >= cells.length - 1) {
+        problems.push(
+          `${README}: NIP-${nip}'s row has no \`${BASELINE_COLUMN}\` cell`,
+        );
+        continue;
+      }
+      const expected = `[${entry.date}](${repository}/blob/${entry.commit}/${nip}.md)`;
+      if (cells[column] !== expected)
+        problems.push(
+          `${README}: NIP-${nip}'s spec baseline cell disagrees with ${BASELINE}:\n` +
+            `    ${README}: ${cells[column]}\n` +
+            `    expected: ${expected}`,
+        );
+    }
   }
 
   // A misspelled id is reported as such above; asking the table for a row it
   // could not name would repeat that as a second, misleading message. A break
   // does not suppress this — the rows past it were still read.
-  // Without the column naming them, which rows name which NIP is unknown, so
-  // calling each of them absent would be fourteen guesses at one problem.
-  const named = table.nip !== -1;
   for (const nip of named ? Object.keys(baseline.documents[TABLE_FAMILY]) : [])
     if (DOCUMENT.test(nip) && !tabled.has(nip))
       problems.push(

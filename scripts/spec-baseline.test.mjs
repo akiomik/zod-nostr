@@ -199,6 +199,17 @@ describe("specBaselineProblems", () => {
       },
     );
 
+    it.each([["toString"], ["constructor"]])(
+      "reports a `sources.%s` family with no `documents` entry",
+      (family) => {
+        const input = repository();
+        input.baseline.sources[family] = { label: "BUD", repository: LUDS };
+        expect(specBaselineProblems(input)).toEqual([
+          `spec-baseline.json: \`sources.${family}\` has no \`documents\` entry`,
+        ]);
+      },
+    );
+
     it("reports a family that only `sources` knows about", () => {
       const input = repository();
       input.baseline.sources.buds = { label: "BUD", repository: "https://x" };
@@ -629,6 +640,43 @@ describe("specBaselineProblems", () => {
 
     // A row is not a heading's content, so dashes under one break the page,
     // not the table — deleting the row above them would be a false absence.
+    // A section split into two tables names its NIPs across both, so reading
+    // only the first would report every row of the second as missing.
+    it("reads every table in the section", () => {
+      const input = repository();
+      input.baseline.documents.nips["05"] = {
+        commit: OTHER_COMMIT,
+        date: "2026-06-13",
+        sha256: HASH.replace(/^6/, "b"),
+      };
+      input.files.push("nip05.ts");
+      input.readme = input.readme.replace(
+        "\n\n## Development",
+        [
+          "",
+          "### Extensions",
+          "",
+          "| NIP | Spec baseline | Coverage |",
+          "| --- | --- | --- |",
+          `| **NIP-05** | [2026-06-13](${NIPS}/blob/${OTHER_COMMIT}/05.md) | Ids |`,
+          "",
+          "## Development",
+        ].join("\n"),
+      );
+      expect(specBaselineProblems(input)).toEqual([]);
+    });
+
+    it("reports a row with no Spec baseline cell as that, not as drift", () => {
+      const input = repository();
+      input.readme = input.readme.replace(
+        `| **NIP-01** | [2026-09-04](${NIPS}/blob/${COMMIT}/01.md) | Events |`,
+        "| **NIP-01** |",
+      );
+      expect(specBaselineProblems(input)).toEqual([
+        "README.md: NIP-01's row has no `Spec baseline` cell",
+      ]);
+    });
+
     it("keeps its last row under a thematic break", () => {
       const input = repository();
       input.readme = input.readme.replace(
