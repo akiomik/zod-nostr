@@ -249,6 +249,18 @@ describe("specBaselineProblems", () => {
       ]);
     });
 
+    // Keyed by family as well as id: one family's bad entry is no reason to
+    // stop reporting what another family's entry of the same number says.
+    it("does not let one family's bad entry silence another's", () => {
+      const input = repository();
+      input.baseline.documents.luds["01"] = null;
+      input.readme = input.readme.replace("[2026-09-04]", "[2020-01-01]");
+      expect(specBaselineProblems(input)).toEqual([
+        "spec-baseline.json: `luds.01` records no revision",
+        expect.stringContaining("NIP-01's spec baseline cell disagrees"),
+      ]);
+    });
+
     it.each([
       ["null", null],
       ["a string", "todo"],
@@ -371,6 +383,21 @@ describe("specBaselineProblems", () => {
           "| Legend | Meaning |",
           "| --- | --- |",
           "| x | y |",
+          "",
+          "| NIP | Spec baseline | Coverage |",
+        ].join("\n"),
+      );
+      expect(specBaselineProblems(input)).toEqual([]);
+    });
+
+    it("is not cut short by a fenced sample of its own heading", () => {
+      const input = repository();
+      input.readme = input.readme.replace(
+        "| NIP | Spec baseline | Coverage |",
+        [
+          "```md",
+          "## Supported NIPs",
+          "```",
           "",
           "| NIP | Spec baseline | Coverage |",
         ].join("\n"),

@@ -71,10 +71,12 @@ the single source of truth for provenance.
   `lud01.ts` and the field keeps its ecosystem name at
   `metadataFields.lud06()` — the same split as `metadataFields.nip05()`
   referencing `nip05.identifier()`.
-- **`src/` is the authority on what must be baselined.** Three places name the
-  same set of specs — the modules, the baseline, and the `Supported NIPs`
-  table — and the modules decide: `src/nip67.ts` calls for a `nips.67` entry,
-  and an entry with no module is dead weight. The table repeats each revision so
+- **`src/` is the authority on what must be baselined, family by family.**
+  Three places name the same set of specs — the modules, the baseline, and the
+  `Supported NIPs` table — and the modules of a registered family decide:
+  `src/nip67.ts` calls for a `nips.67` entry, and an entry with no module is
+  dead weight. Registering the family stays a judgement, for the reason under
+  Consequences. The table repeats each revision so
   a reader can click through to it, which is a second copy of a fact, so the two
   are kept in step by `scripts/spec-baseline-check.mjs`, in both directions, in
   CI and `prepublishOnly`. It sits under `scripts/` rather than `test/` because

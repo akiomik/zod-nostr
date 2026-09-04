@@ -24,6 +24,10 @@
 // - It checks what a maintainer plausibly gets wrong — updating one file and
 //   not the other — not what a maintainer would have to go out of their way to
 //   write.
+// - The modules it reads are those of a family `sources` registers. A module
+//   of a family nobody registered is invisible: no filename rule separates a
+//   `bolt11.ts` worth baselining from a `bech32.ts` that is an ordinary
+//   helper, so 0004 leaves registering a family to the person adding it.
 //
 // It takes the three inputs as data and returns what it found, so every rule
 // below is pinned by `spec-baseline.test.mjs` without a fixture repository.
@@ -104,10 +108,16 @@ function moduleIds(label, files) {
 function supportedNipsTable(readme) {
   const heading = readme.indexOf(TABLE_HEADING);
   if (heading === -1) return null;
-  const next = readme.indexOf("\n## ", heading + 1);
-  const lines = readme
-    .slice(heading + 1, next === -1 ? undefined : next)
-    .split("\n");
+  // The section ends at the next heading that is not inside a fence: a fenced
+  // sample of this very section would otherwise cut it short, which is the
+  // mistake the fence tracking below exists to avoid.
+  const lines = [];
+  let fencedHere = false;
+  for (const line of readme.slice(heading + 1).split("\n")) {
+    if (FENCE.test(line)) fencedHere = !fencedHere;
+    else if (!fencedHere && lines.length > 0 && line.startsWith("## ")) break;
+    lines.push(line);
+  }
   let fenced = false;
   for (const [index, header] of lines.entries()) {
     if (FENCE.test(header)) {
@@ -173,6 +183,8 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
   // Ids whose entry holds nothing to compare, for the same reason: the row is
   // there, so telling its reader the NIP has no entry would be false.
   const malformed = new Set();
+  // Both are keyed by family as well as id: `luds.01` saying nothing about a
+  // revision is no reason to stop reporting what `nips.01` says.
 
   // `sources` says what a family is and `documents` holds its entries, so a
   // family in one and not the other is the same "updated one file and not the
@@ -219,14 +231,14 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
       const where = `${BASELINE}: \`${family}.${id}\``;
       if (entry === null || typeof entry !== "object") {
         problems.push(`${where} records no revision`);
-        malformed.add(id);
+        malformed.add(`${family}.${id}`);
         continue;
       }
       if (!DOCUMENT.test(id)) {
         // Cross-checking a misspelled id would bury this under messages naming
         // the module and row that do exist, under the id it should have had.
         problems.push(`${where} is not a two-character document id`);
-        misspelled.add(id.toUpperCase());
+        misspelled.add(`${family}.${id.toUpperCase()}`);
         continue;
       }
       if (!COMMIT.test(entry.commit))
@@ -259,7 +271,7 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
 
     // `src/` is the authority: a spec module with no entry has no provenance.
     for (const [id, file] of modules)
-      if (!(id in documents) && !misspelled.has(id))
+      if (!(id in documents) && !misspelled.has(`${family}.${id}`))
         problems.push(
           `${BASELINE}: \`${SOURCE}/${file}\` has no \`${family}.${id}\` entry`,
         );
@@ -310,8 +322,9 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
     }
     tabled.add(nip);
     const entry = baseline.documents[TABLE_FAMILY][nip];
-    if (!entry || malformed.has(nip)) {
-      if (!misspelled.has(nip) && !malformed.has(nip))
+    const known = `${TABLE_FAMILY}.${nip}`;
+    if (!entry || malformed.has(known)) {
+      if (!misspelled.has(known) && !malformed.has(known))
         problems.push(`${README}: NIP-${nip} has no entry in ${BASELINE}`);
       continue;
     }
