@@ -35,7 +35,7 @@ the single source of truth for provenance.
   `nostr-protocol/nips` changes constantly for NIPs this library does not
   implement. A single repository-wide commit would look stale without meaning
   anything, would not say which text any individual schema targets, and could
-  not express a document that lives elsewhere at all — which LUD-06 and LUD-16
+  not express a document that lives elsewhere at all — which LUD-01 and LUD-16
   do. A `sources` map names each family's repository and label.
 - **Content: `commit`, `date`, `sha256`.** The commit identifies the revision;
   `date` is when it landed upstream (the committer date, which for a long-open

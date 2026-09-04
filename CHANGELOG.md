@@ -30,7 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   recorded revision cell by cell, and every check runs in both directions — so a
   spec added to one place and forgotten in another fails the build instead of
   shipping with no recorded provenance. A document from a family with no table
-  row (LUD-06, LUD-16) is held to what the README can carry: the text of the
+  row (LUD-01, LUD-16) is held to what the README can carry: the text of the
   README's link to the family's repository must enumerate exactly the family's
   baselined documents. Entries are also checked for the corruption a hash can be
   judged for without the text: no two documents may record the same one. It runs

@@ -20,7 +20,7 @@
 // it prevented. Both are human steps that 0004 records; this check covers what
 // it can decide. A NIP is then cross-checked cell by cell,
 // since the table quotes its whole revision. A document from any other family
-// (LUD-06, LUD-16) has no row to quote, so the check asserts the weaker thing
+// (LUD-01, LUD-16) has no row to quote, so the check asserts the weaker thing
 // the README can carry: that the README links the family's repository and that
 // the link's text enumerates exactly the family's baselined documents. That
 // catches a document added or removed on either side, but not a stale revision
@@ -62,7 +62,7 @@ const NAMES_A_NIP = /NIP-[0-9A-Z]{2}/;
 
 /**
  * The texts of the README's links to `repository`. A family with no table row
- * enumerates its documents in that link text (`[LUD-06 and LUD-16](…/luds)`),
+ * enumerates its documents in that link text (`[LUD-01 and LUD-16](…/luds)`),
  * which is where the check reads them from: scanning the whole README instead
  * would misread any passing mention — "does not decode to a LUD-01 URL" — as a
  * missing baseline.

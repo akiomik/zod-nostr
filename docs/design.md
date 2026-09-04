@@ -190,7 +190,7 @@ which layer it extends.
 
 Fields and schemas live under their canonical owner path (see *Canonical owner
 paths*); their spec provenance is recorded in the docs and tests rather than
-forced into the path (e.g. the NIP-24 / LUD-16 / LUD-06 profile fields live in
+forced into the path (e.g. the NIP-24 / LUD-16 / LUD-01 profile fields live in
 the `nip01.metadataFields` catalog, with their defining spec noted per field).
 
 ### Naming
