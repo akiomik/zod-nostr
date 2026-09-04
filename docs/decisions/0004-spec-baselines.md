@@ -37,6 +37,10 @@ the single source of truth for provenance.
   anything, would not say which text any individual schema targets, and could
   not express a document that lives elsewhere at all — which LUD-01 and LUD-16
   do. A `sources` map names each family's repository and label.
+- **Shape: `sources`, then `documents` keyed the same.** `sources` names each
+  document family — its label and its repository — and `documents` holds that
+  family's entries under the same key, so the file says what its own keys mean
+  and a reader never has to know which top-level keys are data.
 - **Content: `commit`, `date`, `sha256`.** The commit identifies the revision;
   `date` is when it landed upstream (the committer date, which is not always the
   author date a commit page shows); `sha256` is the
@@ -56,10 +60,11 @@ the single source of truth for provenance.
 - **Surfaced in the README.** The `Supported NIPs` table carries a `Spec
   baseline` column linking each NIP at its recorded revision, because a consumer
   reads the README, not a JSON file at the repository root.
-- **A module is named for the document it implements.** The check reads
-  provenance from filenames, so `src/<label><id>.ts` must name the document
-  whose rules the module encodes — not the field that happens to carry the
-  value. The kind:0 `lud06` field carries an LNURL, but the encoding is LUD-01's
+- **A module is named for the document it implements.** Provenance is read from
+  filenames, so a spec module is `src/<label><id>.ts` with the label in
+  lowercase — `src/nip67.ts` for NIP-67, `src/lud01.ts` for LUD-01 — and it must
+  name the document whose rules the module encodes, not the field that happens
+  to carry the value. The kind:0 `lud06` field carries an LNURL, but the encoding is LUD-01's
   and LUD-06 defines only what the decoded URL answers with, so the module is
   `lud01.ts` and the field keeps its ecosystem name at
   `metadataFields.lud06()` — the same split as `metadataFields.nip05()`
