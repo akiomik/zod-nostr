@@ -2,8 +2,8 @@
 // implements, and that README.md agrees with it.
 //
 // Three files name the same set of specs: the modules under `src/`, the
-// baseline, and the README (its `Supported NIPs` table and the `Covers …`
-// sentence above it). The README also repeats each NIP's commit and date so a
+// baseline, and the README (its `Supported NIPs` table and the coverage
+// paragraph above it). The README also repeats each NIP's commit and date so a
 // reader can click straight through to the spec text a schema targets. Nothing
 // else in the repository would notice those copies drifting apart: a NIP module
 // added without a baseline entry ships with no recorded provenance, and a
@@ -16,8 +16,9 @@
 // since the table quotes its whole revision. A document from any other family
 // (LUD-06, LUD-16) has no row to quote, so the check asserts the weaker thing
 // the README can carry: that the family's repository and each of its documents
-// are named somewhere in the prose. That catches a document added or removed,
-// but not a stale one — for those, the JSON is the only source.
+// are named in the prose, and that the prose names no document the baseline is
+// missing. That catches a document added or removed on either side, but not a
+// stale revision — for those, the JSON is the only source.
 //
 // Deliberately offline. Whether the upstream text has moved since a baseline
 // was recorded is a different question with a different answer over time; this
@@ -41,7 +42,11 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/;
 // same id in lowercase (`nip7d.ts`).
 const DOCUMENT = /^[0-9A-Z]{2}$/;
 const TABLE_ROW = /^\*\*NIP-([0-9A-Z]{2})\*\*$/;
-const COVERS_OPENING = "\nCovers NIP-";
+const TABLE_HEADING = "\n## Supported NIPs\n";
+// What identifies the intro's coverage paragraph is its link to the table, not
+// its wording: anchoring on the prose would fail a rewording that changed
+// nothing about the list.
+const TABLE_LINK = "](#supported-nips)";
 
 /** Ids of the documents a family implements, read from `src/<label><id>.ts`. */
 function implemented(label) {
@@ -55,15 +60,19 @@ function implemented(label) {
 }
 
 /**
- * The `Covers NIP-…` paragraph, or null. Taken up to the blank line that ends
- * it rather than to the first `.` at a line end, so rewrapping the paragraph
- * cannot silently truncate what the check reads.
+ * The intro paragraph that summarizes coverage and links to the table, or null.
+ * Found by that link and taken whole, between the blank lines that bound it, so
+ * neither rewrapping nor rewording it can truncate what the check reads.
  */
-function coversParagraph(readme) {
-  const start = readme.indexOf(COVERS_OPENING);
-  if (start === -1) return null;
-  const end = readme.indexOf("\n\n", start + 1);
-  return readme.slice(start + 1, end === -1 ? undefined : end);
+function coverageParagraph(readme) {
+  const link = readme.lastIndexOf(TABLE_LINK, readme.indexOf(TABLE_HEADING));
+  if (link === -1) return null;
+  const start = readme.lastIndexOf("\n\n", link);
+  const end = readme.indexOf("\n\n", link);
+  return readme.slice(
+    start === -1 ? 0 : start + 2,
+    end === -1 ? undefined : end,
+  );
 }
 
 /**
@@ -72,7 +81,7 @@ function coversParagraph(readme) {
  * so a run that also has baseline problems still prints them.
  */
 function supportedNipsRows(readme) {
-  const heading = readme.indexOf("\n## Supported NIPs\n");
+  const heading = readme.indexOf(TABLE_HEADING);
   if (heading === -1) return null;
   // A section that runs to the end of the file has no following heading; slicing
   // to `-1` would silently swallow the rest of the README instead.
@@ -117,6 +126,18 @@ for (const family of families) {
     // require at least that the README names them.
     if (family !== TABLE_FAMILY && label && !readme.includes(`${label}-${id}`))
       errors.push(`${README}: never mentions ${label}-${id}`);
+  }
+
+  // The other direction for a family with no table: prose naming a document
+  // that was never baselined.
+  if (family !== TABLE_FAMILY && label) {
+    const mentions = readme.matchAll(new RegExp(`${label}-([0-9A-Z]{2})`, "g"));
+    for (const [, id] of mentions) {
+      if (!(id in documents))
+        errors.push(
+          `${README}: names ${label}-${id}, which has no entry in ${BASELINE}`,
+        );
+    }
   }
 
   // `src/` decides what must be baselined: a spec module with no entry ships
@@ -175,13 +196,16 @@ for (const row of rows ?? []) {
     );
 }
 
-// The intro sentence is the README's third copy of the NIP list, and the one a
-// reader meets first.
-const covers = coversParagraph(readme);
+// The coverage paragraph is the README's third copy of the NIP list, and the
+// one a reader meets first.
+const covers = coverageParagraph(readme);
 const covered = new Set(
   covers ? [...covers.matchAll(/NIP-([0-9A-Z]{2})/g)].map(([, id]) => id) : [],
 );
-if (!covers) errors.push(`${README}: no "Covers NIP-…" sentence`);
+if (!covers)
+  errors.push(
+    `${README}: no intro paragraph linking to the Supported NIPs table`,
+  );
 
 // A section reported as missing above would otherwise make every baselined NIP
 // look individually absent, burying the one problem there is.
@@ -192,13 +216,13 @@ for (const nip of Object.keys(baseline[TABLE_FAMILY] ?? {})) {
     );
   if (covers && !covered.has(nip))
     errors.push(
-      `${README}: NIP-${nip} is baselined in ${BASELINE} but absent from the "Covers NIP-…" sentence`,
+      `${README}: NIP-${nip} is baselined in ${BASELINE} but absent from the intro coverage paragraph`,
     );
 }
 for (const nip of covered) {
   if (rows && !tabled.has(nip))
     errors.push(
-      `${README}: the "Covers NIP-…" sentence names NIP-${nip}, which has no row in the Supported NIPs table`,
+      `${README}: the intro coverage paragraph names NIP-${nip}, which has no row in the Supported NIPs table`,
     );
 }
 

@@ -58,7 +58,7 @@ the single source of truth for provenance.
   reads the README, not a JSON file at the repository root.
 - **Enforcement, with `src/` as the authority.** Four places name the same set
   of specs: the modules, the baseline, the `Supported NIPs` table, and the
-  `Covers …` sentence above it. `test/spec-baseline/check.mjs` derives the
+  coverage paragraph above it. `test/spec-baseline/check.mjs` derives the
   required set from the module filenames — `src/nip67.ts` demands a `nips.67`
   entry, and an entry with no module is dead weight — then asserts the file is
   well formed and that both README copies quote it, in both directions. A spec
@@ -87,7 +87,7 @@ the single source of truth for provenance.
 ## Consequences
 
 Adding `src/nipXX.ts` now means adding a baseline entry, a table row, and a
-mention in the `Covers …` sentence, or the build fails; adding a document from a
+mention in the coverage paragraph, or the build fails; adding a document from a
 new family means adding a `sources` entry too.
 Re-reading a spec is a reviewable change with a diff, rather than an
 undocumented act of diligence. The baseline is a claim about the text a schema
