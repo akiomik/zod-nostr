@@ -125,11 +125,11 @@ Adding `src/nipXX.ts` now means adding a baseline entry, a table row, and a
 mention anywhere outside that table — the opening `Covers NIP-…` sentence is
 where they are named today — or the build fails. A document from a new family
 needs a `sources` entry as well — a requirement this record carries, not one
-the check can demand, for the reason below. Re-reading a spec is a reviewable change with a
-diff, rather than an undocumented act of diligence. The baseline is a claim
-about the text a schema targets, not a guarantee that upstream has not moved
-since — until the scheduled comparison exists, an entry going stale is still
-noticed by hand.
+the check can demand, for the reason below. Re-reading a spec is a reviewable
+change with a diff, rather than an undocumented act of diligence. The baseline
+is a claim about the text a schema targets, not a guarantee that upstream has
+not moved since — until the scheduled comparison exists, an entry going stale
+is still noticed by hand.
 
 Three gaps stay open whatever is checked. The first is that nothing offline can
 tie an entry's `sha256` or `date` to its `commit`: both are facts about a
