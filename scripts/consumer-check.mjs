@@ -5,12 +5,11 @@
 // wrong entry point, which a paths-mapped compile against dist/ cannot.
 //
 // The compile MUST run outside the zod-nostr package tree: the fixture lives
-// inside the package root (`test/consumer/`), so from there TypeScript
-// resolves `zod-nostr` via
-// package self-reference to the repo's own dist/, ignoring the tarball. So we
-// copy the fixture into an OS temp dir whose node_modules holds the extracted
-// tarball, run tsc there, and assert via --traceResolution that resolution
-// actually went through node_modules/zod-nostr (not the repo dist).
+// inside the package root (`test/consumer/`), so from there TypeScript resolves
+// `zod-nostr` via package self-reference to the repo's own dist/, ignoring the
+// tarball. So we copy the fixture into an OS temp dir whose node_modules holds
+// the extracted tarball, run tsc there, and assert via --traceResolution that
+// resolution actually went through node_modules/zod-nostr (not the repo dist).
 import { spawnSync } from "node:child_process";
 import {
   cpSync,

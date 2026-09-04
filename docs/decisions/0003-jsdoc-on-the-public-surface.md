@@ -53,8 +53,8 @@ whole public surface.
   next heading rename.
 - **Enforcement.** `scripts/public-jsdoc-check.mjs` walks `dist/classic.d.ts`
   and `dist/mini.d.ts` and fails on any undocumented path, any path present in
-  one flavor only, and any path whose two comments differ. It runs in CI after the
-  build and in `prepublishOnly`.
+  one flavor only, and any path whose two comments differ. It runs in CI after
+  the build and in `prepublishOnly`.
 
 Checking the built declarations rather than the sources is the load-bearing
 part: they are what an editor actually shows, and they are the one place where
