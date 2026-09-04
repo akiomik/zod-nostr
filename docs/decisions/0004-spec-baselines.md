@@ -38,8 +38,8 @@ the single source of truth for provenance.
   not express a document that lives elsewhere at all — which LUD-01 and LUD-16
   do. A `sources` map names each family's repository and label.
 - **Content: `commit`, `date`, `sha256`.** The commit identifies the revision;
-  `date` is when it landed upstream (the committer date, which for a long-open
-  pull request is later than the author date GitHub displays); `sha256` is the
+  `date` is when it landed upstream (the committer date, which is not always the
+  author date a commit page shows); `sha256` is the
   hash of the document's Markdown at that commit. The hash is the load-bearing
   field — it is what turns a record into something a checker can act on, and the
   reason this is a data file rather than prose.
