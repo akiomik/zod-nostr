@@ -184,6 +184,21 @@ describe("specBaselineProblems", () => {
       ]);
     });
 
+    // `in` would find these on `Object.prototype` and skip the family in
+    // silence, leaving its entries and modules unexamined.
+    it.each([["toString"], ["constructor"]])(
+      "reports a `documents.%s` family with no `sources` entry",
+      (family) => {
+        const input = repository();
+        input.baseline.documents[family] = {
+          "01": { commit: COMMIT, date: "2026-09-04", sha256: HASH },
+        };
+        expect(specBaselineProblems(input)).toEqual([
+          `spec-baseline.json: \`documents.${family}\` has no \`sources\` entry`,
+        ]);
+      },
+    );
+
     it("reports a family that only `sources` knows about", () => {
       const input = repository();
       input.baseline.sources.buds = { label: "BUD", repository: "https://x" };
@@ -442,6 +457,21 @@ describe("specBaselineProblems", () => {
           "",
           "| NIP | Spec baseline | Coverage |",
         ].join("\n"),
+      );
+      expect(specBaselineProblems(input)).toEqual([]);
+    });
+
+    // A fence closes on its own character and length, so what a block shows is
+    // not read as ending it.
+    it.each([
+      ["another fence style inside it", "~~~"],
+      ["a shorter run of its own character", "``"],
+      ["indented code that looks like one", "    ```"],
+    ])("is not confused by %s", (_label, inner) => {
+      const input = repository();
+      input.readme = input.readme.replace(
+        "## Supported NIPs",
+        ["```md", inner, "```", "", "## Supported NIPs"].join("\n"),
       );
       expect(specBaselineProblems(input)).toEqual([]);
     });

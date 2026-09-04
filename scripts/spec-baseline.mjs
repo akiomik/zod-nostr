@@ -58,7 +58,11 @@ const ROW = /^ {0,3}\|/;
 // row of empty cells, which Markdown renders as an ordinary row — reads as the
 // start of a table of its own and stops the scan mid-table.
 const DELIMITER = /^ {0,3}\|[\s:|-]*-[\s:|-]*\|\s*$/;
-const FENCE = /^\s*(```|~~~)/;
+// A fence opens with three or more backticks or tildes, indented at most
+// three: a deeper indent is a code block, not a fence. It closes on the same
+// character, at least as long, carrying nothing else — so a `~~~` shown inside
+// a backtick block, or a fence inside indented code, does not end anything.
+const FENCE = /^ {0,3}(`{3,}|~{3,})/;
 // What ends the section: an ATX heading of the same or higher level, or the
 // underline of a setext one. A `### ` subsection belongs to the section; a
 // thematic break does not underline anything, so it needs a line above it.
@@ -86,6 +90,18 @@ function isCalendarDate(date) {
     !Number.isNaN(parsed.getTime()) &&
     parsed.toISOString().slice(0, 10) === date
   );
+}
+
+/**
+ * The fence a line leaves open: `open` unchanged if it is not a fence line,
+ * the fence it starts if none was open, or null if it closes the open one.
+ */
+function fenceAfter(line, open) {
+  const marker = line.match(FENCE)?.[1];
+  if (marker === undefined) return open;
+  if (open === null) return marker;
+  const closes = marker[0] === open[0] && marker.length >= open.length;
+  return closes && line.trim() === marker ? null : open;
 }
 
 /** Whether `value` is something to read keys off, rather than to throw on. */
@@ -122,12 +138,13 @@ function moduleIds(label, files) {
 function sectionLines(readme) {
   const all = readme.split("\n");
   const lines = [];
-  let fenced = false;
+  let fence = null;
   let found = false;
   for (const line of all) {
-    if (FENCE.test(line)) {
-      fenced = !fenced;
-    } else if (!fenced) {
+    const after = fenceAfter(line, fence);
+    if (after !== fence) {
+      fence = after;
+    } else if (fence === null) {
       if (!found) {
         found = line.trim() === TABLE_HEADING;
         if (found) lines.push(line);
@@ -158,13 +175,14 @@ function sectionLines(readme) {
 function supportedNipsTable(readme) {
   const lines = sectionLines(readme);
   if (lines === null) return null;
-  let fenced = false;
+  let fence = null;
   for (const [index, header] of lines.entries()) {
-    if (FENCE.test(header)) {
-      fenced = !fenced;
+    const after = fenceAfter(header, fence);
+    if (after !== fence) {
+      fence = after;
       continue;
     }
-    if (fenced || !ROW.test(header)) continue;
+    if (fence !== null || !ROW.test(header)) continue;
     if (!DELIMITER.test(lines[index + 1] ?? "")) continue;
     const cells = cellsOf(header);
     const nip = cells.indexOf(NIP_COLUMN);
@@ -183,13 +201,15 @@ function supportedNipsTable(readme) {
     let interrupted = false;
     for (let line = index + 2; line < lines.length; line += 1) {
       const text = lines[line];
-      if (FENCE.test(text)) {
+      const opened = fenceAfter(text, null);
+      if (opened !== null) {
         // A fence ends the table where it renders. Skip its content, then keep
         // reading only if rows follow — those still name NIPs, and only then
         // has anything been cut off. A fence merely following the last row
         // costs the table nothing.
         line += 1;
-        while (line < lines.length && !FENCE.test(lines[line])) line += 1;
+        while (line < lines.length && fenceAfter(lines[line], opened) !== null)
+          line += 1;
         const beyond = lines.slice(line + 1);
         const next = beyond.find((following) => following.trim() !== "");
         if (next === undefined || !ROW.test(next.trimStart())) break;
@@ -258,12 +278,12 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
   // other" mistake the rest of this checks for — and would otherwise be skipped
   // in one direction and throw in the other.
   for (const family of Object.keys(baseline.documents))
-    if (!(family in baseline.sources))
+    if (!Object.hasOwn(baseline.sources, family))
       problems.push(
         `${BASELINE}: \`documents.${family}\` has no \`sources\` entry`,
       );
   for (const family of Object.keys(baseline.sources))
-    if (!(family in baseline.documents))
+    if (!Object.hasOwn(baseline.documents, family))
       problems.push(
         `${BASELINE}: \`sources.${family}\` has no \`documents\` entry`,
       );
@@ -342,7 +362,7 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
 
     // `src/` is the authority: a spec module with no entry has no provenance.
     for (const [id, file] of modules)
-      if (!(id in documents) && !excused.has(`${family}.${id}`))
+      if (!Object.hasOwn(documents, id) && !excused.has(`${family}.${id}`))
         problems.push(
           `${BASELINE}: \`${SOURCE}/${file}\` has no \`${family}.${id}\` entry`,
         );
@@ -352,8 +372,8 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
   // is reported above; missing from both it is reported here, because a
   // renamed key would otherwise skip the whole table cross-check in silence.
   if (
-    !(TABLE_FAMILY in baseline.sources) &&
-    !(TABLE_FAMILY in baseline.documents)
+    !Object.hasOwn(baseline.sources, TABLE_FAMILY) &&
+    !Object.hasOwn(baseline.documents, TABLE_FAMILY)
   )
     problems.push(
       `${BASELINE}: no \`${TABLE_FAMILY}\` family, so nothing says what the ${README} table should quote`,
