@@ -21,10 +21,12 @@
 //   maintainer. Guarding each way a hand-corrupted file could be malformed
 //   costs more code than the case is worth: the build fails either way, and
 //   `biome check` already rejects invalid JSON.
-// - The modules it reads are those of a family `sources` registers. A module of
-//   a family nobody registered is invisible: no filename rule separates a
-//   `bolt11.ts` worth baselining from a `bech32.ts` that is an ordinary helper,
-//   so 0004 leaves registering a family to the person adding it.
+// - `sources` says which families exist, and this checks what it says: within a
+//   family it declares, the modules and the entries must match each other. A
+//   family it does not name is not checked, because no filename rule separates
+//   a `bolt11.ts` worth baselining from a `bech32.ts` that is an ordinary
+//   helper. Naming a family on one side of the file only is reported, since
+//   that is a half-finished edit rather than a declaration.
 //
 // It takes its two inputs as data and returns what it found, so every rule
 // below is pinned by `spec-baseline.test.mjs` without a fixture repository.
