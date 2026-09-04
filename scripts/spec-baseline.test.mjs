@@ -195,6 +195,24 @@ describe("specBaselineProblems", () => {
     });
   });
 
+  describe("a family that does not describe itself", () => {
+    it("reports a missing label instead of crashing on it", () => {
+      const input = repository();
+      input.baseline.sources.luds = { repository: LUDS };
+      expect(specBaselineProblems(input)).toEqual([
+        "spec-baseline.json: `sources.luds` has no label",
+      ]);
+    });
+
+    it("reports a missing repository", () => {
+      const input = repository();
+      input.baseline.sources.luds = { label: "LUD" };
+      expect(specBaselineProblems(input)).toEqual([
+        "spec-baseline.json: `sources.luds` has no repository",
+      ]);
+    });
+  });
+
   describe("a document id is spelled like its upstream filename", () => {
     it("rejects a lowercase hex id without blaming files that exist", () => {
       const input = repository();
@@ -376,6 +394,29 @@ describe("specBaselineProblems", () => {
       expect(specBaselineProblems(input)).toEqual([
         'README.md: no "Supported NIPs" section with a NIP table',
       ]);
+    });
+
+    // Markdown ends a table at a blank or indented line too, so the rows after
+    // one do not render as rows — saying each is "absent" would point at the
+    // wrong fix.
+    it.each([
+      ["a blank line inside it", "\n| **NIP-01**"],
+      ["a row indented out of it", " | **NIP-01**"],
+    ])("reports being broken off by %s", (_label, replacement) => {
+      const input = repository();
+      input.readme = input.readme.replace("| **NIP-01**", replacement);
+      expect(specBaselineProblems(input)).toEqual([
+        expect.stringContaining("breaks off before its rows end"),
+      ]);
+    });
+
+    it("does not call a second table below it a break", () => {
+      const input = repository();
+      input.readme = input.readme.replace(
+        "\n## Development",
+        "\n| Legend | Meaning |\n| --- | --- |\n| x | y |\n\n## Development",
+      );
+      expect(specBaselineProblems(input)).toEqual([]);
     });
 
     it("treats an escaped pipe as cell content, not a column boundary", () => {

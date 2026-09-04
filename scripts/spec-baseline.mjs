@@ -111,9 +111,19 @@ function supportedNipsTable(readme) {
     const nip = cellsOf(header).indexOf(NIP_COLUMN);
     if (nip === -1) continue;
     const rows = [];
-    for (let row = index + 2; lines[row]?.startsWith("|"); row += 1)
-      rows.push(lines[row]);
-    return { header, rows, nip };
+    let end = index + 2;
+    for (; lines[end]?.startsWith("|"); end += 1) rows.push(lines[end]);
+    // A blank line or an indented row ends the table for Markdown too, leaving
+    // what follows to render as text rather than as rows. Spotting that lets it
+    // be reported as itself instead of as every remaining NIP being absent —
+    // while a genuine second table, which carries its own delimiter, does not
+    // count.
+    let after = end;
+    while (lines[after]?.trim() === "") after += 1;
+    const interrupted =
+      lines[after]?.trim().startsWith("|") === true &&
+      !DELIMITER.test(lines[after + 1] ?? "");
+    return { header, rows, nip, interrupted };
   }
   return null;
 }
@@ -143,10 +153,19 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
         `${BASELINE}: \`sources.${family}\` has no \`documents\` entry`,
       );
 
-  for (const [family, { label }] of Object.entries(baseline.sources)) {
+  for (const [family, { label, repository }] of Object.entries(
+    baseline.sources,
+  )) {
     const documents = baseline.documents[family];
     if (!documents) continue; // already reported
-    const modules = moduleIds(label, files);
+    // Reported rather than thrown on: a family added without its label is the
+    // same half-finished edit as one added without its entries, and crashing
+    // would take the rest of the report with it.
+    if (!label)
+      problems.push(`${BASELINE}: \`sources.${family}\` has no label`);
+    if (!repository)
+      problems.push(`${BASELINE}: \`sources.${family}\` has no repository`);
+    const modules = label ? moduleIds(label, files) : new Map();
 
     for (const [id, entry] of Object.entries(documents)) {
       const where = `${BASELINE}: \`${family}.${id}\``;
@@ -173,6 +192,7 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
         else hashes.set(entry.sha256, `${family}.${id}`);
       }
 
+      if (!label) continue; // the checks below need one
       if (!modules.has(id))
         problems.push(
           `${where} has no \`${SOURCE}/${label.toLowerCase()}${id.toLowerCase()}.ts\``,
@@ -236,10 +256,16 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
       );
   }
 
-  // A misspelled id is reported as such above; asking the table for a row it
-  // could not name would repeat that as a second, misleading message.
+  if (table.interrupted)
+    problems.push(
+      `${README}: the Supported NIPs table breaks off before its rows end, so what follows it does not render as part of it`,
+    );
+
+  // A misspelled id is reported as such above, and rows lost to a broken-off
+  // table just above; asking the table for either would repeat that as a
+  // second, misleading message.
   for (const nip of Object.keys(baseline.documents[TABLE_FAMILY]))
-    if (DOCUMENT.test(nip) && !tabled.has(nip))
+    if (!table.interrupted && DOCUMENT.test(nip) && !tabled.has(nip))
       problems.push(
         `${README}: NIP-${nip} is baselined in ${BASELINE} but absent from the Supported NIPs table`,
       );

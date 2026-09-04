@@ -37,7 +37,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   against itself only: whether upstream has moved since a baseline was recorded
   is a separate question, answered by reading the spec rather than by a build.
 
-  The script keeps its decisions in one exported function of its three inputs,
+  `scripts/spec-baseline.mjs` keeps its decisions in one exported function of
+  its three inputs, with reading files and exiting left to the CLI beside it,
   and `scripts/spec-baseline.test.mjs` pins every rule and every
   Markdown-reading guarantee it makes.
 
