@@ -15,8 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and the SHA-256 of the document's Markdown at that commit. It covers the 14
   NIPs and, because the kind:0 profile fields are not all defined by NIPs,
   LUD-01 and LUD-16 from `lnurl/luds`. `sources` names each family and its
-  repository; `documents` holds that family's entries under the same key. The `Supported NIPs` table in `README.md`
-  gains a `Spec baseline` column linking each NIP at its recorded revision, so
+  repository; `documents` holds that family's entries under the same key. The
+  `Supported NIPs` table in `README.md` gains a `Spec baseline` column linking
+  each NIP at its recorded revision, so
   the text a schema was built for is one click away instead of being implicit.
   The SHA-256 is what makes the file more than documentation — it lets upstream
   edits be detected mechanically rather than noticed by accident. An entry moves
