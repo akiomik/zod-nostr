@@ -278,8 +278,9 @@ A public API addition ships with:
 - passing the release gates below;
 - updated `API.md` and `CHANGELOG.md`;
 - for a new spec module (`src/nipXX.ts`, `src/ludXX.ts`), its entry in
-  `spec-baseline.json`, and a mention of the document in `README.md` outside
-  the `Supported NIPs` table — plus, for a NIP, a row in that table.
+  `spec-baseline.json` and a mention of the document in `README.md` — for a
+  NIP, a row in the `Supported NIPs` table as well, and the mention outside
+  those rows, which the opening `Covers NIP-…` sentence carries.
   `npm run test:spec-baseline` fails the build otherwise; see
   [decision 0004](./decisions/0004-spec-baselines.md) for why provenance is
   recorded per document.

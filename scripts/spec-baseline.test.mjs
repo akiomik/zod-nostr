@@ -281,6 +281,20 @@ describe("specBaselineProblems", () => {
 
     // One spelling for what has already been reported: the module and the row
     // are both there, so neither is an orphan of a missing entry.
+    // Only a case difference names the id it should have had; `1` for `01`
+    // names none, so the module and the row are reported on their own terms.
+    it("reports a typo of another shape alongside what it orphans", () => {
+      const input = repository();
+      input.baseline.documents.nips = {
+        1: { commit: COMMIT, date: "2026-09-04", sha256: HASH },
+      };
+      expect(specBaselineProblems(input)).toEqual([
+        "spec-baseline.json: `nips.1` is not a two-character document id",
+        expect.stringContaining("`src/nip01.ts` has no `nips.01` entry"),
+        "README.md: NIP-01 has no entry in spec-baseline.json",
+      ]);
+    });
+
     it("reports a lowercase id whose entry is also malformed just once", () => {
       const input = repository();
       input.baseline.documents.nips = { "7d": null };
@@ -805,6 +819,20 @@ describe("specBaselineProblems", () => {
 
     // The table is not the README's only list of these, and a NIP added to
     // every file the check reads can still leave the sentence above it stale.
+    // Rows are removed by where they are, not by what they say: removing the
+    // first line that reads like one would leave a repeat of it in the prose,
+    // standing in for the mention the table cannot give.
+    it("does not let a repeated row stand in for a mention", () => {
+      const input = repository();
+      const row = `| **NIP-01** | [2026-09-04](${NIPS}/blob/${COMMIT}/01.md) | Events |`;
+      input.readme = input.readme
+        .replace("Covers NIP-01, and", "Covers and")
+        .replace(row, `${row}\n${row}`);
+      expect(specBaselineProblems(input)).toEqual([
+        "README.md: never mentions NIP-01 outside the table",
+      ]);
+    });
+
     it("requires a NIP to be named outside the table", () => {
       const input = repository();
       input.readme = input.readme.replace("Covers NIP-01, and", "Covers and");

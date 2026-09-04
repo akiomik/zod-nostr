@@ -72,8 +72,8 @@ the single source of truth for provenance.
   referencing `nip05.identifier()`.
 - **`src/` is the authority on what must be baselined, family by family.**
   Four places name the same set of specs — the modules, the baseline, the
-  `Supported NIPs` table, and the sentence above it — and the modules of a
-  registered family decide:
+  `Supported NIPs` table, and the README's opening `Covers NIP-…` sentence —
+  and the modules of a registered family decide:
   `src/nip67.ts` calls for a `nips.67` entry, and an entry with no module is
   dead weight. Registering the family stays a judgement, for the reason under
   Consequences. The table repeats each revision so a reader can click through

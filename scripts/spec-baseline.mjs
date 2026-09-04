@@ -151,16 +151,22 @@ function moduleIds(label, files) {
 function sectionLines(readme) {
   const all = readme.split("\n");
   const lines = [];
+  let offset = 0;
   let fence = null;
   let found = false;
-  for (const line of all) {
+  for (const [index, line] of all.entries()) {
     const after = fenceAfter(line, fence);
     if (after !== fence) {
       fence = after;
     } else if (fence === null) {
       if (!found) {
         found = line.trim() === TABLE_HEADING;
-        if (found) lines.push(line);
+        if (found) {
+          // From where the scan is: the heading's text may appear earlier, in
+          // a fence this loop has already stepped over.
+          offset = index;
+          lines.push(line);
+        }
         continue;
       }
       if (HEADING.test(line)) break;
@@ -173,7 +179,7 @@ function sectionLines(readme) {
     }
     if (found) lines.push(line);
   }
-  return found ? lines : null;
+  return found ? { lines, offset } : null;
 }
 
 /**
@@ -190,6 +196,7 @@ function sectionLines(readme) {
  */
 function rowsUnder(lines, index) {
   const rows = [];
+  const at = [];
   let interrupted = false;
   let line = index + 2;
   for (; line < lines.length; line += 1) {
@@ -209,9 +216,9 @@ function rowsUnder(lines, index) {
       const beyond = lines.slice(line + 1);
       const next = beyond.find((following) => following.trim() !== "");
       if (next === undefined || !ROW.test(next.trimStart()))
-        return { rows, interrupted, end: line + 1 };
+        return { rows, at, interrupted, end: line + 1 };
       if (DELIMITER.test(beyond[beyond.indexOf(next) + 1] ?? ""))
-        return { rows, interrupted, end: line + 1 };
+        return { rows, at, interrupted, end: line + 1 };
       interrupted = true;
       continue;
     }
@@ -220,6 +227,7 @@ function rowsUnder(lines, index) {
     // breaking on it would drop every row below it.
     if (ROW.test(text)) {
       rows.push(text);
+      at.push(line);
       continue;
     }
     // Indented past what Markdown reads as a row: the table has ended here,
@@ -227,6 +235,7 @@ function rowsUnder(lines, index) {
     if (text.trim() !== "" && ROW.test(text.trimStart())) {
       interrupted = true;
       rows.push(text.trimStart());
+      at.push(line);
       continue;
     }
     // Blank, or prose — an HTML comment, a stray sentence. Keep reading only
@@ -240,7 +249,7 @@ function rowsUnder(lines, index) {
     if (DELIMITER.test(ahead[ahead.indexOf(rest) + 1] ?? "")) break;
     interrupted = true;
   }
-  return { rows, interrupted, end: line };
+  return { rows, at, interrupted, end: line };
 }
 
 /**
@@ -253,8 +262,9 @@ function rowsUnder(lines, index) {
  * report every row of the other as missing.
  */
 function supportedNipsTables(readme, column) {
-  const lines = sectionLines(readme);
-  if (lines === null) return null;
+  const section = sectionLines(readme);
+  if (section === null) return null;
+  const { lines, offset } = section;
   const tables = [];
   let fence = null;
   for (let index = 0; index < lines.length; index += 1) {
@@ -272,8 +282,14 @@ function supportedNipsTables(readme, column) {
     // beside them. Recognizing it on one lets the other be reported as
     // renamed, instead of the table being reported as missing.
     if (nip === -1 && !cells.includes(BASELINE_COLUMN)) continue;
-    const { rows, interrupted, end } = rowsUnder(lines, index);
-    tables.push({ header, rows, nip, interrupted });
+    const { rows, at, interrupted, end } = rowsUnder(lines, index);
+    tables.push({
+      header,
+      rows,
+      nip,
+      interrupted,
+      at: at.map((line) => line + offset),
+    });
     index = end - 1; // the loop's own step moves past it
   }
   return tables;
@@ -354,8 +370,11 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
         continue;
       }
       if (!DOCUMENT.test(id)) {
-        // Cross-checking a misspelled id would bury this under messages naming
-        // the module and row that do exist, under the id it should have had.
+        // Cross-checking an id that differs only in case would bury this under
+        // messages naming the module and row that do exist under the spelling
+        // it should have had. A typo of another shape — `1` for `01` — names no
+        // id at all, so what it should have been is not knowable and the module
+        // and row are reported on their own terms.
         problems.push(`${where} is not a two-character document id`);
         excused.add(`${family}.${id.toUpperCase()}`);
         continue;
@@ -501,9 +520,14 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
   // names them too, and a NIP added to every file the check reads can still
   // leave that stale. Held to the same weak thing a family without a table is
   // — a mention — but outside the rows, which would satisfy it trivially.
-  const prose = tables
-    .flatMap((table) => table.rows)
-    .reduce((text, row) => text.replace(row, ""), readme);
+  // The rows are removed by where they are, not by what they say: a copy of a
+  // row elsewhere in the README — a fenced example of the table — would
+  // otherwise be the one removed, leaving the real row to satisfy the mention.
+  const rowLines = new Set(tables.flatMap((table) => table.at));
+  const prose = readme
+    .split("\n")
+    .filter((_, line) => !rowLines.has(line))
+    .join("\n");
   for (const id of Object.keys(baseline.documents[TABLE_FAMILY]))
     if (DOCUMENT.test(id) && !prose.includes(`${series}-${id}`))
       problems.push(
