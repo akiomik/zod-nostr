@@ -174,7 +174,9 @@ for (const family of families) {
   else if (!readme.includes(repository))
     errors.push(`${README}: does not link ${repository} (\`${family}\`)`);
 
-  const enumerated = repository ? linkTexts(readme, repository) : "";
+  // Without a repository there is no link to read, and reporting each document
+  // as unnamed would bury the one real problem under a message per entry.
+  const enumerated = repository ? linkTexts(readme, repository) : null;
   const documents = baseline[family];
   if (!documents || Object.keys(documents).length === 0) {
     errors.push(`${BASELINE}: \`sources.${family}\` has no matching entries`);
@@ -194,6 +196,7 @@ for (const family of families) {
     if (
       family !== TABLE_FAMILY &&
       named &&
+      enumerated !== null &&
       !enumerated.includes(`${label}-${id}`)
     )
       errors.push(
@@ -203,7 +206,7 @@ for (const family of families) {
 
   // The other direction for a family with no table: the link enumerating a
   // document that was never baselined.
-  if (family !== TABLE_FAMILY && named) {
+  if (family !== TABLE_FAMILY && named && enumerated !== null) {
     const mentions = enumerated.matchAll(
       new RegExp(`${label}-([0-9A-Z]{2})`, "g"),
     );
