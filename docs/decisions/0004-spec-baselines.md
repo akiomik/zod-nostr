@@ -3,9 +3,8 @@
 Status: Accepted
 
 Records, per specification, the exact revision the schemas are written against,
-in one machine-readable file, and requires the README to quote it — a check that
-asserts this follows separately. Motivated by a repository that could not say
-which version of Nostr it implemented.
+in one machine-readable file, and enforces that the README quotes it. Motivated
+by a repository that could not say which version of Nostr it implemented.
 
 ## Context
 
@@ -119,10 +118,11 @@ the single source of truth for provenance.
 
 ## Consequences
 
-Adding `src/nipXX.ts` now means adding a baseline entry and a table row; a
-document from a new family needs a `sources` entry as well. Until the check
-lands, this record is what carries those requirements. Re-reading a spec is a
-reviewable change with a diff, rather than an undocumented act of diligence. The
+Adding `src/nipXX.ts` now means adding a baseline entry and a table row, or the
+build fails. A document from a new family needs a `sources` entry as well — a
+requirement this record carries, not one the check can demand, for the reason
+below. Re-reading a spec is a reviewable change with a diff, rather than an
+undocumented act of diligence. The
 baseline is a claim about the text a schema targets, not a guarantee that
 upstream has not moved since — until the scheduled comparison exists, an entry
 going stale is still noticed by hand.

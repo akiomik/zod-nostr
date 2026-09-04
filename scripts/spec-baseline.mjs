@@ -40,7 +40,7 @@ export const BASELINE = "spec-baseline.json";
 export const README = "README.md";
 export const SOURCE = "src";
 const TABLE_FAMILY = "nips";
-const TABLE_HEADING = "\n## Supported NIPs\n";
+const TABLE_HEADING = "## Supported NIPs";
 const BASELINE_COLUMN = "Spec baseline";
 const NIP_COLUMN = "NIP";
 
@@ -105,19 +105,36 @@ function moduleIds(label, files) {
  * first pipe-led block instead would read a legend table, or a fenced example
  * of this very table, as the table and report its rows as malformed NIPs.
  */
-function supportedNipsTable(readme) {
-  const heading = readme.indexOf(TABLE_HEADING);
-  if (heading === -1) return null;
-  // The section ends at the next heading that is not inside a fence: a fenced
-  // sample of this very section would otherwise cut it short, which is the
-  // mistake the fence tracking below exists to avoid.
+/**
+ * The lines of the `Supported NIPs` section, or null. Both ends are found
+ * outside fences: a fenced sample of this heading before the real one would
+ * otherwise anchor the section on the sample, and one after it would cut the
+ * section short — either way reporting a table that is right there as missing.
+ */
+function sectionLines(readme) {
+  const all = readme.split("\n");
   const lines = [];
-  let fencedHere = false;
-  for (const line of readme.slice(heading + 1).split("\n")) {
-    if (FENCE.test(line)) fencedHere = !fencedHere;
-    else if (!fencedHere && lines.length > 0 && line.startsWith("## ")) break;
-    lines.push(line);
+  let fenced = false;
+  let found = false;
+  for (const line of all) {
+    if (FENCE.test(line)) {
+      fenced = !fenced;
+    } else if (!fenced) {
+      if (!found) {
+        found = line.trim() === TABLE_HEADING;
+        if (found) lines.push(line);
+        continue;
+      }
+      if (line.startsWith("## ")) break;
+    }
+    if (found) lines.push(line);
   }
+  return found ? lines : null;
+}
+
+function supportedNipsTable(readme) {
+  const lines = sectionLines(readme);
+  if (lines === null) return null;
   let fenced = false;
   for (const [index, header] of lines.entries()) {
     if (FENCE.test(header)) {
@@ -139,6 +156,7 @@ function supportedNipsTable(readme) {
     let interrupted = false;
     for (let line = index + 2; line < lines.length; line += 1) {
       const text = lines[line];
+      if (FENCE.test(text)) break; // the table cannot continue inside one
       if (ROW.test(text)) {
         if (DELIMITER.test(text)) break; // a table of its own
         rows.push(text);
@@ -175,6 +193,8 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
   // Normalized so a CRLF checkout fails on a real disagreement, not on newlines.
   const readme = text.replace(/\r\n/g, "\n");
   const problems = [];
+  if (!baseline.sources || !baseline.documents)
+    return [`${BASELINE}: has no \`sources\` and \`documents\` to compare`];
   const hashes = new Map();
   // Ids reported as misspelled, in the spelling the rest of the repository
   // uses, so the modules and rows that do match them are not reported as
@@ -183,8 +203,12 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
   // Ids whose entry holds nothing to compare, for the same reason: the row is
   // there, so telling its reader the NIP has no entry would be false.
   const malformed = new Set();
-  // Both are keyed by family as well as id: `luds.01` saying nothing about a
-  // revision is no reason to stop reporting what `nips.01` says.
+  // Ids whose entry was reported for the fields a link is built from, so the
+  // comparison does not tell its reader to paste `blob/undefined` into the
+  // README.
+  const unusable = new Set();
+  // All three are keyed by family as well as id: `luds.01` saying nothing about
+  // a revision is no reason to stop reporting what `nips.01` says.
 
   // `sources` says what a family is and `documents` holds its entries, so a
   // family in one and not the other is the same "updated one file and not the
@@ -241,10 +265,14 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
         misspelled.add(`${family}.${id.toUpperCase()}`);
         continue;
       }
-      if (!COMMIT.test(entry.commit))
+      if (!COMMIT.test(entry.commit)) {
         problems.push(`${where} has no 40-character commit`);
-      if (!isCalendarDate(entry.date))
+        unusable.add(`${family}.${id}`);
+      }
+      if (!isCalendarDate(entry.date)) {
         problems.push(`${where} has no YYYY-MM-DD calendar date`);
+        unusable.add(`${family}.${id}`);
+      }
       if (!SHA256.test(entry.sha256))
         problems.push(`${where} has no 64-character sha256`);
 
@@ -328,7 +356,7 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
         problems.push(`${README}: NIP-${nip} has no entry in ${BASELINE}`);
       continue;
     }
-    if (column === -1 || !repository) continue; // already reported
+    if (column === -1 || !repository || unusable.has(known)) continue; // reported
     const expected = `[${entry.date}](${repository}/blob/${entry.commit}/${nip}.md)`;
     if (cells[column] !== expected)
       problems.push(

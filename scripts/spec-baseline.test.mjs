@@ -85,6 +85,17 @@ describe("specBaselineProblems", () => {
       expect(problems[0]).toBe(`spec-baseline.json: \`nips.01\` ${message}`);
     });
 
+    // The link a cell is compared against is built from these, so reporting
+    // them and then demanding `blob/undefined` in the README would be absurd.
+    it.each([
+      [{ commit: undefined }, "has no 40-character commit"],
+      [{ date: "2026-90-04" }, "has no YYYY-MM-DD calendar date"],
+    ])("does not compare a cell against %o", (patch, message) => {
+      expect(specBaselineProblems(withEntry("nips", "01", patch))).toEqual([
+        `spec-baseline.json: \`nips.01\` ${message}`,
+      ]);
+    });
+
     it("accepts a leap day that does exist", () => {
       const input = withEntry("nips", "01", { date: "2024-02-29" });
       input.readme = input.readme.replace("[2026-09-04]", "[2024-02-29]");
@@ -152,6 +163,17 @@ describe("specBaselineProblems", () => {
   });
 
   describe("sources and documents must name the same families", () => {
+    it.each([["sources"], ["documents"]])(
+      "reports a baseline with no `%s` at all",
+      (key) => {
+        const input = repository();
+        delete input.baseline[key];
+        expect(specBaselineProblems(input)).toEqual([
+          "spec-baseline.json: has no `sources` and `documents` to compare",
+        ]);
+      },
+    );
+
     it("reports a family that only `documents` knows about", () => {
       const input = repository();
       input.baseline.documents.buds = {
@@ -386,6 +408,26 @@ describe("specBaselineProblems", () => {
           "",
           "| NIP | Spec baseline | Coverage |",
         ].join("\n"),
+      );
+      expect(specBaselineProblems(input)).toEqual([]);
+    });
+
+    it("is not anchored on a fenced sample of its heading above it", () => {
+      const input = repository();
+      input.readme = input.readme.replace(
+        "## Supported NIPs",
+        ["```md", "## Supported NIPs", "```", "", "## Supported NIPs"].join(
+          "\n",
+        ),
+      );
+      expect(specBaselineProblems(input)).toEqual([]);
+    });
+
+    it("does not read a fence abutting its last row as rows", () => {
+      const input = repository();
+      input.readme = input.readme.replace(
+        "| Events |\n",
+        "| Events |\n```\n| not | a | row |\n```\n",
       );
       expect(specBaselineProblems(input)).toEqual([]);
     });
