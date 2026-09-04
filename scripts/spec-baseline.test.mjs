@@ -268,6 +268,14 @@ describe("specBaselineProblems", () => {
       ]);
     });
 
+    it("reports a table family that is not an object without blaming the README", () => {
+      const input = repository();
+      input.baseline.documents.nips = "todo";
+      expect(specBaselineProblems(input)).toEqual([
+        "spec-baseline.json: `documents.nips` holds no entries",
+      ]);
+    });
+
     it.each([["sources"], ["documents"]])(
       "reports a `%s` that is not an object",
       (key) => {
@@ -520,6 +528,57 @@ describe("specBaselineProblems", () => {
       );
       expect(specBaselineProblems(input)).toEqual([
         'README.md: no "Supported NIPs" section with a NIP table',
+      ]);
+    });
+
+    // A section ends at a heading of the same or higher level, however it is
+    // written — otherwise a table further down is adopted as this one.
+    it.each([
+      ["an h1", "# Appendix"],
+      ["a setext h2", "Appendix\n--------"],
+    ])(
+      "does not read a table from a later section headed by %s",
+      (_l, heading) => {
+        const input = repository();
+        input.readme = input.readme
+          .replace(/^\|.*$/gm, "")
+          .replace("## Development", `${heading}\n\n## Development`)
+          .replace(
+            "## Development",
+            [
+              "## Development",
+              "",
+              "| NIP | Spec baseline | Coverage |",
+              "| --- | --- | --- |",
+              `| **NIP-01** | [2026-09-04](${NIPS}/blob/${COMMIT}/01.md) | Events |`,
+            ].join("\n"),
+          );
+        expect(specBaselineProblems(input)).toEqual([
+          'README.md: no "Supported NIPs" section with a NIP table',
+        ]);
+      },
+    );
+
+    it("keeps reading past a subsection of its own", () => {
+      const input = repository();
+      input.readme = input.readme.replace(
+        "| NIP | Spec baseline | Coverage |",
+        "### The table\n\n| NIP | Spec baseline | Coverage |",
+      );
+      expect(specBaselineProblems(input)).toEqual([]);
+    });
+
+    // Markdown renders a row of empty cells as a row, so reading it as the
+    // start of another table would stop the scan while the table goes on.
+    it("does not mistake a row of empty cells for a delimiter", () => {
+      const input = repository();
+      input.readme = input.readme.replace(
+        `| **NIP-01** | [2026-09-04](${NIPS}/blob/${COMMIT}/01.md) | Events |`,
+        `|  |  |  |\n| **NIP-01** | [2020-01-01](${NIPS}/blob/${COMMIT}/01.md) | Events |`,
+      );
+      expect(specBaselineProblems(input)).toEqual([
+        "README.md: cannot read a NIP number from row: |  |  |  |",
+        expect.stringContaining("NIP-01's spec baseline cell disagrees"),
       ]);
     });
 

@@ -51,8 +51,16 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/;
 // it. A fourth space makes the line something else, and inside a table that
 // means the table stopped.
 const ROW = /^ {0,3}\|/;
-const DELIMITER = /^ {0,3}\|[\s:|-]+\|\s*$/;
+// A delimiter row carries at least one dash. Without that, `|  |  |  |` — a
+// row of empty cells, which Markdown renders as an ordinary row — reads as the
+// start of a table of its own and stops the scan mid-table.
+const DELIMITER = /^ {0,3}\|[\s:|-]*-[\s:|-]*\|\s*$/;
 const FENCE = /^\s*(```|~~~)/;
+// What ends the section: an ATX heading of the same or higher level, or the
+// underline of a setext one. A `### ` subsection belongs to the section; a
+// thematic break does not underline anything, so it needs a line above it.
+const HEADING = /^ {0,3}#{1,2} /;
+const UNDERLINE = /^ {0,3}(=+|-+)\s*$/;
 const TABLE_ROW = /^\*\*NIP-([0-9A-Z]{2})\*\*$/;
 // A document id is the stem of its upstream filename, so it is spelled the way
 // the file is: two characters, digits or uppercase (`01`, `7D`). A lowercase
@@ -75,6 +83,11 @@ function isCalendarDate(date) {
     !Number.isNaN(parsed.getTime()) &&
     parsed.toISOString().slice(0, 10) === date
   );
+}
+
+/** Whether `value` is something to read keys off, rather than to throw on. */
+function holds(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
 /** A Markdown row's cells. An escaped `\|` is content, not a boundary. */
@@ -117,7 +130,11 @@ function sectionLines(readme) {
         if (found) lines.push(line);
         continue;
       }
-      if (line.startsWith("## ")) break;
+      if (HEADING.test(line)) break;
+      if (UNDERLINE.test(line) && lines.at(-1)?.trim() !== "") {
+        lines.pop(); // the line it underlines is that heading, not our content
+        break;
+      }
     }
     if (found) lines.push(line);
   }
@@ -195,7 +212,6 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
   const problems = [];
   // Checked for being objects, not merely present: the loops below reach them
   // with `in` and `Object.entries`, which throw on anything else.
-  const holds = (value) => value !== null && typeof value === "object";
   if (!holds(baseline.sources) || !holds(baseline.documents))
     return [`${BASELINE}: has no \`sources\` and \`documents\` to compare`];
   const hashes = new Map();
@@ -228,14 +244,14 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
       );
 
   for (const [family, source] of Object.entries(baseline.sources)) {
-    if (source === null || typeof source !== "object") {
+    if (!holds(source)) {
       problems.push(`${BASELINE}: \`sources.${family}\` describes no family`);
       continue;
     }
     const { label, repository } = source;
     const documents = baseline.documents[family];
     if (!(family in baseline.documents)) continue; // already reported
-    if (documents === null || typeof documents !== "object") {
+    if (!holds(documents)) {
       problems.push(`${BASELINE}: \`documents.${family}\` holds no entries`);
       continue;
     }
@@ -255,7 +271,7 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
 
     for (const [id, entry] of Object.entries(documents)) {
       const where = `${BASELINE}: \`${family}.${id}\``;
-      if (entry === null || typeof entry !== "object") {
+      if (!holds(entry)) {
         problems.push(`${where} records no revision`);
         excused.add(`${family}.${id.toUpperCase()}`);
         continue;
@@ -317,7 +333,10 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
     problems.push(
       `${BASELINE}: no \`${TABLE_FAMILY}\` family, so nothing says what the ${README} table should quote`,
     );
-  if (!baseline.sources[TABLE_FAMILY] || !baseline.documents[TABLE_FAMILY])
+  if (
+    !holds(baseline.sources[TABLE_FAMILY]) ||
+    !holds(baseline.documents[TABLE_FAMILY])
+  )
     return problems;
 
   const table = supportedNipsTable(readme);
