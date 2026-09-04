@@ -278,10 +278,9 @@ A public API addition ships with:
 - passing the release gates below;
 - updated `API.md` and `CHANGELOG.md`;
 - for a new spec module (`src/nipXX.ts`, `src/ludXX.ts`), its entry in
-  `spec-baseline.json` — plus, for a NIP, a `Supported NIPs` row and a mention
-  in the coverage paragraph above that table. `npm run test:spec-baseline` fails
-  the build otherwise; see [decision 0004](./decisions/0004-spec-baselines.md)
-  for why provenance is recorded per document.
+  `spec-baseline.json` — plus, for a NIP, a `Supported NIPs` row; see
+  [decision 0004](./decisions/0004-spec-baselines.md) for why provenance is
+  recorded per document.
 
 Two release-surface gates run in CI:
 

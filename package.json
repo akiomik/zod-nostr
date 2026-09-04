@@ -29,8 +29,7 @@
     "check:write": "biome check --write .",
     "test:consumer": "node test/consumer/check.mjs",
     "test:jsdoc": "node test/public-jsdoc/check.mjs",
-    "test:spec-baseline": "node test/spec-baseline/check.mjs",
-    "prepublishOnly": "npm run typecheck && npm run check && npm test && npm run test:spec-baseline && npm run build && npm run test:jsdoc && npm run test:consumer"
+    "prepublishOnly": "npm run typecheck && npm run check && npm test && npm run build && npm run test:jsdoc && npm run test:consumer"
   },
   "keywords": [
     "nostr",

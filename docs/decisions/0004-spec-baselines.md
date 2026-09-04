@@ -64,17 +64,15 @@ the single source of truth for provenance.
   `lud01.ts` and the field keeps its ecosystem name at
   `metadataFields.lud06()` — the same split as `metadataFields.nip05()`
   referencing `nip05.identifier()`.
-- **Enforcement, with `src/` as the authority.** Four places name the same set
-  of specs: the modules, the baseline, the `Supported NIPs` table, and the
-  coverage paragraph above it. `test/spec-baseline/check.mjs` derives the
-  required set from the module filenames of a declared family — `src/nip67.ts`
-  demands a `nips.67` entry, and an entry with no module is dead weight — then
-  asserts the file is well formed and that both README copies quote it, in both
-  directions. A spec
-  added to one place and forgotten in another fails the build. It runs in CI and
-  `prepublishOnly`, and stays offline: whether upstream has moved since a
-  baseline was recorded is a different question, with a different answer over
-  time, from whether the repository agrees with itself.
+- **`src/` is the authority on what must be baselined.** Three places name the
+  same set of specs — the modules, the baseline, and the `Supported NIPs`
+  table — and the modules decide: `src/nip67.ts` calls for a `nips.67` entry,
+  and an entry with no module is dead weight. The table repeats each revision so
+  a reader can click through to it, which is a second copy of a fact, so the two
+  are kept in step deliberately rather than by habit. A check that asserts this
+  follows separately; it needs no network, because whether upstream has moved
+  since a baseline was recorded is a different question, with a different answer
+  over time, from whether the repository agrees with itself.
 
 ## Alternatives not chosen
 
@@ -97,29 +95,29 @@ the single source of truth for provenance.
 
 ## Consequences
 
-Adding `src/nipXX.ts` now means adding a baseline entry, a table row, and a
-mention in the coverage paragraph, or the build fails. A document from a new
-family needs a `sources` entry as well — a requirement this record carries, not
-one the check can demand, for the reason below. Re-reading a spec is a
+Adding `src/nipXX.ts` now means adding a baseline entry and a table row; a
+document from a new family needs a `sources` entry as well. Until the check
+lands, this record is what carries those requirements. Re-reading a spec is a
 reviewable change with a diff, rather than an undocumented act of diligence. The
 baseline is a claim about the text a schema targets, not a guarantee that
 upstream has not moved since — until the scheduled comparison exists, an entry
 going stale is still noticed by hand.
 
-Three gaps are left open deliberately. The first is that nothing offline can tie
-an entry's `sha256` or `date` to its `commit`: both are facts about a repository
-this one does not vendor, so a bump that updates `commit` and the README but
-carries the old hash — or a plausible wrong day — passes every check here. It is the field the design
+Three gaps stay open whatever is checked. The first is that nothing offline can
+tie an entry's `sha256` or `date` to its `commit`: both are facts about a
+repository this one does not vendor, so a bump that updates `commit` and the
+README but carries the old hash — or a plausible wrong day — is not detectable
+here. It is the field the design
 rests on, so the scheduled comparison should hash the recorded commit too rather
 than only the current head — otherwise a stale hash reads as an upstream change
 that never happened.
 
-The other two follow from the check deciding what it can read from filenames and
-nothing more. A specification implemented **inside an existing module** rather
+The other two follow from provenance being read from filenames and nothing
+more. A specification implemented **inside an existing module** rather
 than in its own file is invisible to it: NIP-24 is caught only because
 `src/nip24.ts` exists, and folding those fields into `src/nip01.ts` instead
 would have shipped them unbaselined. So is a module of a **family `sources`
 never declares** — no filename rule separates a `bolt11.ts` worth baselining
 from a `bech32.ts` that is an ordinary helper, and a guess in either direction
-was tried and produced worse diagnostics than it prevented. Both are judgements
-made when the spec is added, and this record is where the requirement lives.
+cannot be told apart by name. Both are judgements made when the spec is added,
+and this record is where the requirement lives.

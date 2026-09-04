@@ -22,22 +22,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   only when the document is re-read and the schemas are confirmed against it;
   git history and this file record when that happened.
 
-- **`npm run test:spec-baseline`**, which holds four copies of the same list
-  together: the spec modules under `src/`, `spec-baseline.json`, the
-  `Supported NIPs` table, and the coverage paragraph above it. The module
-  filenames decide what must be baselined (`src/nip67.ts` demands a `nips.67`
-  entry, and an entry with no module is dead weight), the table must quote the
-  recorded revision cell by cell, and every check runs in both directions — so a
-  spec added to one place and forgotten in another fails the build instead of
-  shipping with no recorded provenance. A document from a family with no table
-  row (LUD-01, LUD-16) is held to what the README can carry: the text of the
-  README's link to the family's repository must enumerate exactly the family's
-  baselined documents. Entries are also checked for the corruption a hash can be
-  judged for without the text: no two documents may record the same one. It runs
-  in CI and before publish, and stays offline: whether upstream has moved since
-  a baseline was recorded is a separate question from whether the repository
-  agrees with itself.
-
 - **NIP-24 in the `Supported NIPs` table.** Its extra kind:0 profile metadata
   fields (`display_name`, `website`, `banner`, `bot`, `birthday`) were already
   exposed as `zostr.nip01.metadataFields.*` and documented in `docs/API.md`, but
