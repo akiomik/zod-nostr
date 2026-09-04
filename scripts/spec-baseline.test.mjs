@@ -323,6 +323,14 @@ describe("specBaselineProblems", () => {
       ]);
     });
 
+    it("reports a repository that is not a string instead of crashing on it", () => {
+      const input = repository();
+      input.baseline.sources.nips.repository = 42;
+      expect(specBaselineProblems(input)).toEqual([
+        "spec-baseline.json: `sources.nips` has no repository",
+      ]);
+    });
+
     it("reports a family that is not an object instead of crashing on it", () => {
       const input = repository();
       input.baseline.sources.luds = null;
@@ -750,6 +758,31 @@ describe("specBaselineProblems", () => {
       expect(specBaselineProblems(input)).toEqual([
         "README.md: NIP-01's row has no `Spec baseline` cell",
       ]);
+    });
+
+    // Dashes under anything that is not a paragraph are a thematic break, so
+    // reading one as a heading's underline would end the section early.
+    it.each([
+      ["a fenced block", "```js\nx\n```"],
+      ["an HTML comment", "<!-- a note -->"],
+      ["a list item", "- a bullet"],
+      ["a quote", "> quoted"],
+    ])("keeps reading past a thematic break under %s", (_label, above) => {
+      const input = repository();
+      input.readme = input.readme.replace(
+        "| NIP | Spec baseline | Coverage |",
+        `${above}\n---\n\n| NIP | Spec baseline | Coverage |`,
+      );
+      expect(specBaselineProblems(input)).toEqual([]);
+    });
+
+    it("reads a row that leaves off its trailing pipe", () => {
+      const input = repository();
+      input.readme = input.readme.replace(
+        `| **NIP-01** | [2026-09-04](${NIPS}/blob/${COMMIT}/01.md) | Events |`,
+        `| **NIP-01** | [2026-09-04](${NIPS}/blob/${COMMIT}/01.md) | Events`,
+      );
+      expect(specBaselineProblems(input)).toEqual([]);
     });
 
     it("keeps its heading under a thematic break", () => {

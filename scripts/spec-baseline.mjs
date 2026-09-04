@@ -24,9 +24,10 @@
 // - It checks what a maintainer plausibly gets wrong — updating one file and
 //   not the other — not what a maintainer would have to go out of their way to
 //   write.
-// - It reads a table written with outer pipes, as this README's is. GFM allows
-//   them to be left off; a table without them is reported as no table, loudly
-//   rather than silently, and writing one is a choice nobody here has made.
+// - A row is marked by its leading pipe, as every row in this README has. GFM
+//   lets that one be left off too; a table written without it is reported as
+//   no table, loudly rather than silently, and writing one is a choice nobody
+//   here has made. A trailing pipe is optional, as GFM has it.
 // - The modules it reads are those of a family `sources` registers. A module
 //   of a family nobody registered is invisible: no filename rule separates a
 //   `bolt11.ts` worth baselining from a `bech32.ts` that is an ordinary
@@ -67,6 +68,12 @@ const FENCE = /^ {0,3}(`{3,}|~{3,})/;
 // thematic break does not underline anything, so it needs a line above it.
 const HEADING = /^ {0,3}#{1,2} /;
 const UNDERLINE = /^ {0,3}(=+|-+)\s*$/;
+// What a setext underline cannot follow. CommonMark says it underlines a
+// paragraph; without block-level parsing the nearest honest test is that the
+// line above starts none of the blocks this reader knows — a row, a heading, a
+// fence, a list item, a quote, or HTML. Dashes above any of those are a
+// thematic break, and reading one as an underline ends the section early.
+const NOT_A_PARAGRAPH = /^ {0,3}([-*+>|<]|\d+[.)]|#{1,6} |`{3,}|~{3,})/;
 
 // A document id is the stem of its upstream filename, so it is spelled the way
 // the file is: two characters, digits or uppercase (`01`, `7D`). A lowercase
@@ -108,9 +115,16 @@ function holds(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
-/** A Markdown row's cells. An escaped `\|` is content, not a boundary. */
+/**
+ * A Markdown row's cells. An escaped `\|` is content, not a boundary, and the
+ * outer pipes — which GFM lets a row leave off — bound nothing, so the empty
+ * strings they split off are not cells.
+ */
 function cellsOf(line) {
-  return line.split(/(?<!\\)\|/).map((cell) => cell.trim());
+  const cells = line.trim().split(/(?<!\\)\|/);
+  if (cells.at(0)?.trim() === "") cells.shift();
+  if (cells.at(-1)?.trim() === "") cells.pop();
+  return cells.map((cell) => cell.trim());
 }
 
 /**
@@ -150,12 +164,8 @@ function sectionLines(readme) {
         continue;
       }
       if (HEADING.test(line)) break;
-      // A setext underline needs a paragraph above it. Under a row or another
-      // heading, dashes are a thematic break — taking them for an underline
-      // would delete the line above and, for the heading, the whole section.
       const above = lines.at(-1) ?? "";
-      const paragraph =
-        above.trim() !== "" && !ROW.test(above) && !HEADING.test(above);
+      const paragraph = above.trim() !== "" && !NOT_A_PARAGRAPH.test(above);
       if (UNDERLINE.test(line) && paragraph) {
         lines.pop(); // the line it underlines is that heading, not our content
         break;
@@ -331,7 +341,7 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
       problems.push(
         `${BASELINE}: \`sources.${family}.label\` is \`${label}\`, which is not a series name`,
       );
-    if (!repository)
+    if (typeof repository !== "string" || repository === "")
       problems.push(`${BASELINE}: \`sources.${family}\` has no repository`);
     const named = label && LABEL.test(label);
     const modules = named ? moduleIds(label, files) : new Map();
@@ -413,7 +423,8 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
   if (!LABEL.test(series ?? "")) return problems; // reported with its family
   const nipRow = new RegExp(`^\\*\\*${series}-([0-9A-Z]{2})\\*\\*$`);
   // Trailing slashes are trimmed so a link is built the way one is written.
-  const repository = source?.replace(/\/+$/, "");
+  const repository =
+    typeof source === "string" ? source.replace(/\/+$/, "") : undefined;
 
   const tables = supportedNipsTables(readme, series);
   if (tables === null || tables.length === 0) {
@@ -463,9 +474,7 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
       // A missing repository is reported with its family; building `expected`
       // around it would report every row as disagreeing with `undefined`.
       if (column === -1 || !repository || unusable.has(known)) continue;
-      // The split leaves an empty cell either side of the outer pipes, so a
-      // row is short when the column falls on the trailing one or past it.
-      if (column >= cells.length - 1) {
+      if (column >= cells.length) {
         problems.push(
           `${README}: NIP-${nip}'s row has no \`${BASELINE_COLUMN}\` cell`,
         );
