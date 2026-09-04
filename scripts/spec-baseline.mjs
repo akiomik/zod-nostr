@@ -2,13 +2,16 @@
 // implements, and that README.md's `Supported NIPs` table quotes what it
 // records.
 //
-// Three files name the same set of specs: the spec modules, the baseline, and
-// the table. The table repeats each revision so a reader can click straight
-// through to the spec text a schema targets, which makes it a second copy of a
-// fact — and nothing else in the repository would notice the copies drifting
-// apart. A NIP module added without an entry ships with no recorded provenance;
-// an entry bumped without its table cell leaves readers clicking through to
-// superseded spec text. Both would otherwise pass CI.
+// Four places name the same set of specs: the spec modules, the baseline, the
+// table, and the README's prose outside it — where the opening `Covers NIP-…`
+// sentence names them all. The table repeats each revision so a reader can
+// click straight through to the spec text a schema targets, which makes it a
+// second copy of a fact, and the sentence is a third — and nothing else in the
+// repository would notice the copies drifting apart. A NIP module added
+// without an entry ships with no recorded provenance; an entry bumped without
+// its table cell leaves readers clicking through to superseded spec text; a
+// NIP added to all three leaves the sentence stale. All would otherwise pass
+// CI.
 //
 // The scope is deliberately narrow, and worth stating because the natural pull
 // is to widen it:
@@ -325,6 +328,8 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
   // missing entry would be false. One set, one spelling: keeping two, keyed
   // differently, is how a lowercase id slipped past both.
   const excused = new Set();
+  // Deferred until the prose exists, which needs the table located first.
+  const mentions = [];
   // Ids whose entry was reported for the fields a link is built from, so the
   // comparison does not tell its reader to paste `blob/undefined` into the
   // README.
@@ -417,9 +422,10 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
           `${where} has no \`${SOURCE}/${label.toLowerCase()}${id.toLowerCase()}.ts\``,
         );
       // A family with no table row is held to the weaker thing the README can
-      // carry: that it names the document at all.
-      if (family !== TABLE_FAMILY && !readme.includes(`${label}-${id}`))
-        problems.push(`${README}: never mentions ${label}-${id}`);
+      // carry: that it names the document at all. Judged against the same prose
+      // the NIPs are, once there is any — a mention inside a fence, or inside a
+      // cell of the table, is no more a mention for one family than the other.
+      if (family !== TABLE_FAMILY) mentions.push([label, id]);
     }
 
     // `src/` is the authority: a spec module with no entry has no provenance.
@@ -456,8 +462,14 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
   if (typeof series !== "string" || !LABEL.test(series)) return problems;
   const nipRow = new RegExp(`^\\*\\*${series}-([0-9A-Z]{2})\\*\\*$`);
   // Trailing slashes are trimmed so a link is built the way one is written.
-  const repository =
+  // Trimmed first, then judged: `"/"` is a string, and trimming it leaves
+  // nothing to build a link from — which would skip every cell comparison in
+  // silence rather than say so.
+  const trimmed =
     typeof source === "string" ? source.replace(/\/+$/, "") : undefined;
+  if (source !== undefined && trimmed === "")
+    problems.push(`${BASELINE}: \`sources.${TABLE_FAMILY}\` has no repository`);
+  const repository = trimmed === "" ? undefined : trimmed;
 
   const tables = supportedNipsTables(readme, series);
   if (tables === null || tables.length === 0) {
@@ -550,6 +562,10 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
       return !inside && !rowLines.has(at);
     })
     .join("\n");
+  for (const [label, id] of mentions)
+    if (!prose.includes(`${label}-${id}`))
+      problems.push(`${README}: never mentions ${label}-${id}`);
+
   for (const id of Object.keys(baseline.documents[TABLE_FAMILY]))
     if (DOCUMENT.test(id) && !prose.includes(`${series}-${id}`))
       problems.push(

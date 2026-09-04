@@ -350,6 +350,15 @@ describe("specBaselineProblems", () => {
       ]);
     });
 
+    it("reports a repository that trims away to nothing", () => {
+      const input = repository();
+      input.baseline.sources.nips.repository = "/";
+      input.readme = input.readme.replace("[2026-09-04]", "[1999-01-01]");
+      expect(specBaselineProblems(input)).toEqual([
+        "spec-baseline.json: `sources.nips` has no repository",
+      ]);
+    });
+
     it("reports a repository that is not a string instead of crashing on it", () => {
       const input = repository();
       input.baseline.sources.nips.repository = 42;
@@ -420,6 +429,34 @@ describe("specBaselineProblems", () => {
     it("must be named in the README", () => {
       const input = repository();
       input.readme = input.readme.replace("LUD-16", "the lightning address");
+      expect(specBaselineProblems(input)).toEqual([
+        "README.md: never mentions LUD-16",
+      ]);
+    });
+
+    // Held to the same prose the NIPs are: inside a fence, or inside a cell of
+    // the table, is no more a mention for one family than for the other.
+    it.each([
+      [
+        "inside a fence",
+        (text) =>
+          text
+            .replace("carries LUD-16", "carries")
+            .replace(
+              "## Supported NIPs",
+              "```md\nLUD-16\n```\n\n## Supported NIPs",
+            ),
+      ],
+      [
+        "inside a table cell",
+        (text) =>
+          text
+            .replace("carries LUD-16", "carries")
+            .replace("| Events |", "| Events, LUD-16 |"),
+      ],
+    ])("is not satisfied by a mention %s", (_label, mangle) => {
+      const input = repository();
+      input.readme = mangle(input.readme);
       expect(specBaselineProblems(input)).toEqual([
         "README.md: never mentions LUD-16",
       ]);

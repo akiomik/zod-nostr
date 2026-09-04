@@ -24,7 +24,7 @@ if (problems.length > 0) {
   );
   for (const problem of problems) console.error(`  - ${problem}`);
   console.error(
-    `\nEvery spec module under ${SOURCE}/ must be baselined in ${BASELINE}, and ${README} must quote what it records.`,
+    `\nEvery spec module under ${SOURCE}/ must be baselined in ${BASELINE}; ${README}'s table must quote what it records, and its prose must name each document outside that table.`,
   );
   process.exit(1);
 }
