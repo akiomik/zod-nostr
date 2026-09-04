@@ -103,10 +103,12 @@ function isCalendarDate(date) {
   return (
     !Number.isNaN(parsed.getTime()) &&
     parsed.toISOString().slice(0, 10) === date &&
-    // A revision cannot have landed later than now, so a transposed year is
-    // caught along with a transposed month — both are real days otherwise, and
-    // the README cell is copied from the same field, so it agrees either way.
-    parsed.getTime() <= Date.now()
+    // A revision cannot have landed tomorrow, so a transposed year is caught
+    // along with a transposed month — both are real days otherwise, and the
+    // README cell is copied from the same field, so it agrees either way. The
+    // day of slack is for a maintainer reading a date east of UTC, for whom
+    // today has already begun and by this measure would be the future.
+    date <= new Date(Date.now() + 86_400_000).toISOString().slice(0, 10)
   );
 }
 
@@ -162,13 +164,12 @@ function moduleIds(label, files) {
  */
 function sectionLines(readme) {
   const all = readme.split("\n");
+  const heading = (line) => line.trim().replace(/\s+#+$/, "") === TABLE_HEADING;
   const lines = [];
   let offset = 0;
   let fence = null;
   let found = false;
-  // A second heading of the same name would hold rows this scan never reads,
-  // and reading only the first of them is a silent answer to a broken README.
-  let twice = false;
+  let ended = all.length;
   for (const [index, line] of all.entries()) {
     const after = fenceAfter(line, fence);
     if (after !== fence) {
@@ -177,7 +178,7 @@ function sectionLines(readme) {
       if (!found) {
         // Markdown lets a heading close with a run of hashes, which changes
         // nothing about what it says.
-        found = line.trim().replace(/\s+#+$/, "") === TABLE_HEADING;
+        found = heading(line);
         if (found) {
           // From where the scan is: the heading's text may appear earlier, in
           // a fence this loop has already stepped over.
@@ -187,22 +188,36 @@ function sectionLines(readme) {
         continue;
       }
       if (HEADING.test(line)) {
-        twice = readme
-          .split("\n")
-          .slice(index)
-          .some((rest) => rest.trim().replace(/\s+#+$/, "") === TABLE_HEADING);
+        ended = index;
         break;
       }
       const above = lines.at(-1) ?? "";
       const paragraph = above.trim() !== "" && !NOT_A_PARAGRAPH.test(above);
       if (UNDERLINE.test(line) && paragraph) {
         lines.pop(); // the line it underlines is that heading, not our content
+        ended = index;
         break;
       }
     }
     if (found) lines.push(line);
   }
-  return found ? { lines, offset, twice } : null;
+  if (!found) return null;
+
+  // A second heading of the same name holds rows this scan never reads, and
+  // reading only the first of them is a silent answer to a broken README. Read
+  // for however the section ended, and outside fences, where a sample of this
+  // heading is an example of one rather than a second section.
+  let quoted = null;
+  let twice = false;
+  for (const line of all.slice(ended)) {
+    const after = fenceAfter(line, quoted);
+    if (after !== quoted) quoted = after;
+    else if (quoted === null && heading(line)) {
+      twice = true;
+      break;
+    }
+  }
+  return { lines, offset, twice };
 }
 
 /**

@@ -96,6 +96,18 @@ describe("specBaselineProblems", () => {
       ]);
     });
 
+    // A day of slack: a maintainer east of UTC reads today's date off a commit
+    // page while UTC is still on yesterday.
+    it("accepts today and tomorrow", () => {
+      const day = (offset) =>
+        new Date(Date.now() + offset).toISOString().slice(0, 10);
+      for (const date of [day(0), day(86_400_000)]) {
+        const input = withEntry("nips", "01", { date });
+        input.readme = input.readme.replace("[2026-09-04]", `[${date}]`);
+        expect(specBaselineProblems(input)).toEqual([]);
+      }
+    });
+
     it("rejects a day that has not happened", () => {
       const input = withEntry("nips", "01", { date: "2999-01-01" });
       input.readme = input.readme.replace("[2026-09-04]", "[2999-01-01]");
@@ -1024,6 +1036,37 @@ describe("specBaselineProblems", () => {
       expect(specBaselineProblems(input)).toEqual([
         "README.md: cannot read a NIP number from row: |  |  |  |",
         expect.stringContaining("NIP-01's spec baseline cell disagrees"),
+      ]);
+    });
+
+    it("does not call a fenced sample of its heading a second section", () => {
+      const input = repository();
+      input.readme = input.readme.replace(
+        "## Development",
+        "```md\n## Supported NIPs\n```\n\n## Development",
+      );
+      expect(specBaselineProblems(input)).toEqual([]);
+    });
+
+    it("reports a second section after a setext heading closes the first", () => {
+      const input = repository();
+      input.readme = input.readme.replace(
+        "## Development",
+        [
+          "Other",
+          "-----",
+          "",
+          "## Supported NIPs",
+          "",
+          "| NIP | Spec baseline | Coverage |",
+          "| --- | --- | --- |",
+          "| **NIP-01** | [1999-01-01](https://bogus) | Events |",
+          "",
+          "## Development",
+        ].join("\n"),
+      );
+      expect(specBaselineProblems(input)).toEqual([
+        expect.stringContaining('more than one "Supported NIPs" section'),
       ]);
     });
 
