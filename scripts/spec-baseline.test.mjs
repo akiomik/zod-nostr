@@ -209,6 +209,32 @@ describe("specBaselineProblems", () => {
         "spec-baseline.json: `sources.luds` has no repository",
       ]);
     });
+
+    // The table's own family reaches further into the checks than any other,
+    // so its half-finished edits get their own cases.
+    it("reports the table family's missing repository once, not per row", () => {
+      const input = repository();
+      input.baseline.sources.nips = { label: "NIP" };
+      expect(specBaselineProblems(input)).toEqual([
+        "spec-baseline.json: `sources.nips` has no repository",
+      ]);
+    });
+
+    it("reports a family that is not an object instead of crashing on it", () => {
+      const input = repository();
+      input.baseline.sources.luds = null;
+      expect(specBaselineProblems(input)).toEqual([
+        "spec-baseline.json: `sources.luds` describes no family",
+      ]);
+    });
+
+    it("reports an entry that is not an object", () => {
+      const input = repository();
+      input.baseline.documents.luds["16"] = null;
+      expect(specBaselineProblems(input)).toEqual([
+        "spec-baseline.json: `luds.16` records no revision",
+      ]);
+    });
   });
 
   describe("a document id is spelled like its upstream filename", () => {
@@ -436,6 +462,20 @@ describe("specBaselineProblems", () => {
       input.files.push("lud99.ts");
       expect(specBaselineProblems(input)).toEqual([
         "spec-baseline.json: `documents.luds` holds no entries",
+      ]);
+    });
+
+    // Found from where the scan is, not from the section start: a line that
+    // repeats an earlier one would otherwise be judged by that one's successor.
+    it("reports a break even when the orphaned line repeats the header", () => {
+      const input = repository();
+      input.readme = input.readme.replace(
+        `| **NIP-01** | [2026-09-04](${NIPS}/blob/${COMMIT}/01.md) | Events |`,
+        `| **NIP-01** | [2026-09-04](${NIPS}/blob/${COMMIT}/01.md) | Events |\n\n| NIP | Spec baseline | Coverage |`,
+      );
+      expect(specBaselineProblems(input)).toEqual([
+        expect.stringContaining("breaks off before its rows end"),
+        expect.stringContaining("cannot read a NIP number from row"),
       ]);
     });
 

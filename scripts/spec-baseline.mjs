@@ -129,9 +129,13 @@ function supportedNipsTable(readme) {
         rows.push(lines[line]);
         continue;
       }
-      const rest = lines.slice(line).find((text) => text.trim() !== "");
+      const ahead = lines.slice(line);
+      const rest = ahead.find((text) => text.trim() !== "");
       if (rest === undefined || !ROW.test(rest.trimStart())) break;
-      if (DELIMITER.test(lines[lines.indexOf(rest) + 1] ?? "")) break;
+      // Located from here, not from the section start: a line that repeats an
+      // earlier one — a header pasted below the table — would otherwise be
+      // found at its first occurrence, whose successor is the real delimiter.
+      if (DELIMITER.test(lines[line + ahead.indexOf(rest) + 1] ?? "")) break;
       interrupted = true;
       if (lines[line].trim() !== "") rows.push(lines[line].trimStart());
     }
@@ -169,9 +173,12 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
         `${BASELINE}: \`sources.${family}\` has no \`documents\` entry`,
       );
 
-  for (const [family, { label, repository }] of Object.entries(
-    baseline.sources,
-  )) {
+  for (const [family, source] of Object.entries(baseline.sources)) {
+    if (source === null || typeof source !== "object") {
+      problems.push(`${BASELINE}: \`sources.${family}\` describes no family`);
+      continue;
+    }
+    const { label, repository } = source;
     const documents = baseline.documents[family];
     if (!(family in baseline.documents)) continue; // already reported
     if (documents === null || typeof documents !== "object") {
@@ -189,6 +196,10 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
 
     for (const [id, entry] of Object.entries(documents)) {
       const where = `${BASELINE}: \`${family}.${id}\``;
+      if (entry === null || typeof entry !== "object") {
+        problems.push(`${where} records no revision`);
+        continue;
+      }
       if (!DOCUMENT.test(id)) {
         // Cross-checking a misspelled id would bury this under messages naming
         // the module and row that do exist, under the id it should have had.
@@ -252,7 +263,14 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
       `${README}: the Supported NIPs table has no \`${BASELINE_COLUMN}\` column`,
     );
 
+  if (table.interrupted)
+    problems.push(
+      `${README}: the Supported NIPs table breaks off before its rows end, so what follows it does not render as part of it`,
+    );
+
   const { repository } = baseline.sources[TABLE_FAMILY];
+  // A missing repository is reported with its family; building `expected`
+  // around it would report every row as disagreeing with a link to `undefined`.
   const tabled = new Set();
   for (const row of table.rows) {
     const cells = cellsOf(row);
@@ -268,7 +286,7 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
         problems.push(`${README}: NIP-${nip} has no entry in ${BASELINE}`);
       continue;
     }
-    if (column === -1) continue; // already reported
+    if (column === -1 || !repository) continue; // already reported
     const expected = `[${entry.date}](${repository}/blob/${entry.commit}/${nip}.md)`;
     if (cells[column] !== expected)
       problems.push(
@@ -277,11 +295,6 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
           `    expected: ${expected}`,
       );
   }
-
-  if (table.interrupted)
-    problems.push(
-      `${README}: the Supported NIPs table breaks off before its rows end, so what follows it does not render as part of it`,
-    );
 
   // A misspelled id is reported as such above; asking the table for a row it
   // could not name would repeat that as a second, misleading message. A break
