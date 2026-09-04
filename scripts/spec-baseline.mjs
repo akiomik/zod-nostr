@@ -24,6 +24,10 @@
 // - It checks what a maintainer plausibly gets wrong — updating one file and
 //   not the other — not what a maintainer would have to go out of their way to
 //   write.
+// - Every table in the `Supported NIPs` section that has a column named for
+//   the family is one of these tables, so a list of NIPs deliberately left
+//   unbaselined — planned work, say — belongs outside the section, or inside a
+//   fence, rather than beside them.
 // - A row is marked by its leading pipe, as every row in this README has. GFM
 //   lets that one be left off too; a table written without it is reported as
 //   no table, loudly rather than silently, and writing one is a choice nobody
@@ -522,13 +526,19 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
   // names them too, and a NIP added to every file the check reads can still
   // leave that stale. Held to the same weak thing a family without a table is
   // — a mention — but outside the rows, which would satisfy it trivially.
-  // The rows are removed by where they are, not by what they say: a copy of a
-  // row elsewhere in the README — a fenced example of the table — would
-  // otherwise be the one removed, leaving the real row to satisfy the mention.
+  // The prose a reader reads: the README without the table's rows, which are
+  // removed by where they are rather than by what they say, and without fenced
+  // text, where a copy of a row is an example of one rather than a mention.
   const rowLines = new Set(tables.flatMap((table) => table.at));
+  let quoted = null;
   const prose = readme
     .split("\n")
-    .filter((_, line) => !rowLines.has(line))
+    .filter((line, at) => {
+      const after = fenceAfter(line, quoted);
+      const inside = quoted !== null || after !== quoted;
+      quoted = after;
+      return !inside && !rowLines.has(at);
+    })
     .join("\n");
   for (const id of Object.keys(baseline.documents[TABLE_FAMILY]))
     if (DOCUMENT.test(id) && !prose.includes(`${series}-${id}`))

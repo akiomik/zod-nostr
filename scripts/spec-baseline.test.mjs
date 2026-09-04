@@ -833,6 +833,20 @@ describe("specBaselineProblems", () => {
       ]);
     });
 
+    it("does not let a fenced copy of a row stand in for a mention", () => {
+      const input = repository();
+      const row = `| **NIP-01** | [2026-09-04](${NIPS}/blob/${COMMIT}/01.md) | Events |`;
+      input.readme = input.readme
+        .replace("Covers NIP-01, and", "Covers and")
+        .replace(
+          "## Supported NIPs",
+          `\`\`\`md\n${row}\n\`\`\`\n\n## Supported NIPs`,
+        );
+      expect(specBaselineProblems(input)).toEqual([
+        "README.md: never mentions NIP-01 outside the table",
+      ]);
+    });
+
     it("requires a NIP to be named outside the table", () => {
       const input = repository();
       input.readme = input.readme.replace("Covers NIP-01, and", "Covers and");

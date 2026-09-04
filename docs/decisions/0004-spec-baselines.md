@@ -61,10 +61,10 @@ the single source of truth for provenance.
   baseline` column linking each NIP at its recorded revision, because a consumer
   reads the README, not a JSON file at the repository root.
 - **A module is named for the document it implements.** Provenance is read from
-  filenames, so a spec module is `src/<label><id>.ts` with the label in
-  lowercase — `src/nip67.ts` for NIP-67, `src/lud01.ts` for LUD-01 — and it must
-  name the document whose rules the module encodes, not the field that happens
-  to carry the value. The kind:0 `lud06` field carries an LNURL, but the
+  filenames, so a spec module is `src/<label><id>.ts` — `src/nip67.ts` for
+  NIP-67, `src/lud01.ts` for LUD-01, matched without regard for case or how
+  deep under `src/` it sits — and it must name the document whose rules the
+  module encodes, not the field that happens to carry the value. The kind:0 `lud06` field carries an LNURL, but the
   encoding is LUD-01's and LUD-06 defines only what the decoded URL answers
   with, so the module is
   `lud01.ts` and the field keeps its ecosystem name at
