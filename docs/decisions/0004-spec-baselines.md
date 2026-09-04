@@ -3,8 +3,8 @@
 Status: Accepted
 
 Records, per specification, the exact revision the schemas are written against,
-in one machine-readable file, and enforces that the README quotes it. Motivated
-by a repository that could not say which version of Nostr it implemented.
+in one machine-readable file that nothing else repeats. Motivated by a
+repository that could not say which version of Nostr it implemented.
 
 ## Context
 
@@ -57,9 +57,13 @@ the single source of truth for provenance.
   document has been read and the schemas confirmed against it. A bump is
   therefore worth a changelog line even when no code changed: "we looked, and
   nothing needed to change" is a result.
-- **Surfaced in the README.** The `Supported NIPs` table carries a `Spec
-  baseline` column linking each NIP at its recorded revision, because a consumer
-  reads the README, not a JSON file at the repository root.
+- **Recorded once, pointed at from the README.** The `Supported NIPs` table
+  links no revisions and the prose beside it points at `spec-baseline.json`
+  instead. Repeating each revision in the table would read better — a consumer
+  reads the README, not a JSON file at the repository root — but it makes the
+  same fact live in two files, and keeping those in step means reading the
+  README as Markdown. That parser grew larger than the record it guarded, so
+  the duplication goes rather than the guard.
 - **A module is named for the document it implements.** Provenance is read from
   filenames, so a spec module is `src/<label><id>.ts` — `src/nip67.ts` for
   NIP-67, `src/lud01.ts` for LUD-01, matched without regard for case or how
@@ -71,31 +75,26 @@ the single source of truth for provenance.
   `lud01.ts` and the field keeps its ecosystem name at
   `metadataFields.lud06()` — the same split as `metadataFields.nip05()`
   referencing `nip05.identifier()`.
-- **`src/` is the authority on what must be baselined, family by family.**
-  Four places name the same set of specs — the modules, the baseline, the
-  `Supported NIPs` table, and the README's prose outside it, where the opening
-  `Covers NIP-…` sentence names them all —
-  and the modules of a registered family decide:
-  `src/nip67.ts` calls for a `nips.67` entry, and an entry with no module is
-  dead weight. Registering the family stays a judgement, for the reason under
-  Consequences. The table repeats each revision so a reader can click through
-  to it, which is a second copy of a fact, so the two are kept in step by
-  `scripts/spec-baseline-check.mjs`, in both directions, in CI and
-  `prepublishOnly`. It sits under `scripts/` rather than `test/` because
-  it is tooling with tests of its own, which would read as tests of test code
-  there.
+- **`src/` is the authority on what must be baselined, family by family.** Two
+  places name the same set of specs — the modules and the baseline — and the
+  modules of a registered family decide: `src/nip67.ts` calls for a `nips.67`
+  entry, and an entry with no module is dead weight. Registering the family
+  stays a judgement, for the reason under Consequences. The two are kept in
+  step by `scripts/spec-baseline-check.mjs`, in both directions, in CI and
+  `prepublishOnly`.
 
   The check compares the repository against itself and nothing else. It does not
   fetch upstream — whether a spec has moved since a baseline was recorded is a
   different question, with a different answer over time, and asking it here
-  would fail an innocent pull request on an unrelated upstream edit. It also
-  assumes the baseline is well-formed JSON a maintainer wrote: it asserts what
-  someone plausibly gets wrong, which is updating one file and not the other,
-  and not the ways a hand-corrupted file could be malformed. Those fail the
-  build anyway, and guarding each one costs more than the case is worth.
+  would fail an innocent pull request on an unrelated upstream edit. It reads no
+  Markdown, because there is no second copy of a revision to hold the README to.
+  And it assumes the baseline is well-formed JSON a maintainer wrote: it asserts
+  what someone plausibly gets wrong, which is updating one file and not the
+  other, and not the ways a hand-corrupted file could be malformed. Those fail
+  the build anyway, and guarding each one costs more than the case is worth.
 
   Its rules are pinned by `scripts/spec-baseline.test.mjs`, which is why they
-  live in `spec-baseline.mjs` as a function of the three inputs, with reading
+  live in `spec-baseline.mjs` as a function of its two inputs, with reading
   files and exiting left to the CLI beside it. A script nothing exercises
   invites an open-ended argument about how good each diagnostic is; one with a
   contract answers that with a case, or with a deliberate change to one.
@@ -121,9 +120,11 @@ the single source of truth for provenance.
 
 ## Consequences
 
-Adding `src/nipXX.ts` now means adding a baseline entry, a table row, and a
-mention anywhere outside that table — the opening `Covers NIP-…` sentence is
-where they are named today — or the build fails. A document from a new family
+Adding `src/nipXX.ts` now means adding a baseline entry, or the build fails.
+The README's `Supported NIPs` table and its opening `Covers NIP-…` sentence
+still name the specs this library implements, and stay hand-maintained prose —
+what they say about coverage is not a revision, so nothing there can fall out
+of step with the baseline. A document from a new family
 needs a `sources` entry as well — a requirement this record carries, not one
 the check can demand, for the reason below. Re-reading a spec is a reviewable
 change with a diff, rather than an undocumented act of diligence. The baseline

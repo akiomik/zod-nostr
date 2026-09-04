@@ -16,33 +16,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   NIPs and, because the kind:0 profile fields are not all defined by NIPs,
   LUD-01 and LUD-16 from `lnurl/luds`. `sources` names each family and its
   repository; `documents` holds that family's entries under the same key. The
-  `Supported NIPs` table in `README.md` gains a `Spec baseline` column linking
-  each NIP at its recorded revision, so the text a schema was built for is one
-  click away instead of being implicit. The SHA-256 is what makes the file more
-  than documentation — it lets upstream edits be detected mechanically rather
-  than noticed by accident. An entry moves only when the document is re-read
-  and the schemas are confirmed against it; git history and this file record
-  when that happened.
+  `Supported NIPs` table in `README.md` points at it rather than repeating what
+  it records, so which revision a schema targets is written down once. The
+  SHA-256 is what makes the file more than documentation — it lets upstream
+  edits be detected mechanically rather than noticed by accident. An entry
+  moves only when the document is re-read and the schemas are confirmed against
+  it; git history and this file record when that happened.
 
-- **`npm run test:spec-baseline`**, which keeps the four places that name the
-  same set of specs in step: the spec modules under `src/`,
-  `spec-baseline.json`, the `Supported NIPs` table, and the README's prose
-  outside it, where the opening `Covers NIP-…` sentence names them all. The
-  modules of a registered family decide what must be baselined (`src/nip67.ts`
-  calls for a `nips.67` entry, and an entry with no module is dead weight), and
-  the table must quote the recorded revision cell by cell — both directions, so
-  a spec added to one place and forgotten in another fails the build instead of
-  shipping with no recorded provenance. It also rejects what an entry can be
-  judged for without the spec text: a date that is not a real day, a malformed
-  commit or hash, and a hash shared by two documents. It runs in CI and before
-  publish, and compares the repository against itself only: whether upstream
-  has moved since a baseline was recorded is a separate question, answered by
-  reading the spec rather than by a build.
+- **`npm run test:spec-baseline`**, which keeps the two places that name the
+  same set of specs in step: the spec modules under `src/` and
+  `spec-baseline.json`. The modules of a registered family decide what must be
+  baselined (`src/nip67.ts` calls for a `nips.67` entry, and an entry with no
+  module is dead weight) — both directions, so a spec added to one and
+  forgotten in the other fails the build instead of shipping with no recorded
+  provenance. It also rejects what an entry can be judged for without the spec
+  text: a date that is not a real day, a malformed commit or hash, and a hash
+  shared by two documents. It runs in CI and before publish, and compares the
+  repository against itself only: whether upstream has moved since a baseline
+  was recorded is a separate question, answered by reading the spec rather than
+  by a build.
 
   `scripts/spec-baseline.mjs` keeps its decisions in one exported function of
-  its three inputs, with reading files and exiting left to the CLI beside it,
-  and `scripts/spec-baseline.test.mjs` pins every rule and every
-  Markdown-reading guarantee it makes.
+  its two inputs, with reading files and exiting left to the CLI beside it, and
+  `scripts/spec-baseline.test.mjs` pins every rule it enforces.
 
 - **NIP-24 in the `Supported NIPs` table.** Its extra kind:0 profile metadata
   fields (`display_name`, `website`, `banner`, `bot`, `birthday`) were already
