@@ -71,8 +71,9 @@ the single source of truth for provenance.
   `metadataFields.lud06()` — the same split as `metadataFields.nip05()`
   referencing `nip05.identifier()`.
 - **`src/` is the authority on what must be baselined, family by family.**
-  Three places name the same set of specs — the modules, the baseline, and the
-  `Supported NIPs` table — and the modules of a registered family decide:
+  Four places name the same set of specs — the modules, the baseline, the
+  `Supported NIPs` table, and the sentence above it — and the modules of a
+  registered family decide:
   `src/nip67.ts` calls for a `nips.67` entry, and an entry with no module is
   dead weight. Registering the family stays a judgement, for the reason under
   Consequences. The table repeats each revision so a reader can click through
@@ -99,8 +100,8 @@ the single source of truth for provenance.
 
 ## Alternatives not chosen
 
-- *A header comment in each `src/nipXX.ts`* — the obvious place, and the reason
-  it fails is that there are sixteen of them. Nothing enforces a comment, a
+- *A header comment in each `src/<label><id>.ts`* — the obvious place, and the
+  reason it fails is that there are sixteen of them. Nothing enforces a comment, a
   stale one is invisible, and consumers read the README rather than the source.
   Provenance belongs in one file that a check can read.
 - *A single repository revision, or a git submodule* — a submodule makes the

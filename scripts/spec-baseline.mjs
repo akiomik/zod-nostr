@@ -57,7 +57,7 @@ const ROW = /^ {0,3}\|/;
 // A delimiter row carries at least one dash. Without that, `|  |  |  |` — a
 // row of empty cells, which Markdown renders as an ordinary row — reads as the
 // start of a table of its own and stops the scan mid-table.
-const DELIMITER = /^ {0,3}\|[\s:|-]*-[\s:|-]*\|\s*$/;
+const DELIMITER = /^ {0,3}\|[\s:|-]*-[\s:|-]*\|?\s*$/;
 // A fence opens with three or more backticks or tildes, indented at most
 // three: a deeper indent is a code block, not a fence. It closes on the same
 // character, at least as long, carrying nothing else — so a `~~~` shown inside
@@ -437,24 +437,25 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
   // one that could not may hold the very row it would call missing.
   const named = tables.every((table) => table.nip !== -1);
 
-  // One break is one problem, however many tables show it.
+  // One break, or one missing column, is one problem however many tables show
+  // it — a reader fixes the section, not each table in turn.
   if (tables.some((table) => table.interrupted))
     problems.push(
       `${README}: the Supported NIPs table breaks off before its rows end, so what follows it does not render as part of it`,
+    );
+  if (tables.some((table) => !cellsOf(table.header).includes(BASELINE_COLUMN)))
+    problems.push(
+      `${README}: the Supported NIPs table has no \`${BASELINE_COLUMN}\` column`,
+    );
+  if (tables.some((table) => table.nip === -1))
+    problems.push(
+      `${README}: the Supported NIPs table has no \`${series}\` column`,
     );
 
   for (const table of tables) {
     // Both columns a table is read by are located from its own header rather
     // than assumed, so either may move; dropping one is reported.
     const column = cellsOf(table.header).indexOf(BASELINE_COLUMN);
-    if (column === -1)
-      problems.push(
-        `${README}: the Supported NIPs table has no \`${BASELINE_COLUMN}\` column`,
-      );
-    if (table.nip === -1)
-      problems.push(
-        `${README}: the Supported NIPs table has no \`${series}\` column`,
-      );
 
     for (const row of table.nip === -1 ? [] : table.rows) {
       const cells = cellsOf(row);
@@ -493,6 +494,19 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
   // A misspelled id is reported as such above; asking the table for a row it
   // could not name would repeat that as a second, misleading message. A break
   // does not suppress this — the rows past it were still read.
+  // The table is not the README's only list of these: the sentence above it
+  // names them too, and a NIP added to every file the check reads can still
+  // leave that stale. Held to the same weak thing a family without a table is
+  // — a mention — but outside the rows, which would satisfy it trivially.
+  const prose = tables
+    .flatMap((table) => table.rows)
+    .reduce((text, row) => text.replace(row, ""), readme);
+  for (const id of Object.keys(baseline.documents[TABLE_FAMILY]))
+    if (DOCUMENT.test(id) && !prose.includes(`${series}-${id}`))
+      problems.push(
+        `${README}: never mentions ${series}-${id} outside the table`,
+      );
+
   for (const nip of named ? Object.keys(baseline.documents[TABLE_FAMILY]) : [])
     if (DOCUMENT.test(nip) && !tabled.has(nip))
       problems.push(

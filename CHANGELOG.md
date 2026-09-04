@@ -24,9 +24,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and the schemas are confirmed against it; git history and this file record
   when that happened.
 
-- **`npm run test:spec-baseline`**, which keeps the three places that name the
+- **`npm run test:spec-baseline`**, which keeps the four places that name the
   same set of specs in step: the spec modules under `src/`,
-  `spec-baseline.json`, and the `Supported NIPs` table. The modules of a
+  `spec-baseline.json`, the `Supported NIPs` table, and the sentence above
+  it. The modules of a
   registered family decide what must be baselined (`src/nip67.ts` calls for a
   `nips.67` entry, and an entry with no module is dead weight), and the table
   must quote the recorded revision cell by cell — both directions, so a spec

@@ -516,6 +516,7 @@ describe("specBaselineProblems", () => {
         sha256: HASH.replace(/^6/, "9"),
       };
       input.files.push("nip05.ts");
+      input.readme = input.readme.replace("NIP-01,", "NIP-01, NIP-05,");
       input.readme = input.readme.replace(
         `| **NIP-01** | [2026-09-04](${NIPS}/blob/${COMMIT}/01.md) | Events |`,
         `| **NIP-01** | [2026-09-04](${NIPS}/blob/${COMMIT}/01.md) | Events |\n| --- | --- | --- |\n| **NIP-05** | [2020-01-01](${NIPS}/blob/${COMMIT}/05.md) | Ids |`,
@@ -534,6 +535,7 @@ describe("specBaselineProblems", () => {
         sha256: HASH.replace(/^6/, "a"),
       };
       input.files.push("nip05.ts");
+      input.readme = input.readme.replace("NIP-01,", "NIP-01, NIP-05,");
       input.readme = input.readme.replace(
         `| **NIP-01** | [2026-09-04](${NIPS}/blob/${COMMIT}/01.md) | Events |`,
         `| **NIP-01** | [2026-09-04](${NIPS}/blob/${COMMIT}/01.md) | Events |\n\`\`\`\n| not | a | row |\n\`\`\`\n| **NIP-05** | [2020-01-01](${NIPS}/blob/${COMMIT}/05.md) | Ids |`,
@@ -658,6 +660,7 @@ describe("specBaselineProblems", () => {
         sha256: HASH.replace(/^6/, "b"),
       };
       input.files.push("nip05.ts");
+      input.readme = input.readme.replace("NIP-01,", "NIP-01, NIP-05,");
       input.readme = input.readme.replace(
         "\n\n## Development",
         [
@@ -684,6 +687,7 @@ describe("specBaselineProblems", () => {
         sha256: HASH.replace(/^6/, "c"),
       };
       input.files.push("nip05.ts");
+      input.readme = input.readme.replace("NIP-01,", "NIP-01, NIP-05,");
       input.readme = input.readme.replace(
         "\n\n## Development",
         [
@@ -732,6 +736,7 @@ describe("specBaselineProblems", () => {
         sha256: HASH.replace(/^6/, "d"),
       };
       input.files.push("nip05.ts");
+      input.readme = input.readme.replace("NIP-01,", "NIP-01, NIP-05,");
       input.readme = input.readme.replace(
         "\n\n## Development",
         [
@@ -776,6 +781,48 @@ describe("specBaselineProblems", () => {
       expect(specBaselineProblems(input)).toEqual([]);
     });
 
+    it("reads a delimiter that leaves off its trailing pipe", () => {
+      const input = repository();
+      input.readme = input.readme.replace(
+        "| --- | --- | --- |",
+        "| --- | --- | ---",
+      );
+      expect(specBaselineProblems(input)).toEqual([]);
+    });
+
+    // The table is not the README's only list of these, and a NIP added to
+    // every file the check reads can still leave the sentence above it stale.
+    it("requires a NIP to be named outside the table", () => {
+      const input = repository();
+      input.readme = input.readme.replace("Covers NIP-01, and", "Covers and");
+      expect(specBaselineProblems(input)).toEqual([
+        "README.md: never mentions NIP-01 outside the table",
+      ]);
+    });
+
+    it("reports a missing column once, not once per table", () => {
+      const input = repository();
+      input.readme = input.readme
+        .replace("| Spec baseline | Coverage |", "| Revision | Coverage |")
+        .replace(
+          "\n\n## Development",
+          [
+            "",
+            "",
+            "| NIP | Revision | Coverage |",
+            "| --- | --- | --- |",
+            "| **NIP-01** | x | Events |",
+            "",
+            "## Development",
+          ].join("\n"),
+        );
+      expect(
+        specBaselineProblems(input).filter((problem) =>
+          problem.includes("`Spec baseline` column"),
+        ),
+      ).toHaveLength(1);
+    });
+
     it("reads a row that leaves off its trailing pipe", () => {
       const input = repository();
       input.readme = input.readme.replace(
@@ -802,7 +849,8 @@ describe("specBaselineProblems", () => {
       input.files = ["nostr01.ts", "lud16.ts"];
       input.readme = input.readme
         .replace("| NIP | Spec baseline", "| NOSTR | Spec baseline")
-        .replace("**NIP-01**", "**NOSTR-01**");
+        .replace("**NIP-01**", "**NOSTR-01**")
+        .replace("Covers NIP-01,", "Covers NOSTR-01,");
       expect(specBaselineProblems(input)).toEqual([]);
     });
 
@@ -911,6 +959,7 @@ describe("specBaselineProblems", () => {
         sha256: HASH.replace(/^6/, "7"),
       };
       input.files.push("nip05.ts");
+      input.readme = input.readme.replace("NIP-01,", "NIP-01, NIP-05,");
       input.readme = input.readme.replace("| **NIP-01**", "\n| **NIP-01**");
       expect(specBaselineProblems(input)).toEqual([
         expect.stringContaining("breaks off before its rows end"),
@@ -960,6 +1009,7 @@ describe("specBaselineProblems", () => {
         sha256: HASH.replace(/^6/, "8"),
       };
       input.files.push("nip05.ts");
+      input.readme = input.readme.replace("NIP-01,", "NIP-01, NIP-05,");
       input.readme = input.readme.replace(
         `| **NIP-01** | [2026-09-04](${NIPS}/blob/${COMMIT}/01.md) | Events |`,
         `| **NIP-01** | [2026-09-04](${NIPS}/blob/${COMMIT}/01.md) | Events |\n<!-- a note -->\n| **NIP-05** | [2020-01-01](${NIPS}/blob/${COMMIT}/05.md) | Identifiers |`,
