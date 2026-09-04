@@ -42,10 +42,13 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/;
 // same id in lowercase (`nip7d.ts`).
 const DOCUMENT = /^[0-9A-Z]{2}$/;
 const TABLE_ROW = /^\*\*NIP-([0-9A-Z]{2})\*\*$/;
-// A spec module is a three-letter family label and a two-character document id
-// (`nip01.ts`, `lud16.ts`, `nip7d.ts`) — the shape used to spot a module whose
-// family is not declared at all.
-const SPEC_MODULE = /^([a-z]{3})[0-9a-z]{2}\.ts$/;
+// A spec module is a family label of any length followed by a two-character
+// document id — `nip01.ts`, `lud16.ts`, `nip7d.ts`, and a hypothetical
+// `bolt11.ts`. Used only to spot a module whose family `sources` does not
+// declare; a declared family is matched exactly by `implemented()` instead. The
+// id must carry a digit, which is what separates a document from an ordinary
+// helper — `types.ts` and `utils.ts` end in two characters too.
+const SPEC_MODULE = /^([a-z]+)([0-9a-z]{2})\.ts$/;
 const TABLE_HEADING = "\n## Supported NIPs\n";
 // What identifies the intro's coverage paragraph is that it links to the table
 // and names NIPs, not its wording: anchoring on the prose would fail a
@@ -200,11 +203,11 @@ const labels = new Set(
   families.map((family) => sources[family]?.label?.toLowerCase()),
 );
 for (const file of readdirSync(join(root, SOURCE))) {
-  const prefix = file.match(SPEC_MODULE)?.[1];
-  if (prefix && !labels.has(prefix))
-    errors.push(
-      `${BASELINE}: \`${SOURCE}/${file}\` belongs to no family in \`sources\``,
-    );
+  const [, prefix, id] = file.match(SPEC_MODULE) ?? [];
+  if (!prefix || !/\d/.test(id) || labels.has(prefix)) continue;
+  errors.push(
+    `${BASELINE}: \`${SOURCE}/${file}\` reads as document ${prefix.toUpperCase()}-${id.toUpperCase()}, whose family \`sources\` does not declare (a helper that is not a spec module belongs under \`${SOURCE}/core/\`)`,
+  );
 }
 
 // Every table row must name a baselined NIP and quote its recorded revision,
