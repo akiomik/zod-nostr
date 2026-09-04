@@ -20,10 +20,12 @@ import { subscriptionId } from "./nip01.js";
  *
  * The hints array holds arbitrary strings, not a fixed enum. NIP-67 defines
  * `"finish"` (the relay has sent every stored event matching the filters — the
- * client should not paginate) and `"more"` (the relay holds more matching stored
- * events — the client should paginate), but requires clients to accept unknown
- * hint values without error, so no enum is baked in (this would reject
- * spec-valid future hints). The array MAY be empty and MAY carry multiple hints.
+ * client should not paginate), `"more"` (the relay holds more matching stored
+ * events — the client should paginate), and `"auth"` (the relay may hold more
+ * for a client that completes NIP-42 authentication), but requires clients to
+ * accept unknown hint values without error, so no enum is baked in (this would
+ * reject spec-valid future hints). The array MAY be empty and MAY carry
+ * multiple hints.
  *
  * Only the *presence* of `"finish"`/`"more"` is definitive; a missing third
  * element, an empty array, or unknown-only hints leave completeness unknown, in

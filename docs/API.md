@@ -935,14 +935,16 @@ JSON wire — an explicit `undefined` third element is rejected — and infers t
 precise `["EOSE", string] | ["EOSE", string, string[]]`.
 
 The `hints` are plain strings, not a fixed enum. NIP-67 defines `"finish"` (the
-relay has sent every stored event matching the filters — do not paginate) and
-`"more"` (the relay holds more — paginate), but requires clients to accept
-unknown hint values without error, so no enum is baked in. The array MAY be
-empty and MAY carry multiple hints. Only the **presence** of `"finish"`/`"more"`
-is definitive; a missing third element, an empty array, or unknown-only hints
-leave completeness unknown, in which case NIP-67 says the client SHOULD paginate
-with `until` set to the oldest received event's `created_at`. Interpreting the
-hints is the consumer's job — the schema validates structure only.
+relay has sent every stored event matching the filters — do not paginate),
+`"more"` (the relay holds more — paginate), and `"auth"` (the relay may hold
+more for a client that completes [NIP-42](#nip-42--authentication)
+authentication), but requires clients to accept unknown hint values without
+error, so no enum is baked in. The array MAY be empty and MAY carry multiple
+hints. Only the **presence** of `"finish"`/`"more"` is definitive; a missing
+third element, an empty array, or unknown-only hints leave completeness unknown,
+in which case NIP-67 says the client SHOULD paginate with `until` set to the
+oldest received event's `created_at`. Interpreting the hints is the consumer's
+job — the schema validates structure only.
 
 `zostr.nip67.relayMessage.eose()` is a strict superset of
 [`zostr.nip01.relayMessage.eose()`](#zostrnip01relaymessage) (it also accepts the bare

@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Spec baselines for every supported NIP.** `spec-baseline.json` records, per
+  NIP, the exact revision of the specification these schemas are written
+  against: the commit in `nostr-protocol/nips`, that commit's date, and the
+  SHA-256 of the NIP's Markdown at that commit. The `Supported NIPs` table in
+  `README.md` gains a `Spec baseline` column linking each NIP at its recorded
+  revision, so the text a schema was built for is one click away instead of
+  being implicit. The SHA-256 is what makes the file more than documentation —
+  it lets upstream edits be detected mechanically rather than noticed by
+  accident. An entry moves only when the NIP is re-read and the schemas are
+  confirmed against it; git history and this file record when that happened.
+
+### Fixed
+
+- **NIP-67 documentation listed only two of the three defined hints.** NIP-67
+  added an `"auth"` hint (the relay may hold more stored events for a client
+  that completes NIP-42 authentication) alongside `"finish"` and `"more"`. The
+  JSDoc on `zostr.nip67.relayMessage.eose()` and the NIP-67 section of
+  `docs/API.md` still described the earlier two-value set. No schema change: the
+  hints array is validated as plain strings precisely because NIP-67 requires
+  clients to accept unknown hint values, so `"auth"` already parsed.
+
 ## [0.5.2] - 2026-08-01
 
 ### Added

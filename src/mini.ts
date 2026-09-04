@@ -732,8 +732,8 @@ export const zostr = {
        * `["EOSE", subscriptionId]` or `["EOSE", subscriptionId, hints]` — a
        * union of the two exact wire shapes, so an explicit `undefined` third
        * element is rejected. It is a strict superset of NIP-01's EOSE. The
-       * hints are plain strings, not an enum: NIP-67 defines `"finish"` and
-       * `"more"` but requires clients to accept unknown values.
+       * hints are plain strings, not an enum: NIP-67 defines `"finish"`,
+       * `"more"`, and `"auth"` but requires clients to accept unknown values.
        */
       eose: () => z.union(nip67.nip67.relayMessage.eose()._zod.def.options),
     },
