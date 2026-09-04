@@ -125,6 +125,19 @@ describe("specBaselineProblems", () => {
 
     // Only a case difference names the id it should have had, and the module
     // that matches it is not an orphan of a missing entry.
+    // Two characters, but not the ones the upstream filename has, so the
+    // message says what a document id is rather than counting characters.
+    it("reports a lowercase id as not being one", () => {
+      const input = repository();
+      input.baseline.documents.nips = {
+        "7d": { commit: COMMIT, date: "2026-09-04", sha256: HASH },
+      };
+      input.files = ["nip7d.ts", "lud16.ts"];
+      expect(specBaselineProblems(input)).toEqual([
+        "spec-baseline.json: `nips.7d` is not a document id: two characters, digits or uppercase, as the upstream filename is",
+      ]);
+    });
+
     it("reports a misspelled id without blaming the module it names", () => {
       const input = repository();
       input.baseline.documents.nips = { "7d": null };
@@ -141,7 +154,7 @@ describe("specBaselineProblems", () => {
       };
       // `1` names no id, so the module it does not match is reported too.
       expect(specBaselineProblems(input)).toEqual([
-        "spec-baseline.json: `nips.1` is not a two-character document id",
+        expect.stringContaining("`nips.1` is not a document id"),
         expect.stringContaining("`src/nip01.ts` has no `nips.01` entry"),
       ]);
     });
@@ -200,13 +213,14 @@ describe("specBaselineProblems", () => {
   });
 
   describe("sources and documents must name the same families", () => {
+    // Named one at a time: reporting both would point at a key that is there.
     it.each([["sources"], ["documents"]])(
       "reports a baseline with no `%s` at all",
       (key) => {
         const input = repository();
         delete input.baseline[key];
         expect(specBaselineProblems(input)).toEqual([
-          "spec-baseline.json: has no `sources` and `documents` to compare",
+          `spec-baseline.json: has no \`${key}\` to compare`,
         ]);
       },
     );
@@ -217,10 +231,16 @@ describe("specBaselineProblems", () => {
         const input = repository();
         input.baseline[key] = "todo";
         expect(specBaselineProblems(input)).toEqual([
-          "spec-baseline.json: has no `sources` and `documents` to compare",
+          `spec-baseline.json: has no \`${key}\` to compare`,
         ]);
       },
     );
+
+    it("names both when neither is there", () => {
+      expect(specBaselineProblems({ baseline: {}, files: [] })).toEqual([
+        "spec-baseline.json: has no `sources` and no `documents` to compare",
+      ]);
+    });
 
     it("reports a family that only `documents` knows about", () => {
       const input = repository();

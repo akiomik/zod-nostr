@@ -88,8 +88,13 @@ function moduleIds(label, files) {
 export function specBaselineProblems({ baseline, files }) {
   // Checked for being objects, not merely present: the loops below reach them
   // with `Object.entries`, which throws on anything else.
-  if (!holds(baseline.sources) || !holds(baseline.documents))
-    return [`${BASELINE}: has no \`sources\` and \`documents\` to compare`];
+  const missing = ["sources", "documents"].filter(
+    (key) => !holds(baseline[key]),
+  );
+  if (missing.length > 0)
+    return [
+      `${BASELINE}: has no ${missing.map((key) => `\`${key}\``).join(" and no ")} to compare`,
+    ];
 
   const problems = [];
   const hashes = new Map();
@@ -148,7 +153,9 @@ export function specBaselineProblems({ baseline, files }) {
       if (!DOCUMENT.test(id)) {
         // Cross-checking a misspelled id against the modules would bury this
         // under a message naming the module that does exist.
-        problems.push(`${where} is not a two-character document id`);
+        problems.push(
+          `${where} is not a document id: two characters, digits or uppercase, as the upstream filename is`,
+        );
         excused.add(id.toUpperCase());
         continue;
       }
@@ -193,7 +200,10 @@ export function specBaselineProblems({ baseline, files }) {
 
 /** The line the CLI prints when nothing disagrees. */
 export function specBaselineSummary({ baseline }) {
-  const counts = Object.keys(baseline.documents)
+  const families = Object.keys(baseline.documents);
+  if (families.length === 0)
+    return `Spec baseline check passed — no families registered, so nothing in ${SOURCE}/ was checked.`;
+  const counts = families
     .map(
       (family) => `${Object.keys(baseline.documents[family]).length} ${family}`,
     )
