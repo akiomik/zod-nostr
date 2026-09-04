@@ -31,7 +31,7 @@ jobs:
       - name: Test
         run: npm run test:coverage
 
-      - name: Spec baseline check (src, spec-baseline.json, README)
+      - name: Spec baseline check (src vs. spec-baseline.json)
         run: npm run test:spec-baseline
 
       - name: Upload coverage reports to Codecov
