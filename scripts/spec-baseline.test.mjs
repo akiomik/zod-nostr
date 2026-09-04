@@ -666,6 +666,81 @@ describe("specBaselineProblems", () => {
       expect(specBaselineProblems(input)).toEqual([]);
     });
 
+    // Leaving the scan on a fence's closing marker would have the next table
+    // read it as an opening one, and every fence after it the wrong way round.
+    it("keeps its fence parity past a fence abutting a row", () => {
+      const input = repository();
+      input.baseline.documents.nips["05"] = {
+        commit: OTHER_COMMIT,
+        date: "2026-06-13",
+        sha256: HASH.replace(/^6/, "c"),
+      };
+      input.files.push("nip05.ts");
+      input.readme = input.readme.replace(
+        "\n\n## Development",
+        [
+          "",
+          "```js",
+          "x",
+          "```",
+          "",
+          "| NIP | Spec baseline | Coverage |",
+          "| --- | --- | --- |",
+          `| **NIP-05** | [2026-06-13](${NIPS}/blob/${OTHER_COMMIT}/05.md) | Ids |`,
+          "",
+          "## Development",
+        ].join("\n"),
+      );
+      expect(specBaselineProblems(input)).toEqual([]);
+    });
+
+    it("still ignores a fenced example after a fence abutting a row", () => {
+      const input = repository();
+      input.readme = input.readme.replace(
+        "\n\n## Development",
+        [
+          "",
+          "```js",
+          "x",
+          "```",
+          "",
+          "```md",
+          "| NIP | Spec baseline | Coverage |",
+          "| --- | --- | --- |",
+          "| **NIP-99** | [2020-01-01](https://example.com/99.md) | Example |",
+          "```",
+          "",
+          "## Development",
+        ].join("\n"),
+      );
+      expect(specBaselineProblems(input)).toEqual([]);
+    });
+
+    it("waits for every table to be readable before calling a NIP absent", () => {
+      const input = repository();
+      input.baseline.documents.nips["05"] = {
+        commit: OTHER_COMMIT,
+        date: "2026-06-13",
+        sha256: HASH.replace(/^6/, "d"),
+      };
+      input.files.push("nip05.ts");
+      input.readme = input.readme.replace(
+        "\n\n## Development",
+        [
+          "",
+          "",
+          "| Number | Spec baseline | Coverage |",
+          "| --- | --- | --- |",
+          `| **NIP-05** | [2026-06-13](${NIPS}/blob/${OTHER_COMMIT}/05.md) | Ids |`,
+          "",
+          "## Development",
+        ].join("\n"),
+      );
+      expect(specBaselineProblems(input)).toEqual([
+        "README.md: the Supported NIPs table has no `NIP` column",
+      ]);
+    });
+
     it("reports a row with no Spec baseline cell as that, not as drift", () => {
       const input = repository();
       input.readme = input.readme.replace(

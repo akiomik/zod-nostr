@@ -165,14 +165,6 @@ function sectionLines(readme) {
 }
 
 /**
- * README's `Supported NIPs` table: its header line and its body rows, or null.
- *
- * Identified by shape rather than by position — the first block in the section,
- * outside any fence, that has a delimiter row and a `NIP` column. Taking the
- * first pipe-led block instead would read a legend table, or a fenced example
- * of this very table, as the table and report its rows as malformed NIPs.
- */
-/**
  * The rows under the header at `index`, whether the table broke off before
  * they ended, and the line the scan stopped at — so the next table in the
  * section is looked for after this one rather than inside it.
@@ -199,10 +191,15 @@ function rowsUnder(lines, index) {
       line += 1;
       while (line < lines.length && fenceAfter(lines[line], opened) !== null)
         line += 1;
+      // Past the closing marker, not on it: leaving the scan there would have
+      // the caller read that marker as opening a fence, and every fence after
+      // it in the section the wrong way round.
       const beyond = lines.slice(line + 1);
       const next = beyond.find((following) => following.trim() !== "");
-      if (next === undefined || !ROW.test(next.trimStart())) break;
-      if (DELIMITER.test(beyond[beyond.indexOf(next) + 1] ?? "")) break;
+      if (next === undefined || !ROW.test(next.trimStart()))
+        return { rows, interrupted, end: line + 1 };
+      if (DELIMITER.test(beyond[beyond.indexOf(next) + 1] ?? ""))
+        return { rows, interrupted, end: line + 1 };
       interrupted = true;
       continue;
     }
@@ -416,9 +413,9 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
   const { repository } = baseline.sources[TABLE_FAMILY];
   const tabled = new Set();
   // Which rows name which NIP is what a missing `NIP` column makes unknowable,
-  // so a table without one leaves the absence check to the tables that have
-  // one rather than guessing on its behalf.
-  let named = false;
+  // so the absence check waits until every table in the section could be read:
+  // one that could not may hold the very row it would call missing.
+  const named = tables.every((table) => table.nip !== -1);
 
   for (const table of tables) {
     // Both columns a table is read by are located from its own header rather
@@ -428,13 +425,10 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
       problems.push(
         `${README}: the Supported NIPs table has no \`${BASELINE_COLUMN}\` column`,
       );
-    if (table.nip === -1) {
+    if (table.nip === -1)
       problems.push(
         `${README}: the Supported NIPs table has no \`${NIP_COLUMN}\` column`,
       );
-    } else {
-      named = true;
-    }
 
     if (table.interrupted)
       problems.push(
