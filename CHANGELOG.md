@@ -27,11 +27,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`npm run test:spec-baseline`**, which keeps the four places that name the
   same set of specs in step: the spec modules under `src/`,
   `spec-baseline.json`, the `Supported NIPs` table, and the README's prose
-  outside it — where the opening `Covers NIP-…` sentence names them all. The modules of a
-  registered family decide what must be baselined (`src/nip67.ts` calls for a
-  `nips.67` entry, and an entry with no module is dead weight), and the table
-  must quote the recorded revision cell by cell — both directions, so a spec
-  added to one place and forgotten in another fails the build instead of
+  outside it — where the opening `Covers NIP-…` sentence names them all. The
+  modules of a registered family decide what must be baselined (`src/nip67.ts`
+  calls for a `nips.67` entry, and an entry with no module is dead weight), and
+  the table must quote the recorded revision cell by cell — both directions, so
+  a spec added to one place and forgotten in another fails the build instead of
   shipping with no recorded provenance. It also rejects what an entry can be
   judged for without the spec text: a date that is not a real day, a malformed
   commit or hash, and a hash shared by two documents. It runs in CI and before

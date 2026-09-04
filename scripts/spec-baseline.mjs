@@ -294,6 +294,11 @@ function supportedNipsTables(readme, column) {
       rows,
       nip,
       interrupted,
+      // GFM renders a table only when its delimiter row has as many cells as
+      // its header: adding a column and not extending the delimiter — the
+      // half-finished edit this very column invites — leaves the whole block
+      // as raw pipes on the page.
+      misdelimited: cellsOf(lines[index + 1]).length !== cells.length,
       at: at.map((line) => line + offset),
     });
     index = end - 1; // the loop's own step moves past it
@@ -465,8 +470,13 @@ export function specBaselineProblems({ baseline, readme: text, files }) {
   // one that could not may hold the very row it would call missing.
   const named = tables.every((table) => table.nip !== -1);
 
-  // One break, or one missing column, is one problem however many tables show
-  // it — a reader fixes the section, not each table in turn.
+  // One break, one mismatched delimiter, or one missing column is one problem
+  // however many tables show it — a reader fixes the section, not each table
+  // in turn.
+  if (tables.some((table) => table.misdelimited))
+    problems.push(
+      `${README}: the Supported NIPs table's delimiter row does not have as many cells as its header, so the table does not render as one`,
+    );
   if (tables.some((table) => table.interrupted))
     problems.push(
       `${README}: the Supported NIPs table breaks off before its rows end, so what follows it does not render as part of it`,

@@ -64,8 +64,9 @@ the single source of truth for provenance.
   filenames, so a spec module is `src/<label><id>.ts` — `src/nip67.ts` for
   NIP-67, `src/lud01.ts` for LUD-01, matched without regard for case or how
   deep under `src/` it sits — and it must name the document whose rules the
-  module encodes, not the field that happens to carry the value. The kind:0 `lud06` field carries an LNURL, but the
-  encoding is LUD-01's and LUD-06 defines only what the decoded URL answers
+  module encodes, not the field that happens to carry the value. The kind:0
+  `lud06` field carries an LNURL, but the encoding is LUD-01's and LUD-06
+  defines only what the decoded URL answers
   with, so the module is
   `lud01.ts` and the field keeps its ecosystem name at
   `metadataFields.lud06()` — the same split as `metadataFields.nip05()`
@@ -120,13 +121,14 @@ the single source of truth for provenance.
 ## Consequences
 
 Adding `src/nipXX.ts` now means adding a baseline entry, a table row, and a
-mention outside that table — the sentence above it names them all — or the
-build fails. A document from a new family needs a `sources` entry as well — a
-requirement this record carries, not one the check can demand, for the reason
-below. Re-reading a spec is a reviewable change with a diff, rather than an
-undocumented act of diligence. The baseline is a claim about the text a schema
-targets, not a guarantee that upstream has not moved since — until the
-scheduled comparison exists, an entry going stale is still noticed by hand.
+mention outside that table — the README's opening `Covers NIP-…` sentence names
+them all — or the build fails. A document from a new family needs a `sources`
+entry as well — a requirement this record carries, not one the check can
+demand, for the reason below. Re-reading a spec is a reviewable change with a
+diff, rather than an undocumented act of diligence. The baseline is a claim
+about the text a schema targets, not a guarantee that upstream has not moved
+since — until the scheduled comparison exists, an entry going stale is still
+noticed by hand.
 
 Three gaps stay open whatever is checked. The first is that nothing offline can
 tie an entry's `sha256` or `date` to its `commit`: both are facts about a

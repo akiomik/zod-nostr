@@ -808,6 +808,19 @@ describe("specBaselineProblems", () => {
       expect(specBaselineProblems(input)).toEqual([]);
     });
 
+    // GFM renders a table only when the delimiter has as many cells as the
+    // header, so a column added to one and not the other renders as nothing.
+    it("reports a delimiter with fewer cells than its header", () => {
+      const input = repository();
+      input.readme = input.readme.replace(
+        "| --- | --- | --- |",
+        "| --- | --- |",
+      );
+      expect(specBaselineProblems(input)).toEqual([
+        expect.stringContaining("does not have as many cells as its header"),
+      ]);
+    });
+
     it("reads a delimiter that leaves off its trailing pipe", () => {
       const input = repository();
       input.readme = input.readme.replace(
