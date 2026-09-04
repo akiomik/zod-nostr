@@ -169,7 +169,8 @@ mechanically, and covers the two specs that have no row here because they are
 not NIPs: [LUD-01 and LUD-16](https://github.com/lnurl/luds), behind
 `nip01.metadataFields.lud06()` and `nip01.metadataFields.lud16()` — the kind:0
 field is named `lud06`, but what it carries is a LUD-01 LNURL. An entry
-moves only when the spec is re-read and the schemas are confirmed against it.
+moves only when the spec is re-read and the schemas are confirmed against it;
+`npm run test:spec-baseline` keeps the table and the JSON from disagreeing.
 
 See [docs/API.md](docs/API.md) for the full API reference, and
 [docs/guides.md](docs/guides.md) for task-oriented how-to guides (building a

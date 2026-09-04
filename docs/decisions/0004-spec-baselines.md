@@ -76,10 +76,23 @@ the single source of truth for provenance.
   table — and the modules decide: `src/nip67.ts` calls for a `nips.67` entry,
   and an entry with no module is dead weight. The table repeats each revision so
   a reader can click through to it, which is a second copy of a fact, so the two
-  are kept in step deliberately rather than by habit. A check that asserts this
-  follows separately; it needs no network, because whether upstream has moved
-  since a baseline was recorded is a different question, with a different answer
-  over time, from whether the repository agrees with itself.
+  are kept in step by `scripts/spec-baseline-check.mjs`, in both directions, in
+  CI and `prepublishOnly`.
+
+  The check compares the repository against itself and nothing else. It does not
+  fetch upstream — whether a spec has moved since a baseline was recorded is a
+  different question, with a different answer over time, and asking it here
+  would fail an innocent pull request on an unrelated upstream edit. It also
+  assumes the baseline is well-formed JSON a maintainer wrote: it asserts what
+  someone plausibly gets wrong, which is updating one file and not the other,
+  and not the ways a hand-corrupted file could be malformed. Those fail the
+  build anyway, and guarding each one costs more than the case is worth.
+
+  Its rules are pinned by `scripts/spec-baseline-check.test.mjs`, which is why
+  the script exports what it decides as a function of its three inputs and
+  keeps reading files in the CLI. A script nothing exercises invites an
+  open-ended argument about how good each diagnostic is; one with a contract
+  answers that with a case, or with a deliberate change to one.
 
 ## Alternatives not chosen
 
