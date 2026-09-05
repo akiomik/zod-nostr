@@ -145,8 +145,8 @@ stands on its own: a `commit` is a name, while `date` and `sha256` are claims
 about what that name points at — when it landed, and what its text was.
 Confirming a claim means fetching the document, and no check that reads only
 this repository does; the name itself is never looked up either. Entries are
-held to each other, but agreement is not confirmation: one wrong day pasted
-into every entry that shares a commit passes. An entry is true because whoever
+held to each other, but agreement is not confirmation: entries that share a
+commit can agree on a day it did not land on. An entry is true because whoever
 wrote it hashed the document as they read it — care taken at the keyboard, not
 something the build can demand.
 
