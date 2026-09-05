@@ -1,6 +1,6 @@
 {
   "name": "zod-nostr",
-  "version": "0.5.2",
+  "version": "0.6.0",
   "description": "Spec-faithful, tunable Zod schemas & codecs for Nostr — strict by default, loosen deliberately. Classic + zod/mini.",
   "type": "module",
   "files": [
