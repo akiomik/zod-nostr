@@ -144,14 +144,15 @@ targets, not a guarantee that upstream has not moved since. Whether it has is a
 question for whoever is closing the gap, and `spec-baseline.json` is where they
 get the revision to ask it from.
 
-Two gaps stay open whatever is checked. The first is that nothing offline can
-tie an entry's `sha256` or `date` to its `commit`: both are facts about a
-repository this one does not vendor, so a bump that updates `commit` but
-carries the old hash — or a plausible wrong day that is still a real date — is
-not detectable here. Hashing the document as it is read is what makes an entry
-true, and that is care taken when the entry is written rather than anything the
-build can demand — though the likeliest slip, an entry carrying another entry's
-hash, is caught.
+Two gaps stay open whatever is checked. The first is that no entry can be held
+to its own `commit`: the document at that revision is a fact about a repository
+this one does not vendor, so a bump that updates `commit` and keeps the old
+hash — or a plausible wrong day that is still a real date — passes. Hashing the
+document as it is read is what makes an entry true, and that is care taken when
+the entry is written rather than anything the build can demand. What is caught
+is narrower and is a different thing: entries disagreeing with each other,
+which is all this can see without the upstream text — one entry carrying
+another's hash, and two entries dating one commit differently.
 
 The second follows from provenance being read from filenames: a specification
 implemented **inside an existing module** rather than in its own file is

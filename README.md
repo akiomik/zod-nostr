@@ -161,11 +161,11 @@ aliased at the root (`zostr.event`, `zostr.npub`, …).
 Each NIP above links to its current text; which revision these schemas are
 written against is recorded in [spec-baseline.json](spec-baseline.json) — the
 commit, the date it landed upstream, and the SHA-256 of the document's text, so
-that upstream changes can be detected mechanically. It covers the NIPs above
-and the two specs behind `nip01.metadataFields.lud06()` and
-`nip01.metadataFields.lud16()`, which are not NIPs: [LUD-01 and
-LUD-16](https://github.com/lnurl/luds). An entry moves only when the spec is
-re-read and the schemas are confirmed against it.
+an upstream change can be told from a misremembered revision by hashing the
+document again. It covers the NIPs above and the two specs behind
+`nip01.metadataFields.lud06()` and `nip01.metadataFields.lud16()`, which are
+not NIPs: [LUD-01 and LUD-16](https://github.com/lnurl/luds). An entry moves
+only when the spec is re-read and the schemas are confirmed against it.
 
 See [docs/API.md](docs/API.md) for the full API reference, and
 [docs/guides.md](docs/guides.md) for task-oriented how-to guides (building a
