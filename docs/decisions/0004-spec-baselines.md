@@ -42,12 +42,12 @@ the single source of truth for provenance.
   family's entries under the same key, so the file says what its own keys mean
   and a reader never has to know which top-level keys are data.
 - **Content: `commit`, `date`, `sha256`.** The commit identifies the revision;
-  `date` is when it landed upstream (the committer date, which is not always
-  the author date a commit page shows); `sha256` is the hash of the document's
-  Markdown at that commit. The hash is the load-bearing field: the commit says
-  which revision and the hash says which text, so an entry can be confirmed
-  against the document instead of taken on trust. Being a data file rather than
-  prose is what lets a check read it at all.
+  `date` is when it landed upstream (the committer date, which is not always the
+  author date a commit page shows); `sha256` is the
+  hash of the document's Markdown at that commit. The hash is the load-bearing
+  field: the commit names a revision and the hash names its text, so an entry
+  can be confirmed against the document rather than taken on trust. Being a
+  data file rather than prose is what lets a check read it.
 - **No review date.** An entry says which revision the schemas target; it does
   not say when someone last looked. Recording that would mean stamping every
   document as reviewed whenever one of them is, and the honest alternative —
@@ -123,8 +123,6 @@ the single source of truth for provenance.
 - *Exporting the baseline at runtime* (`export const SPEC_BASELINE`) — adds
   public surface and bundle weight for something with documentation value only.
   Nothing prevents adding it later if a consumer asks.
-- *Checking upstream in the same script* — weighed and left out, for the
-  reason the decision above gives.
 
 ## Consequences
 
@@ -138,16 +136,19 @@ requirement. A document from a new family needs a `sources` entry as well — a
 requirement this record carries, not one the check can demand, for the reason
 below. Re-reading a spec is a reviewable change with a diff, rather than an
 undocumented act of diligence. The baseline is a claim about the text a schema
-targets, not a guarantee that upstream has not moved since. Whether it has is a
-question for whoever is closing the distance between the two, and
-`spec-baseline.json` is where they get the revision to ask it from.
+targets, not a guarantee that upstream has not moved since. Diffing from the
+recorded commit is how a maintainer finds out, which is what the file is there
+to make possible.
 
-Two gaps stay open whatever is checked. The first is that nothing here reads
-the upstream document, so no entry can be held to it: whether its `sha256` is
-the hash of that document, and whether its `date` is when that commit landed,
-are facts about a repository this one does not vendor. Hashing the document as
-it is read is what makes an entry true, and that is care taken when the entry
-is written rather than anything the build can demand.
+Two gaps stay open. The first is that only one of an entry's three fields
+stands on its own: a `commit` is a name, while `date` and `sha256` are claims
+about what that name points at — when it landed, and what its text was.
+Confirming a claim means fetching the document, and no check that reads only
+this repository does; the name itself is never looked up either. Entries are
+held to each other, but agreement is not confirmation: one wrong day pasted
+into every entry that shares a commit passes. An entry is true because whoever
+wrote it hashed the document as they read it — care taken at the keyboard, not
+something the build can demand.
 
 The second follows from provenance being read from filenames: a specification
 implemented **inside an existing module** rather than in its own file is
