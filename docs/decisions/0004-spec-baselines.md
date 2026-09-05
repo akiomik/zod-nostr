@@ -45,8 +45,10 @@ the single source of truth for provenance.
   `date` is when it landed upstream (the committer date, which is not always the
   author date a commit page shows); `sha256` is the
   hash of the document's Markdown at that commit. The hash is the load-bearing
-  field — it is what turns a record into something a checker can act on, and the
-  reason this is a data file rather than prose.
+  field: a commit id can be copied out of a log, while a hash cannot be had
+  without the document, so it is the part of an entry its author could not have
+  written without the text in front of them. Being a data file rather than
+  prose is what lets a check read it.
 - **No review date.** An entry says which revision the schemas target; it does
   not say when someone last looked. Recording that would mean stamping every
   document as reviewed whenever one of them is, and the honest alternative —
@@ -122,12 +124,6 @@ the single source of truth for provenance.
 - *Exporting the baseline at runtime* (`export const SPEC_BASELINE`) — adds
   public surface and bundle weight for something with documentation value only.
   Nothing prevents adding it later if a consumer asks.
-- *Checking upstream in the same script* — worth doing, but not here: a network
-  call makes the check non-deterministic and turns an unrelated upstream edit
-  into a red build on an innocent pull request. A scheduled job that reports the
-  diff is the right shape for that, and the `sha256` field is what it will read
-  — against the text at the recorded commit as well as at the current head, so
-  that it also answers whether the entry is internally consistent.
 
 ## Consequences
 
@@ -141,16 +137,18 @@ requirement. A document from a new family needs a `sources` entry as well — a
 requirement this record carries, not one the check can demand, for the reason
 below. Re-reading a spec is a reviewable change with a diff, rather than an
 undocumented act of diligence. The baseline is a claim about the text a schema
-targets, not a guarantee that upstream has not moved since — until the
-scheduled comparison exists, an entry going stale is still noticed by hand.
+targets, not a guarantee that upstream has not moved since. Diffing from the
+recorded commit is how a maintainer finds out, which is what the file is there
+to make possible.
 
-Two gaps stay open whatever is checked. The first is that nothing offline can
-tie an entry's `sha256` or `date` to its `commit`: both are facts about a
-repository this one does not vendor, so a bump that updates `commit` but
-carries the old hash — or a plausible wrong day that is still a real date — is
-not detectable here. It is the field the design rests on, so the scheduled
-comparison should hash the recorded commit too rather than only the current
-head — otherwise a stale hash reads as an upstream change that never happened.
+Two gaps stay open. The first is that all three of an entry's fields are
+assertions about a repository this one does not vendor — that the revision
+exists, that it landed then, that its text hashed to this — and nothing here
+fetches it, so none of them is confirmed. Entries are held to each other, but
+agreement is not confirmation: entries that share a commit can agree on a day
+it did not land on. An entry is true because whoever wrote it hashed the
+document as they read it — care taken at the keyboard, not something the build
+can demand.
 
 The second follows from provenance being read from filenames: a specification
 implemented **inside an existing module** rather than in its own file is
