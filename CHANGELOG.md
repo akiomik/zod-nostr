@@ -62,9 +62,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   parsed. They are declared fields now, carrying `eventId()`/`pubkey()` as
   `ids`/`authors` do, so a malformed value is reported the same way theirs is:
   one issue per offending element, under that element's path (`["#e", 0]`), and
-  alongside any other field's rather than instead of it. The inferred type gains
-  `"#e"?: string[]` and `"#p"?: string[]`, which the catchall's index signature
-  previously typed as `string[]`. Applies to `zostr.filter()` and
+  alongside any other field's rather than instead of it. Being fields also
+  breaks their inferred type: `"#e"` and `"#p"` read as `string[] | undefined`
+  where the catchall's `[key: string]: unknown` left them `unknown`, the same
+  refinement `filter()`'s named fields got in 0.1.2. Applies to `zostr.filter()`
+  and
   `zostr.nip50.filter()`, and to the `REQ`/`COUNT` messages that carry them.
   Every other `"#<letter>"` filter still carries arbitrary strings, including
   `"#E"`/`"#P"` — NIP-01 names the lowercase pair, and an uppercase tag is a

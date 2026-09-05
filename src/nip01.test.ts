@@ -445,6 +445,11 @@ describe("zostr NIP-01 output types", () => {
 
     const f = classicZostr.filter().parse({ kinds: [1] });
     expectTypeOf(f.kinds).toEqualTypeOf<number[] | undefined>();
+    // `#e`/`#p` are declared fields, so they infer precisely; every other tag
+    // filter is still read through the catchall's `[key: string]: unknown`.
+    expectTypeOf(f["#e"]).toEqualTypeOf<string[] | undefined>();
+    expectTypeOf(f["#p"]).toEqualTypeOf<string[] | undefined>();
+    expectTypeOf(f["#t"]).toEqualTypeOf<unknown>();
 
     const ok = classicZostr.nip01.relayMessage
       .ok()
@@ -465,6 +470,9 @@ describe("zostr NIP-01 output types", () => {
 
     const f = zm.parse(miniZostr.filter(), { kinds: [1] });
     expectTypeOf(f.kinds).toEqualTypeOf<number[] | undefined>();
+    expectTypeOf(f["#e"]).toEqualTypeOf<string[] | undefined>();
+    expectTypeOf(f["#p"]).toEqualTypeOf<string[] | undefined>();
+    expectTypeOf(f["#t"]).toEqualTypeOf<unknown>();
 
     const ok = zm.parse(miniZostr.nip01.relayMessage.ok(), [
       "OK",

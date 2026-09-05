@@ -233,10 +233,11 @@ Used as the second element of `REQ`/`CLOSE`/`EVENT` (relay→client)/`EOSE`/
 
 ### `zostr.filter()`
 
-The NIP-01 `REQ`/`COUNT` filter object: `ids`, `authors`, `kinds`, `since`,
-`until`, `limit`, plus any number of `#<a-zA-Z>` tag-value filters (e.g.
-`#e`, `#p`). Unknown keys outside this set are rejected. `since`/`until` are
-integer timestamps and `limit` is a non-negative integer (an event count);
+The NIP-01 `REQ`/`COUNT` filter object: `ids`, `authors`, `kinds`, `#e`, `#p`,
+`since`, `until`, `limit`, plus any number of further `#<a-zA-Z>` tag-value
+filters (e.g. `#t`, `#a`). Unknown keys outside this set are rejected.
+`since`/`until` are integer timestamps and `limit` is a non-negative integer
+(an event count);
 non-integer, negative, and non-finite values are rejected. `ids`, `authors`,
 `kinds`, and each `#<letter>` array must be **non-empty** when present, matching
 NIP-01's grammar (an array field, when present, lists at least one value); a
@@ -247,9 +248,11 @@ dimension (this widens the match), or drop the filter / don't send the request
 to select nothing.
 
 `ids`, `authors`, `#e`, and `#p` must hold **64-character lowercase hex**
-values, which NIP-01 requires of those four lists. Every other `#<letter>`
-filter carries arbitrary strings, since NIP-01 says nothing about what any other
-tag holds — including `#E`/`#P`, which are different tags from `#e`/`#p`.
+values, which NIP-01 requires of those four lists — so `#e` and `#p` are named
+fields here, and infer as `string[] | undefined` rather than through the
+catchall. Every other `#<letter>` filter carries arbitrary strings (inferred
+`unknown`, like any catchall key), since NIP-01 says nothing about what any
+other tag holds — including `#E`/`#P`, which are different tags from `#e`/`#p`.
 
 ```ts
 zostr.filter().parse({
