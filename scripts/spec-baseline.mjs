@@ -145,11 +145,13 @@ export function specBaselineProblems({ baseline, files }) {
   // declared would report the same file over two runs.
   for (const family of Object.keys(baseline.documents)) {
     const source = baseline.sources[family];
-    const declared = Object.hasOwn(baseline.sources, family);
-    if (declared && !holds(source)) {
+    // Declared means named *and* describing a family: a `sources` value that is
+    // not an object says nothing about a label or a repository, but its
+    // entries still say what they say, so they are judged all the same.
+    const named = Object.hasOwn(baseline.sources, family);
+    const declared = named && holds(source);
+    if (named && !declared)
       problems.push(`${BASELINE}: \`sources.${family}\` describes no family`);
-      continue;
-    }
     const documents = baseline.documents[family];
     if (!holds(documents)) {
       problems.push(`${BASELINE}: \`documents.${family}\` holds no entries`);
@@ -161,8 +163,8 @@ export function specBaselineProblems({ baseline, files }) {
     // would take the rest of the report with it. A regex coerces what it tests,
     // so `true` would read as `"true"` without the type check.
     const { label, repository } = declared ? source : {};
-    const named = typeof label === "string" && LABEL.test(label);
-    if (declared && !named)
+    const labelled = typeof label === "string" && LABEL.test(label);
+    if (declared && !labelled)
       problems.push(
         `${BASELINE}: \`sources.${family}\` has no label naming a document series`,
       );
@@ -171,7 +173,7 @@ export function specBaselineProblems({ baseline, files }) {
       (typeof repository !== "string" || repository.trim() === "")
     )
       problems.push(`${BASELINE}: \`sources.${family}\` has no repository`);
-    const modules = named ? moduleIds(label, files) : new Map();
+    const modules = labelled ? moduleIds(label, files) : new Map();
     // Ids already reported at their entry, in the spelling the modules use: the
     // module that matches one is there, so calling it an orphan of a missing
     // entry would be false.
@@ -234,7 +236,7 @@ export function specBaselineProblems({ baseline, files }) {
         continue;
       }
 
-      if (!named) continue; // the check below needs a usable label
+      if (!labelled) continue; // the check below needs a usable label
       if (!modules.has(id))
         problems.push(
           `${where} has no \`${SOURCE}/${label.toLowerCase()}${id.toLowerCase()}.ts\``,

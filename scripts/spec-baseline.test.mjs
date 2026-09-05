@@ -416,6 +416,24 @@ describe("specBaselineProblems", () => {
       ]);
     });
 
+    // Symmetric with the undeclared case: what a `sources` value cannot say is
+    // its label and repository, not what its entries say.
+    it("judges the entries of a family whose source is not an object", () => {
+      const input = repository();
+      input.baseline.sources.luds = null;
+      input.baseline.documents.luds[16] = {
+        commit: "x",
+        date: "nope",
+        sha256: "no",
+      };
+      expect(specBaselineProblems(input)).toEqual([
+        "spec-baseline.json: `sources.luds` describes no family",
+        expect.stringContaining("`luds.16` has no 40-character lowercase-hex"),
+        expect.stringContaining("`luds.16` has no YYYY-MM-DD date"),
+        expect.stringContaining("`luds.16` has no 64-character lowercase-hex"),
+      ]);
+    });
+
     it("reports a family whose entries are not an object", () => {
       const input = repository();
       input.baseline.documents.luds = null;
