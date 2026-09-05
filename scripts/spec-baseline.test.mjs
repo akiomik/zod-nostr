@@ -435,6 +435,28 @@ describe("specBaselineProblems", () => {
       ]);
     });
 
+    // Copying a `sources` block and editing only its key. Without this the
+    // second family is judged against modules that are not its own, and the
+    // collision that caused it is never named.
+    it("reports two families sharing one label", () => {
+      const input = repository();
+      input.baseline.sources.nips2 = { label: "NIP", repository: NIPS };
+      input.baseline.documents.nips2 = {};
+      expect(specBaselineProblems(input)).toEqual([
+        "spec-baseline.json: `sources.nips2` and `sources.nips` share the label `NIP`",
+      ]);
+    });
+
+    // Matched the way the modules are, so one spelling cannot slip past.
+    it("reports a shared label whose spelling differs by case", () => {
+      const input = repository();
+      input.baseline.sources.nips2 = { label: "nip", repository: NIPS };
+      input.baseline.documents.nips2 = {};
+      expect(specBaselineProblems(input)).toEqual([
+        "spec-baseline.json: `sources.nips2` and `sources.nips` share the label `nip`",
+      ]);
+    });
+
     // The mirror of the case above: a label is all it takes to find a family's
     // modules, so one declared in `sources` alone still has them spoken for.
     // Reporting only the missing `documents` would name the file to fix in a

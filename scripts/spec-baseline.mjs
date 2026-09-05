@@ -30,6 +30,12 @@
 //   helper. Naming a family on one side of the file only is reported, since
 //   that is a half-finished edit rather than a declaration.
 //
+// One rule holds over all of it: where this stops short of a check, either the
+// same run already carries the message that the reader acts on, or what was
+// skipped cannot be known — a family whose label is missing, malformed, or
+// shared has no modules that can be told apart from another's. Stopping for any
+// other reason would cost a second run to learn the rest.
+//
 // It takes its two inputs as data and returns what it found, so every rule
 // below is pinned by `spec-baseline.test.mjs` without a fixture repository.
 // Reading the files, printing, and exiting are `spec-baseline-check.mjs`'s job.
@@ -125,6 +131,9 @@ export function specBaselineProblems({ baseline, files }) {
   // judgeable without the upstream text.
   const hashes = new Map();
   const dated = new Map();
+  // The families that have claimed a label, so a second one claiming it is
+  // named as the mistake rather than doubling every module's report.
+  const labels = new Map();
 
   // `sources` says what a family is and `documents` holds its entries, so a
   // family in one and not the other is the same "updated one file and not the
@@ -187,7 +196,18 @@ export function specBaselineProblems({ baseline, files }) {
       (typeof repository !== "string" || repository.trim() === "")
     )
       problems.push(`${BASELINE}: \`sources.${family}\` has no repository`);
-    const modules = labelled ? moduleIds(label, files) : new Map();
+    // One label cannot name two families: `moduleIds` would find one family's
+    // modules for both, and each of them would be reported as wanting an entry
+    // in each family. Compared case-insensitively, as the modules are matched.
+    const taken = labelled ? labels.get(label.toLowerCase()) : undefined;
+    if (taken !== undefined)
+      problems.push(
+        `${BASELINE}: \`sources.${family}\` and \`sources.${taken}\` share the label \`${label}\``,
+      );
+    else if (labelled) labels.set(label.toLowerCase(), family);
+    // Usable, not merely well-formed: a shared label finds the wrong modules.
+    const usable = labelled && taken === undefined;
+    const modules = usable ? moduleIds(label, files) : new Map();
     // Ids already reported at their entry, in the spelling the modules use: the
     // module that matches one is there, so calling it an orphan of a missing
     // entry would be false.
@@ -263,7 +283,7 @@ export function specBaselineProblems({ baseline, files }) {
         continue;
       }
 
-      if (!labelled) continue; // the check below needs a usable label
+      if (!usable) continue; // the check below needs a label of this family's
       if (!modules.has(id))
         problems.push(
           `${where} has no \`${SOURCE}/${label.toLowerCase()}${id.toLowerCase()}.ts\``,
