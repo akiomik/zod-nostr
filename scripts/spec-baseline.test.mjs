@@ -400,7 +400,8 @@ describe("specBaselineProblems", () => {
 describe("specBaselineSummary", () => {
   it("counts each family", () => {
     expect(specBaselineSummary(repository())).toBe(
-      "Spec baseline check passed — 1 nips, 1 luds baselined from src/.",
+      "Spec baseline check passed — 1 nips, 1 luds baselined, " +
+        "for the families spec-baseline.json declares.",
     );
   });
 });

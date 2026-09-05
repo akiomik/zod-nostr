@@ -1,5 +1,7 @@
-// Asserts that `spec-baseline.json` records every specification `src/`
-// implements, and nothing it does not.
+// Asserts that `spec-baseline.json` and the spec modules under `src/` agree,
+// family by family, about what is baselined. Which families there are is what
+// `spec-baseline.json` says: this checks what it declares, not what `src/`
+// might imply.
 //
 // Two places name the same set of specs: the modules and the baseline. A spec
 // module added without an entry ships with no recorded provenance, and an entry
@@ -219,7 +221,8 @@ export function specBaselineProblems({ baseline, files }) {
         );
     }
 
-    // `src/` is the authority: a spec module with no entry has no provenance.
+    // Within a declared family, `src/` decides: a module with no entry has no
+    // provenance recorded for it.
     for (const [id, file] of modules)
       if (!Object.hasOwn(documents, id) && !excused.has(id))
         problems.push(
@@ -234,11 +237,14 @@ export function specBaselineProblems({ baseline, files }) {
 export function specBaselineSummary({ baseline }) {
   const families = Object.keys(baseline.documents);
   if (families.length === 0)
-    return `Spec baseline check passed — no families registered, so nothing in ${SOURCE}/ was checked.`;
+    return `Spec baseline check passed — ${BASELINE} declares no families, so nothing in ${SOURCE}/ was checked.`;
   const counts = families
     .map(
       (family) => `${Object.keys(baseline.documents[family]).length} ${family}`,
     )
     .join(", ");
-  return `Spec baseline check passed — ${counts} baselined from ${SOURCE}/.`;
+  return (
+    `Spec baseline check passed — ${counts} baselined, ` +
+    `for the families ${BASELINE} declares.`
+  );
 }
