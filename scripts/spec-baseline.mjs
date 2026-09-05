@@ -175,10 +175,7 @@ export function specBaselineProblems({ baseline, files }) {
       // differ by case, and naming one spelling for both would misquote one.
       problems.push(
         `${BASELINE}: ${sharing
-          .map(
-            (family) =>
-              `\`sources.${family}\` (\`${baseline.sources[family].label}\`)`,
-          )
+          .map((family) => `\`sources.${family}\` (\`${labelOf.get(family)}\`)`)
           .join(" and ")} share one label`,
       );
 

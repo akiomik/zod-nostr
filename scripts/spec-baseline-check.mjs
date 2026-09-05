@@ -57,8 +57,9 @@ if (problems.length > 0) {
       : `\n${BASELINE} and the spec modules under ${SOURCE}/ must agree about what is baselined, family by family, for the families ${BASELINE} declares.`,
   );
   // Set, not `process.exit(1)`: writes to a pipe — which stderr is under CI —
-  // are asynchronous, and exiting does not wait for them. A gate that exits
-  // having printed nothing is the one outcome this must not produce.
+  // are asynchronous, and exiting does not wait for them. A report this size
+  // fits a pipe's buffer, so nothing is lost today; against a reader that does
+  // not drain at once, `process.exit(1)` delivers a fraction of what it wrote.
   process.exitCode = 1;
 } else {
   console.log(specBaselineSummary({ baseline }));
