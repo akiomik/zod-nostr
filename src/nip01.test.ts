@@ -197,27 +197,52 @@ describe.each(FLAVORS)("zostr NIP-01 filter() ($name)", ({ zostr, z }) => {
   });
 
   it.each(["#e", "#p"])(
-    "requires every %s value to be 64-character lowercase hex",
+    "accepts a 64-character lowercase hex %s value",
     (key) => {
       const hex = "c".repeat(64);
 
       expect(z.parse(zostr.filter(), { [key]: [hex] })).toEqual({
         [key]: [hex],
       });
-      // Too short, uppercase, and non-hex all fail — the rule `ids`/`authors`
-      // already apply, which NIP-01 states for these two lists as well.
-      expect(z.safeParse(zostr.filter(), { [key]: ["id"] }).success).toBe(
-        false,
-      );
-      expect(
-        z.safeParse(zostr.filter(), { [key]: ["C".repeat(64)] }).success,
-      ).toBe(false);
-      // A single bad value fails the list even when the rest are well-formed.
+      // One bad value fails the list even when the rest are well-formed.
       expect(
         z.safeParse(zostr.filter(), { [key]: [hex, "nope"] }).success,
       ).toBe(false);
     },
   );
+
+  // One case per way the form can be wrong, so no case stands in for another:
+  // "id" is short *and* non-hex, and would pass for either on its own.
+  it.each<[string, string]>([
+    ["too short", "id"],
+    ["the right length but not hex", "z".repeat(64)],
+    ["hex digits in uppercase", "C".repeat(64)],
+  ])('rejects a "#e"/"#p" value that is %s', (_label, value) => {
+    expect(z.safeParse(zostr.filter(), { "#e": [value] }).success).toBe(false);
+    expect(z.safeParse(zostr.filter(), { "#p": [value] }).success).toBe(false);
+  });
+
+  it("reports a malformed #e exactly as it reports a malformed ids", () => {
+    const values = ["nope", "also-nope"];
+    const tagFilter = z.safeParse(zostr.filter(), { "#e": values });
+    const idsFilter = z.safeParse(zostr.filter(), { ids: values });
+
+    expect(tagFilter.success).toBe(false);
+    expect(idsFilter.success).toBe(false);
+    // NIP-01 states one rule over both lists, so both report it the same way:
+    // one issue per offending element, under that element's path. Compared with
+    // the field name dropped, nothing else about the issues may differ.
+    const withoutFieldName = (result: typeof tagFilter) =>
+      result.error?.issues.map((issue) => ({
+        ...issue,
+        path: issue.path.slice(1),
+      }));
+    expect(withoutFieldName(tagFilter)).toEqual(withoutFieldName(idsFilter));
+    expect(tagFilter.error?.issues.map((issue) => issue.path)).toEqual([
+      ["#e", 0],
+      ["#e", 1],
+    ]);
+  });
 
   it.each(["#a", "#t", "#E", "#P"])(
     "leaves %s values unconstrained, since NIP-01 names only #e and #p",

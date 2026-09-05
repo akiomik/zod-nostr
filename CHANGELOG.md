@@ -60,7 +60,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `"#<letter>"` tag filter went through one catchall, which cannot tell one tag
   letter from another, so a malformed event id or pubkey in `"#e"`/`"#p"`
   parsed. Applies to `zostr.filter()` and `zostr.nip50.filter()`, and to the
-  `REQ`/`COUNT` messages that carry them. Every other `"#<letter>"` filter still
+  `REQ`/`COUNT` messages that carry them. A malformed value is reported the way
+  `ids`/`authors` report theirs — one issue per offending element, under that
+  element's path (`["#e", 0]`) — so a consumer reading `issue.path` locates it
+  without matching on message text. Every other `"#<letter>"` filter still
   carries arbitrary strings, including `"#E"`/`"#P"` — NIP-01 names the
   lowercase pair, and an uppercase tag is a different tag.
 

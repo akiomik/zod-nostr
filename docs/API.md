@@ -254,8 +254,9 @@ tag holds — including `#E`/`#P`, which are different tags from `#e`/`#p`.
 ```ts
 zostr.filter().parse({
   kinds: [1],
-  authors: ["3bf0c63f..."],
-  "#e": ["000000..."],
+  authors: ["3bf0c63f..."], // elided; each must be 64 lowercase hex chars
+  "#e": ["000000..."],      // elided; same form as `ids`/`authors`
+  "#t": ["nostr"],          // any other tag filter: arbitrary strings
   limit: 50,
 });
 ```

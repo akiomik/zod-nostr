@@ -1,5 +1,5 @@
 import { verifyEvent } from "nostr-tools/pure";
-import type * as core from "zod/v4/core";
+import * as core from "zod/v4/core";
 import {
   signatureCheck as coreSignatureCheck,
   makeCheck,
@@ -7,7 +7,7 @@ import {
   nonEmptyArrayCheck,
   nonNegativeIntegerCheck,
 } from "./core/checks.js";
-import { hexPattern, hexStringSchema } from "./core/hex.js";
+import { hexStringSchema } from "./core/hex.js";
 import {
   zodArray,
   zodBoolean,
@@ -240,8 +240,15 @@ const FILTER_TAG_KEY = /^#[a-zA-Z]$/;
  */
 const FILTER_HEX_TAG_KEYS = ["#e", "#p"] as const;
 
-/** The value form those two lists must take (same as `eventId()`/`pubkey()`). */
-const FILTER_HEX_VALUE = hexPattern(64);
+/**
+ * The value form those two lists must take. This is the schema `ids` and
+ * `authors` already carry, not a second statement of the same rule: the four
+ * lists are one sentence in NIP-01, so they are held to one schema, and a
+ * `"#e"` value fails exactly as an `ids` value does — same issue code, format,
+ * and message, without this module wording any of them. One shared instance,
+ * since it is only ever parsed against, never composed into another schema.
+ */
+const FILTER_HEX_VALUE = hexStringSchema(64);
 
 /**
  * Rejects filter keys that are neither a known NIP-01 field nor a `"#<letter>"`
@@ -268,19 +275,19 @@ function filterTagKeysCheck(
 }
 
 /**
- * Rejects a `"#e"`/`"#p"` filter value that is not a 64-character lowercase hex
- * string, the form NIP-01 requires of those two lists (see
- * {@link FILTER_HEX_TAG_KEYS}). One issue per offending key: the outcome is a
- * single pass/fail per list, so the scan stops at that key's first bad value
- * rather than reporting each of them.
+ * Rejects a `"#e"`/`"#p"` filter value that is not the 64-character lowercase
+ * hex string NIP-01 requires of those two lists (see
+ * {@link FILTER_HEX_TAG_KEYS}). Each value is parsed by
+ * {@link FILTER_HEX_VALUE}, so an offending one is reported per element and
+ * under its own path — `["#e", 0]` — exactly as `ids`/`authors` report theirs.
+ * The same rule surfacing in two shapes would leave a consumer reading paths
+ * for two of the four lists and messages for the other two.
  *
- * Whether a key holds a non-empty array of strings at all is the catchall's
- * job, and an object's checks do not run once its catchall has reported — so in
- * practice this only ever sees a `string[]`. It guards both shapes rather than
- * trust that: a non-array key is skipped, and a non-string element fails
- * without reaching `RegExp.test`, which would coerce it (and throw on a
- * symbol). Composing this onto any filter-shaped object is then never a way to
- * make a parse throw.
+ * Whether a key holds a non-empty array at all is the catchall's job, and an
+ * object's checks do not run once its catchall has reported — so in practice
+ * this only ever sees an array of strings. A non-array key is skipped rather
+ * than trusted, and a non-string element needs no guard here: it fails on the
+ * schema's own type check, with nothing coerced.
  *
  * Split from {@link filterTagKeysCheck} rather than folded into it: that check
  * answers which keys may appear, this one what two of them may hold, and
@@ -291,16 +298,22 @@ function filterTagValuesCheck(): core.$ZodCheck<Record<string, unknown>> {
     for (const key of FILTER_HEX_TAG_KEYS) {
       const values = payload.value[key];
       if (!Array.isArray(values)) continue;
-      const invalid = values.some(
-        (value) => typeof value !== "string" || !FILTER_HEX_VALUE.test(value),
-      );
-      if (invalid) {
-        payload.issues.push({
-          code: "custom",
-          input: payload.value,
-          message: `Invalid "${key}" filter value (expected a 64-character lowercase hex string)`,
-        });
-      }
+      values.forEach((value, index) => {
+        const result = core.safeParse(FILTER_HEX_VALUE, value);
+        if (result.success) return;
+        for (const issue of result.error.issues) {
+          // Prefixed, not replaced: the schema reports at its own root, and
+          // the parser prefixes the filter's path onto whatever this check
+          // pushes. `input` is restated because a finalized issue carries it
+          // optionally and a raw one requires it — the offending element,
+          // which is what the schema itself reports.
+          payload.issues.push({
+            ...issue,
+            input: value,
+            path: [key, index, ...issue.path],
+          });
+        }
+      });
     }
   });
 }
