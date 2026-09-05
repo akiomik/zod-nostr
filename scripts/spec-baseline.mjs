@@ -159,15 +159,18 @@ export function specBaselineProblems({ baseline, files }) {
     const declared = named && holds(source);
     if (named && !declared)
       problems.push(`${BASELINE}: \`sources.${family}\` describes no family`);
-    // A family with no `documents` at all is reported above; here it is read as
-    // the no entries it has, so that its modules are still spoken for.
-    const documents = Object.hasOwn(baseline.documents, family)
+    // A family with no `documents` is reported above and one whose `documents`
+    // are not entries is reported here. Either way it is read as the no entries
+    // it has rather than skipped, so that its modules are still spoken for: a
+    // label is all it takes to find them, and stopping would leave the file to
+    // baseline for the run after this one is fixed.
+    const held = Object.hasOwn(baseline.documents, family)
       ? baseline.documents[family]
       : {};
-    if (!holds(documents)) {
+    const unusable = !holds(held);
+    if (unusable)
       problems.push(`${BASELINE}: \`documents.${family}\` holds no entries`);
-      continue;
-    }
+    const documents = unusable ? {} : held;
 
     // Reported rather than thrown on: a family added without its label is the
     // same half-finished edit as one added without its entries, and crashing

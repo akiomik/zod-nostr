@@ -489,12 +489,16 @@ describe("specBaselineProblems", () => {
       ]);
     });
 
-    it("reports a family whose entries are not an object", () => {
+    // Read as the no entries it has, not skipped: the label is there, so the
+    // modules wanting an entry are named in the same run as the family.
+    it("reports a family whose entries are not an object, and its modules", () => {
       const input = repository();
       input.baseline.documents.luds = null;
       input.files.push("lud99.ts");
       expect(specBaselineProblems(input)).toEqual([
         "spec-baseline.json: `documents.luds` holds no entries",
+        "spec-baseline.json: `src/lud16.ts` has no `luds.16` entry",
+        "spec-baseline.json: `src/lud99.ts` has no `luds.99` entry",
       ]);
     });
   });
