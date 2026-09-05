@@ -23,8 +23,16 @@ const OTHER_HASH = `${OTHER_COMMIT}${OTHER_COMMIT.slice(0, 24)}`;
 // however `HASH` is spelled. Reached by index, so two calls differ as well.
 const MARKS = [..."abcdef"].filter((mark) => mark !== HASH[0]);
 
-/** The nth hash unlike `HASH` and unlike every other `unlike`. */
-const unlike = (nth) => `${MARKS[nth]}${HASH.slice(1)}`;
+/**
+ * The nth hash unlike `HASH` and unlike every other `unlike`, for `nth` below
+ * `MARKS.length` — six, or five when `HASH` starts with a hex letter. Past that
+ * the mark is `undefined`, which would make a hash that is not one and change
+ * which diagnostic a case asserts rather than failing as the misuse it is.
+ */
+const unlike = (nth) => {
+  if (nth >= MARKS.length) throw new RangeError(`no mark ${nth} to build with`);
+  return `${MARKS[nth]}${HASH.slice(1)}`;
+};
 
 const NIPS = "https://github.com/nostr-protocol/nips";
 const LUDS = "https://github.com/lnurl/luds";

@@ -53,7 +53,7 @@ if (problems.length > 0) {
   // was widened to remove from it.
   console.error(
     unread.length > 0
-      ? `\nThere is nothing to compare without both of them.`
+      ? `\nWithout ${BASELINE} and ${SOURCE}/ both readable, there is nothing to compare.`
       : `\n${BASELINE} and the spec modules under ${SOURCE}/ must agree about what is baselined, family by family, for the families ${BASELINE} declares.`,
   );
   // Set, not `process.exit(1)`: writes to a pipe — which stderr is under CI —

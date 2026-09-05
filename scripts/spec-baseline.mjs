@@ -147,17 +147,25 @@ export function specBaselineProblems({ baseline, files }) {
       );
 
   // Which families answer to each label, before any of them is judged by it.
+  // Tested for being a string first: a regex coerces what it tests, so `true`
+  // would read as `"true"` and `LUD(` would reach `RegExp` as syntax.
   // One label naming two families cannot be settled by taking the first: the
   // accidental copy is as likely to be written above the original as below,
   // and whichever came first would claim the modules while the other was told
   // its own were missing. Neither is judged by them, and the collision is what
   // the report names. Keyed lowercase, as `moduleIds` matches.
+  // What counts as a label is decided here and read below, not decided twice: a
+  // second copy of the test is a second thing to keep in step, and the loop
+  // that reads `byLabel` would throw on the family the two stopped agreeing
+  // about, losing the report the file promises to deliver instead.
+  const labelOf = new Map();
   const byLabel = new Map();
   for (const family of Object.keys(baseline.sources)) {
     const label = holds(baseline.sources[family])
       ? baseline.sources[family].label
       : undefined;
     if (typeof label !== "string" || !LABEL.test(label)) continue;
+    labelOf.set(family, label);
     const key = label.toLowerCase();
     byLabel.set(key, [...(byLabel.get(key) ?? []), family]);
   }
@@ -208,11 +216,10 @@ export function specBaselineProblems({ baseline, files }) {
 
     // Reported rather than thrown on: a family added without its label is the
     // same half-finished edit as one added without its entries, and crashing
-    // would take the rest of the report with it. A regex coerces what it tests,
-    // so `true` would read as `"true"` without the type check.
-    const { label, repository } = declared ? source : {};
-    const names = typeof label === "string" && LABEL.test(label);
-    if (declared && !names)
+    // would take the rest of the report with it.
+    const { repository } = declared ? source : {};
+    const label = labelOf.get(family);
+    if (declared && label === undefined)
       problems.push(
         `${BASELINE}: \`sources.${family}\` has no label naming a document series`,
       );
@@ -223,7 +230,8 @@ export function specBaselineProblems({ baseline, files }) {
       problems.push(`${BASELINE}: \`sources.${family}\` has no repository`);
     // Usable, not merely a name: a label two families answer to finds modules
     // that cannot be told apart, and the collision is reported above.
-    const usable = names && byLabel.get(label.toLowerCase()).length === 1;
+    const usable =
+      label !== undefined && byLabel.get(label.toLowerCase()).length === 1;
     const modules = usable ? moduleIds(label, files) : new Map();
     // Ids already reported at their entry, in the spelling the modules use: the
     // module that matches one is there, so calling it an orphan of a missing
