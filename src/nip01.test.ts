@@ -188,12 +188,89 @@ describe.each(FLAVORS)("zostr NIP-01 filter() ($name)", ({ zostr, z }) => {
   );
 
   it("keeps {} valid and accepts present arrays with at least one value", () => {
+    const id = "c".repeat(64);
     expect(z.parse(zostr.filter(), {})).toEqual({});
-    expect(z.parse(zostr.filter(), { kinds: [1], "#e": ["id"] })).toEqual({
+    expect(z.parse(zostr.filter(), { kinds: [1], "#e": [id] })).toEqual({
       kinds: [1],
-      "#e": ["id"],
+      "#e": [id],
     });
   });
+
+  it.each(["#e", "#p"])(
+    "accepts a 64-character lowercase hex %s value",
+    (key) => {
+      const hex = "c".repeat(64);
+
+      expect(z.parse(zostr.filter(), { [key]: [hex] })).toEqual({
+        [key]: [hex],
+      });
+      // One bad value fails the list even when the rest are well-formed.
+      expect(
+        z.safeParse(zostr.filter(), { [key]: [hex, "nope"] }).success,
+      ).toBe(false);
+    },
+  );
+
+  // One case per way the form can be wrong, so no case stands in for another:
+  // "id" is short *and* non-hex, and would pass for either on its own.
+  it.each<[string, string]>([
+    ["too short", "id"],
+    ["the right length but not hex", "z".repeat(64)],
+    ["hex digits in uppercase", "C".repeat(64)],
+  ])('rejects a "#e"/"#p" value that is %s', (_label, value) => {
+    expect(z.safeParse(zostr.filter(), { "#e": [value] }).success).toBe(false);
+    expect(z.safeParse(zostr.filter(), { "#p": [value] }).success).toBe(false);
+  });
+
+  it("reports a malformed #e exactly as it reports a malformed ids", () => {
+    const values = ["nope", "also-nope"];
+    const tagFilter = z.safeParse(zostr.filter(), { "#e": values });
+    const idsFilter = z.safeParse(zostr.filter(), { ids: values });
+
+    expect(tagFilter.success).toBe(false);
+    expect(idsFilter.success).toBe(false);
+    // NIP-01 states one rule over both lists, so both report it the same way:
+    // one issue per offending element, under that element's path. Compared with
+    // the field name dropped, nothing else about the issues may differ.
+    const withoutFieldName = (result: typeof tagFilter) =>
+      result.error?.issues.map((issue) => ({
+        ...issue,
+        path: issue.path.slice(1),
+      }));
+    expect(withoutFieldName(tagFilter)).toEqual(withoutFieldName(idsFilter));
+    expect(tagFilter.error?.issues.map((issue) => issue.path)).toEqual([
+      ["#e", 0],
+      ["#e", 1],
+    ]);
+  });
+
+  it("reports a malformed #e alongside another field's, as ids does", () => {
+    const result = z.safeParse(zostr.filter(), {
+      ids: ["nope"],
+      "#e": ["nope"],
+    });
+
+    expect(result.success).toBe(false);
+    // Neither hides the other, because both are fields. Were the hex rule an
+    // object-level check instead, only `ids` would be reported: a property
+    // issue stops an object's checks from running at all.
+    expect(result.error?.issues).toHaveLength(2);
+    expect(result.error?.issues.map((issue) => issue.path)).toEqual(
+      expect.arrayContaining([
+        ["ids", 0],
+        ["#e", 0],
+      ]),
+    );
+  });
+
+  it.each(["#a", "#t", "#E", "#P"])(
+    "leaves %s values unconstrained, since NIP-01 names only #e and #p",
+    (key) => {
+      expect(z.parse(zostr.filter(), { [key]: ["anything"] })).toEqual({
+        [key]: ["anything"],
+      });
+    },
+  );
 });
 
 describe.each(FLAVORS)(
@@ -257,6 +334,16 @@ describe.each(FLAVORS)(
       // At least one filter is required (matching NIP-01's REQ grammar).
       expect(
         z.safeParse(zostr.nip01.clientMessage.req(), ["REQ", "sub1"]).success,
+      ).toBe(false);
+      // REQ carries filter(), so the filter's own rules travel with it — a
+      // rest filter is held to them too, not just the required first one.
+      expect(
+        z.safeParse(zostr.nip01.clientMessage.req(), [
+          "REQ",
+          "sub1",
+          {},
+          { "#e": ["not-hex"] },
+        ]).success,
       ).toBe(false);
       expect(
         z.parse(zostr.nip01.clientMessage.close(), ["CLOSE", "sub1"]),
@@ -358,6 +445,11 @@ describe("zostr NIP-01 output types", () => {
 
     const f = classicZostr.filter().parse({ kinds: [1] });
     expectTypeOf(f.kinds).toEqualTypeOf<number[] | undefined>();
+    // `#e`/`#p` are declared fields, so they infer precisely; every other tag
+    // filter is still read through the catchall's `[key: string]: unknown`.
+    expectTypeOf(f["#e"]).toEqualTypeOf<string[] | undefined>();
+    expectTypeOf(f["#p"]).toEqualTypeOf<string[] | undefined>();
+    expectTypeOf(f["#t"]).toEqualTypeOf<unknown>();
 
     const ok = classicZostr.nip01.relayMessage
       .ok()
@@ -378,6 +470,9 @@ describe("zostr NIP-01 output types", () => {
 
     const f = zm.parse(miniZostr.filter(), { kinds: [1] });
     expectTypeOf(f.kinds).toEqualTypeOf<number[] | undefined>();
+    expectTypeOf(f["#e"]).toEqualTypeOf<string[] | undefined>();
+    expectTypeOf(f["#p"]).toEqualTypeOf<string[] | undefined>();
+    expectTypeOf(f["#t"]).toEqualTypeOf<unknown>();
 
     const ok = zm.parse(miniZostr.nip01.relayMessage.ok(), [
       "OK",

@@ -264,6 +264,15 @@ export function filterTagKeysCheck(
  * stays valid because every field is optional. Unknown keys are rejected by
  * `filterTagKeysCheck()` (only known fields and `"#<letter>"` tag filters are
  * allowed), so nothing is silently stripped.
+ *
+ * `"#e"` and `"#p"` are declared fields rather than catchall keys, because
+ * NIP-01 says what they hold: "the `ids`, `authors`, `#e` and `#p` filter lists
+ * MUST contain exact 64-character lowercase hex values". Naming them puts them
+ * under `eventId()`/`pubkey()` — one sentence of the spec, one pair of schemas,
+ * and a malformed value reported where and when a malformed `ids` value is.
+ * The catchall keeps serving every other `"#<letter>"` filter, which carries
+ * arbitrary strings; that includes `"#E"`/`"#P"`, since NIP-01 names the
+ * lowercase pair and an uppercase tag is a different tag.
  */
 export function filter() {
   return zodObject(
@@ -271,6 +280,12 @@ export function filter() {
       ids: zodOptional(zodArray(eventId(), [nonEmptyArrayCheck("ids")])),
       authors: zodOptional(zodArray(pubkey(), [nonEmptyArrayCheck("authors")])),
       kinds: zodOptional(zodArray(kind(), [nonEmptyArrayCheck("kinds")])),
+      // Labelled "tag filter" like the catchall they are lifted out of, so a
+      // `"#e"` and a `"#t"` still report an empty array identically.
+      "#e": zodOptional(
+        zodArray(eventId(), [nonEmptyArrayCheck("tag filter")]),
+      ),
+      "#p": zodOptional(zodArray(pubkey(), [nonEmptyArrayCheck("tag filter")])),
       since: zodOptional(timestamp()),
       until: zodOptional(timestamp()),
       limit: zodOptional(limit()),

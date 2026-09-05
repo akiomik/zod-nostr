@@ -53,6 +53,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Breaking:** a `filter()`'s `"#e"` and `"#p"` values must be **64-character
+  lowercase hex** strings. NIP-01 states this of four lists — "the `ids`,
+  `authors`, `#e` and `#p` filter lists MUST contain exact 64-character
+  lowercase hex values" — and only the first two enforced it: every
+  `"#<letter>"` tag filter went through one catchall, which cannot tell one tag
+  letter from another, so a malformed event id or pubkey in `"#e"`/`"#p"`
+  parsed. They are declared fields now, carrying `eventId()`/`pubkey()` as
+  `ids`/`authors` do, so a malformed value is reported the same way theirs is:
+  one issue per offending element, under that element's path (`["#e", 0]`), and
+  alongside any other field's rather than instead of it. Being fields also
+  breaks their inferred type: `"#e"` and `"#p"` read as `string[] | undefined`
+  where the catchall's `[key: string]: unknown` left them `unknown` — the same
+  refinement 0.2.0 recorded for `filter()`'s named fields. Applies to
+  `zostr.filter()` and `zostr.nip50.filter()`, and to the `REQ`/`COUNT` messages
+  that carry them. Every other `"#<letter>"` filter still carries arbitrary
+  strings, including `"#E"`/`"#P"` — NIP-01 names the lowercase pair, and an
+  uppercase tag is a different tag.
+
+  ```ts
+  // before → after
+  { "#e": ["abc"] }  →  { "#e": ["5c83da77…"] }  // 64 lowercase hex chars
+  ```
+
 - **`scripts/` for the checks that gate the build.** `npm run test:jsdoc` and
   `npm run test:consumer` ran from `test/`, beside the fixture one of them
   compiles, which read as tests of test code once one of these checks grew

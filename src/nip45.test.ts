@@ -33,6 +33,9 @@ describe.each(FLAVORS)(
       ["an empty subscription id", ["COUNT", "", {}]],
       // Filters are still validated (unknown filter key rejected).
       ["an unknown filter key", ["COUNT", "sub1", { foo: ["x"] }]],
+      // NIP-45's HLL section counts by "#e"/"#p", whose values NIP-01 fixes to
+      // 64-character lowercase hex.
+      ['a malformed "#e" value', ["COUNT", "sub1", { "#e": ["not-hex"] }]],
     ])("rejects %s", (_label, message) => {
       expect(
         z.safeParse(zostr.nip45.clientMessage.count(), message).success,

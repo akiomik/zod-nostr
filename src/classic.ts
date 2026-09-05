@@ -177,6 +177,8 @@ const nip01Namespace = {
    * `limit`, plus any number of `#<a-zA-Z>` tag-value filters. Unknown keys
    * outside that set are rejected, and an array field, when present, must be
    * non-empty — omit it instead to place no constraint on that dimension.
+   * `ids`, `authors`, `#e`, and `#p` hold 64-character lowercase hex values;
+   * every other tag filter holds arbitrary strings.
    */
   filter: () =>
     z

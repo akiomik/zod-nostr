@@ -233,24 +233,32 @@ Used as the second element of `REQ`/`CLOSE`/`EVENT` (relay→client)/`EOSE`/
 
 ### `zostr.filter()`
 
-The NIP-01 `REQ`/`COUNT` filter object: `ids`, `authors`, `kinds`, `since`,
-`until`, `limit`, plus any number of `#<a-zA-Z>` tag-value filters (e.g.
-`#e`, `#p`). Unknown keys outside this set are rejected. `since`/`until` are
-integer timestamps and `limit` is a non-negative integer (an event count);
-non-integer, negative, and non-finite values are rejected. `ids`, `authors`,
-`kinds`, and each `#<letter>` array must be **non-empty** when present, matching
-NIP-01's grammar (an array field, when present, lists at least one value); a
-previously-accepted empty `[]` is now rejected. The empty filter object `{}`
-(match anything) stays valid. An empty array had no defined meaning, so there is
-no drop-in replacement: **omit** the field to place no constraint on that
-dimension (this widens the match), or drop the filter / don't send the request
-to select nothing.
+The NIP-01 `REQ`/`COUNT` filter object: `ids`, `authors`, `kinds`, `#e`, `#p`,
+`since`, `until`, `limit`, plus any number of further `#<a-zA-Z>` tag-value
+filters (e.g. `#t`, `#a`). Unknown keys outside this set are rejected.
+`since`/`until` are integer timestamps and `limit` is a non-negative integer
+(an event count); non-integer, negative, and non-finite values are rejected.
+`ids`, `authors`, `kinds`, and each `#<letter>` array must be **non-empty**
+when present, matching NIP-01's grammar (an array field, when present, lists at
+least one value); a previously-accepted empty `[]` is now rejected. The empty
+filter object `{}` (match anything) stays valid. An empty array had no defined
+meaning, so there is no drop-in replacement: **omit** the field to place no
+constraint on that dimension (this widens the match), or drop the filter /
+don't send the request to select nothing.
+
+`ids`, `authors`, `#e`, and `#p` must hold **64-character lowercase hex**
+values, which NIP-01 requires of those four lists — so `#e` and `#p` are named
+fields here, and infer as `string[] | undefined` rather than through the
+catchall. Every other `#<letter>` filter carries arbitrary strings (inferred
+`unknown`, like any catchall key), since NIP-01 says nothing about what any
+other tag holds — including `#E`/`#P`, which are different tags from `#e`/`#p`.
 
 ```ts
 zostr.filter().parse({
   kinds: [1],
-  authors: ["3bf0c63f..."],
-  "#e": ["000000..."],
+  authors: ["3bf0c63f..."], // elided; each must be 64 lowercase hex chars
+  "#e": ["000000..."],      // elided; same form as `ids`/`authors`
+  "#t": ["nostr"],          // any other tag filter: arbitrary strings
   limit: 50,
 });
 ```
