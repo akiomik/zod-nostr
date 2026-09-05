@@ -45,9 +45,10 @@ the single source of truth for provenance.
   `date` is when it landed upstream (the committer date, which is not always the
   author date a commit page shows); `sha256` is the
   hash of the document's Markdown at that commit. The hash is the load-bearing
-  field: the commit names a revision and the hash names its text, so an entry
-  can be confirmed against the document rather than taken on trust. Being a
-  data file rather than prose is what lets a check read it.
+  field: a commit id can be copied out of a log, while a hash cannot be had
+  without the document, so it is the part of an entry its author could not have
+  written without the text in front of them. Being a data file rather than
+  prose is what lets a check read it.
 - **No review date.** An entry says which revision the schemas target; it does
   not say when someone last looked. Recording that would mean stamping every
   document as reviewed whenever one of them is, and the honest alternative —
@@ -140,15 +141,14 @@ targets, not a guarantee that upstream has not moved since. Diffing from the
 recorded commit is how a maintainer finds out, which is what the file is there
 to make possible.
 
-Two gaps stay open. The first is that only one of an entry's three fields
-stands on its own: a `commit` is a name, while `date` and `sha256` are claims
-about what that name points at — when it landed, and what its text was.
-Confirming a claim means fetching the document, and no check that reads only
-this repository does; the name itself is never looked up either. Entries are
-held to each other, but agreement is not confirmation: entries that share a
-commit can agree on a day it did not land on. An entry is true because whoever
-wrote it hashed the document as they read it — care taken at the keyboard, not
-something the build can demand.
+Two gaps stay open. The first is that all three of an entry's fields are
+assertions about a repository this one does not vendor — that the revision
+exists, that it landed then, that its text hashed to this — and nothing here
+fetches it, so none of them is confirmed. Entries are held to each other, but
+agreement is not confirmation: entries that share a commit can agree on a day
+it did not land on. An entry is true because whoever wrote it hashed the
+document as they read it — care taken at the keyboard, not something the build
+can demand.
 
 The second follows from provenance being read from filenames: a specification
 implemented **inside an existing module** rather than in its own file is
