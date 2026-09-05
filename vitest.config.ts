@@ -2,11 +2,10 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
-    // Stated rather than left to the default, and by extension rather than by
-    // place: the library's tests live beside the source and the checks that
-    // gate the build carry their own under `scripts/`, so naming directories
-    // would drop whichever one a later edit forgot.
-    include: ["**/*.test.{ts,mjs}"],
+    // No `include`: vitest's default already collects both the library's tests
+    // beside the source and the ones the build's checks carry under `scripts/`.
+    // Any list written here would be narrower than that default, and would drop
+    // whatever it forgot to name without saying so.
     coverage: {
       provider: "v8",
       include: ["src/**/*.ts"],
