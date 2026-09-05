@@ -34,6 +34,10 @@ const unlike = (nth) => {
   return `${MARKS[nth]}${HASH.slice(1)}`;
 };
 
+// Instants, as `landed` holds them: RFC 3339 in UTC, to the second.
+const LANDED = "2026-09-04T04:19:51Z";
+const OTHER_LANDED = "2026-07-16T14:52:59Z";
+
 const NIPS = "https://github.com/nostr-protocol/nips";
 const LUDS = "https://github.com/lnurl/luds";
 
@@ -46,9 +50,13 @@ function repository() {
         luds: { label: "LUD", repository: LUDS },
       },
       documents: {
-        nips: { "01": { commit: COMMIT, date: "2026-09-04", sha256: HASH } },
+        nips: { "01": { commit: COMMIT, landed: LANDED, sha256: HASH } },
         luds: {
-          16: { commit: OTHER_COMMIT, date: "2026-07-16", sha256: OTHER_HASH },
+          16: {
+            commit: OTHER_COMMIT,
+            landed: OTHER_LANDED,
+            sha256: OTHER_HASH,
+          },
         },
       },
     },
@@ -74,10 +82,32 @@ describe("specBaselineProblems", () => {
       [{ commit: "0123456" }, "has no 40-character lowercase-hex commit"],
       [{ commit: undefined }, "has no 40-character lowercase-hex commit"],
       [{ sha256: "abc" }, "has no 64-character lowercase-hex sha256"],
-      [{ date: "yesterday" }, "has no YYYY-MM-DD date"],
-      [{ date: "2026-90-04" }, "dates a day that does not exist, 2026-90-04"],
-      [{ date: "2026-02-30" }, "dates a day that does not exist, 2026-02-30"],
-      [{ date: "2999-01-01" }, "dates a day that has not come, 2999-01-01"],
+      [{ landed: "yesterday" }, "has no YYYY-MM-DDTHH:MM:SSZ instant"],
+      // A bare day is what this field used to hold, so it is the likeliest
+      // thing to be written here by hand or left behind by a half-done edit.
+      [{ landed: "2026-09-04" }, "has no YYYY-MM-DDTHH:MM:SSZ instant"],
+      // One instant, one spelling: an offset or a fraction is the same moment
+      // written another way, and entries at one commit are compared as text.
+      [
+        { landed: "2026-09-04T13:19:51+09:00" },
+        "has no YYYY-MM-DDTHH:MM:SSZ instant",
+      ],
+      [
+        { landed: "2026-09-04T04:19:51.000Z" },
+        "has no YYYY-MM-DDTHH:MM:SSZ instant",
+      ],
+      [
+        { landed: "2026-90-04T00:00:00Z" },
+        "lands at an instant that does not exist, 2026-90-04T00:00:00Z",
+      ],
+      [
+        { landed: "2026-02-30T00:00:00Z" },
+        "lands at an instant that does not exist, 2026-02-30T00:00:00Z",
+      ],
+      [
+        { landed: "2999-01-01T00:00:00Z" },
+        "lands at an instant that has not come, 2999-01-01T00:00:00Z",
+      ],
     ])("rejects %o", (patch, message) => {
       expect(specBaselineProblems(withEntry("nips", "01", patch))).toEqual([
         `spec-baseline.json: \`nips.01\` ${message}`,
@@ -86,44 +116,51 @@ describe("specBaselineProblems", () => {
 
     it("accepts a leap day that does exist", () => {
       expect(
-        specBaselineProblems(withEntry("nips", "01", { date: "2024-02-29" })),
+        specBaselineProblems(
+          withEntry("nips", "01", { landed: "2024-02-29T12:00:00Z" }),
+        ),
       ).toEqual([]);
     });
 
-    // A day of slack: a maintainer east of UTC reads today's date off a commit
-    // page while UTC is still on yesterday.
-    it("accepts today and tomorrow", () => {
-      const day = (offset) =>
-        new Date(Date.now() + offset).toISOString().slice(0, 10);
-      for (const date of [day(0), day(86_400_000)])
-        expect(specBaselineProblems(withEntry("nips", "01", { date }))).toEqual(
-          [],
-        );
+    // An instant says which moment it is, so "has it come?" has one answer
+    // wherever it is asked from. The day of slack a bare date needed is gone,
+    // and a minute ahead is ahead.
+    it("accepts now and rejects a minute from now", () => {
+      const at = (offset) =>
+        `${new Date(Date.now() + offset).toISOString().slice(0, 19)}Z`;
+      expect(
+        specBaselineProblems(withEntry("nips", "01", { landed: at(0) })),
+      ).toEqual([]);
+      expect(
+        specBaselineProblems(withEntry("nips", "01", { landed: at(60_000) })),
+      ).toEqual([
+        expect.stringContaining("lands at an instant that has not come"),
+      ]);
     });
 
-    // One commit has one committer date, so two entries recording it must
-    // agree — a transposed day is otherwise a real date at a real commit.
-    it("rejects two entries dating one commit differently", () => {
+    // One commit landed once, so two entries recording it must agree about
+    // when — a transposed digit is otherwise a real instant at a real commit.
+    it("rejects two entries landing one commit differently", () => {
       const input = withEntry("luds", 16, {
         commit: COMMIT,
-        date: "2026-09-05",
+        landed: OTHER_LANDED,
       });
       expect(specBaselineProblems(input)).toEqual([
-        expect.stringContaining("dates 0123456 to 2026-09-05"),
+        expect.stringContaining(`lands 0123456 at ${OTHER_LANDED}`),
       ]);
     });
 
     // Judged on a commit that is one, as the paste check is on a hash that is:
-    // two placeholders disagreeing about a date they do not have is noise.
-    it("does not date entries by a commit that is not one", () => {
+    // two placeholders disagreeing about an instant they do not have is noise.
+    it("does not land entries by a commit that is not one", () => {
       const input = repository();
-      for (const [id, date] of [
-        ["01", "2026-01-01"],
-        ["05", "2026-02-02"],
+      for (const [id, landed] of [
+        ["01", "2026-01-01T00:00:00Z"],
+        ["05", "2026-02-02T00:00:00Z"],
       ])
         input.baseline.documents.nips[id] = {
           commit: "TODO",
-          date,
+          landed,
           sha256: unlike(id === "01" ? 0 : 1),
         };
       input.files.push("nip05.ts");
@@ -142,13 +179,13 @@ describe("specBaselineProblems", () => {
       for (const id of ["05", "10"])
         input.baseline.documents.nips[id] = {
           commit: COMMIT,
-          date: "2026-09-05",
+          landed: OTHER_LANDED,
           sha256: unlike(id === "05" ? 0 : 1),
         };
       input.files.push("nip05.ts", "nip10.ts");
       expect(
         specBaselineProblems(input).filter((problem) =>
-          problem.includes("dates 0123456"),
+          problem.includes("lands 0123456"),
         ),
       ).toHaveLength(1);
     });
@@ -162,41 +199,45 @@ describe("specBaselineProblems", () => {
       input.baseline.documents.nips = {
         10: {
           commit: COMMIT,
-          date: "2026-09-05",
+          landed: OTHER_LANDED,
           sha256: unlike(0),
         },
-        "01": { commit: COMMIT, date: "2026-09-04", sha256: HASH },
+        "01": { commit: COMMIT, landed: LANDED, sha256: HASH },
       };
       input.files = ["nip01.ts", "nip10.ts", "lud16.ts"];
       expect(specBaselineProblems(input)).toEqual([
-        "spec-baseline.json: `nips.10` dates 0123456 to 2026-09-05, which `nips.01` dates to 2026-09-04",
+        `spec-baseline.json: \`nips.10\` lands 0123456 at ${OTHER_LANDED}, which \`nips.01\` lands at ${LANDED}`,
       ]);
     });
 
     // Two entries wrong in two ways are two edits. Folding them into one
     // report would cost a second build to learn about the second.
-    it("reports each date a commit is given, not only the first wrong one", () => {
+    it("reports each instant a commit is given, not only the first wrong one", () => {
       const input = repository();
-      for (const [id, date] of [
-        ["05", "2026-09-01"],
-        ["10", "2026-09-02"],
+      for (const [id, landed] of [
+        ["05", "2026-09-01T00:00:00Z"],
+        ["10", "2026-09-02T00:00:00Z"],
       ])
         input.baseline.documents.nips[id] = {
           commit: COMMIT,
-          date,
+          landed,
           sha256: unlike(id === "05" ? 0 : 1),
         };
       input.files.push("nip05.ts", "nip10.ts");
       expect(specBaselineProblems(input)).toEqual([
-        expect.stringContaining("`nips.05` dates 0123456 to 2026-09-01"),
-        expect.stringContaining("`nips.10` dates 0123456 to 2026-09-02"),
+        expect.stringContaining(
+          "`nips.05` lands 0123456 at 2026-09-01T00:00:00Z",
+        ),
+        expect.stringContaining(
+          "`nips.10` lands 0123456 at 2026-09-02T00:00:00Z",
+        ),
       ]);
     });
 
     it("accepts two entries agreeing about one commit", () => {
       const input = withEntry("luds", 16, {
         commit: COMMIT,
-        date: "2026-09-04",
+        landed: LANDED,
       });
       expect(specBaselineProblems(input)).toEqual([]);
     });
@@ -205,7 +246,7 @@ describe("specBaselineProblems", () => {
       const input = repository();
       input.baseline.documents.nips["7d"] = {
         commit: OTHER_COMMIT,
-        date: "2026-07-16",
+        landed: OTHER_LANDED,
         sha256: HASH,
       };
       input.files.push("nip7d.ts");
@@ -262,7 +303,7 @@ describe("specBaselineProblems", () => {
     it("reports a lowercase id as not being one", () => {
       const input = repository();
       input.baseline.documents.nips = {
-        "7d": { commit: COMMIT, date: "2026-09-04", sha256: HASH },
+        "7d": { commit: COMMIT, landed: LANDED, sha256: HASH },
       };
       input.files = ["nip7d.ts", "lud16.ts"];
       expect(specBaselineProblems(input)).toEqual([
@@ -282,7 +323,7 @@ describe("specBaselineProblems", () => {
     it("reports an id of the wrong shape", () => {
       const input = repository();
       input.baseline.documents.nips = {
-        1: { commit: COMMIT, date: "2026-09-04", sha256: HASH },
+        1: { commit: COMMIT, landed: LANDED, sha256: HASH },
       };
       // `1` names no id, so the module it does not match is reported too.
       expect(specBaselineProblems(input)).toEqual([
@@ -314,7 +355,7 @@ describe("specBaselineProblems", () => {
     it("names the module it looked for in lowercase", () => {
       const input = repository();
       input.baseline.documents.nips = {
-        "7D": { commit: COMMIT, date: "2026-09-04", sha256: HASH },
+        "7D": { commit: COMMIT, landed: LANDED, sha256: HASH },
       };
       input.files = ["lud16.ts"];
       expect(specBaselineProblems(input)).toEqual([
@@ -352,7 +393,7 @@ describe("specBaselineProblems", () => {
     it("finds a module whose hex id is uppercase", () => {
       const input = repository();
       input.baseline.documents.nips = {
-        "7D": { commit: COMMIT, date: "2026-09-04", sha256: HASH },
+        "7D": { commit: COMMIT, landed: LANDED, sha256: HASH },
       };
       input.files = ["nip7D.ts", "lud16.ts"];
       expect(specBaselineProblems(input)).toEqual([]);
@@ -411,7 +452,7 @@ describe("specBaselineProblems", () => {
       input.baseline.documents.buds = {
         "01": {
           commit: COMMIT,
-          date: "2026-09-04",
+          landed: LANDED,
           sha256: unlike(0),
         },
       };
@@ -425,14 +466,16 @@ describe("specBaselineProblems", () => {
     it("judges the entries of a family `sources` does not declare", () => {
       const input = repository();
       input.baseline.documents.buds = {
-        "01": { commit: "x", date: "nope", sha256: "no" },
+        "01": { commit: "x", landed: "nope", sha256: "no" },
       };
       expect(specBaselineProblems(input)).toEqual([
         "spec-baseline.json: `documents.buds` has no `sources` entry",
         expect.stringContaining(
           "`buds.01` has no 40-character lowercase-hex commit",
         ),
-        expect.stringContaining("`buds.01` has no YYYY-MM-DD date"),
+        expect.stringContaining(
+          "`buds.01` has no YYYY-MM-DDTHH:MM:SSZ instant",
+        ),
         expect.stringContaining(
           "`buds.01` has no 64-character lowercase-hex sha256",
         ),
@@ -511,7 +554,7 @@ describe("specBaselineProblems", () => {
         input.baseline.documents[family] = {
           "01": {
             commit: COMMIT,
-            date: "2026-09-04",
+            landed: LANDED,
             sha256: unlike(0),
           },
         };
@@ -536,13 +579,15 @@ describe("specBaselineProblems", () => {
       input.baseline.sources.luds = null;
       input.baseline.documents.luds[16] = {
         commit: "x",
-        date: "nope",
+        landed: "nope",
         sha256: "no",
       };
       expect(specBaselineProblems(input)).toEqual([
         "spec-baseline.json: `sources.luds` describes no family",
         expect.stringContaining("`luds.16` has no 40-character lowercase-hex"),
-        expect.stringContaining("`luds.16` has no YYYY-MM-DD date"),
+        expect.stringContaining(
+          "`luds.16` has no YYYY-MM-DDTHH:MM:SSZ instant",
+        ),
         expect.stringContaining("`luds.16` has no 64-character lowercase-hex"),
       ]);
     });
