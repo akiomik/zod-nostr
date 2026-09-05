@@ -46,8 +46,8 @@ the single source of truth for provenance.
   the author date a commit page shows); `sha256` is the hash of the document's
   Markdown at that commit. The hash is the load-bearing field: the commit says
   which revision and the hash says which text, so an entry can be confirmed
-  against the document instead of taken on trust. That this is a data file
-  rather than prose is what lets a check read the rest of it.
+  against the document instead of taken on trust. Being a data file rather than
+  prose is what lets a check read it at all.
 - **No review date.** An entry says which revision the schemas target; it does
   not say when someone last looked. Recording that would mean stamping every
   document as reviewed whenever one of them is, and the honest alternative —
@@ -146,18 +146,10 @@ question for whoever is closing the gap, and `spec-baseline.json` is where they
 get the revision to ask it from.
 
 Two gaps stay open whatever is checked. The first is that nothing here reads
-the upstream document, so no entry can be held to its own `commit`: the hash it
-carries is never questioned, an entry's hash being its own and disagreeing with
-nothing, so a bump that keeps the old one goes unremarked; and a wrong day
-passes as long as it is a day that exists and is no more than a day ahead — the
-slack the check leaves for a maintainer reading a date east of UTC — and no
-other entry dates that commit differently. Hashing the document as it is read
-is what makes an entry true, and that is care taken when the entry is written
-rather than anything the build can demand. Of the three fields an entry
-records, what the check sees without the upstream text is each on its own — a
-commit or a hash of the wrong shape, a date that is no day, or one more than a
-day ahead — and entries that disagree with each other, one carrying another's
-hash or two dating one commit differently.
+the upstream document, so no entry's `sha256` or `date` can be held to its
+`commit`: those are facts about a repository this one does not vendor. Hashing
+the document as it is read is what makes an entry true, and that is care taken
+when the entry is written rather than anything the build can demand.
 
 The second follows from provenance being read from filenames: a specification
 implemented **inside an existing module** rather than in its own file is
