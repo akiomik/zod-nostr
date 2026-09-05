@@ -147,12 +147,12 @@ describe("specBaselineProblems", () => {
     // One commit landed once, so two entries recording it must agree about
     // when — a transposed digit is otherwise a real instant at a real commit.
     it("rejects two entries landing one commit differently", () => {
-      const input = withEntry("luds", 16, {
-        commit: COMMIT,
-        landed: OTHER_LANDED,
-      });
+      // A third instant, so the disagreement is in the case rather than in the
+      // fixture's defaults happening to differ.
+      const elsewhen = "2022-03-04T05:06:07Z";
+      const input = withEntry("luds", 16, { commit: COMMIT, landed: elsewhen });
       expect(specBaselineProblems(input)).toEqual([
-        expect.stringContaining(`lands 0123456 at ${OTHER_LANDED}`),
+        expect.stringContaining(`lands 0123456 at ${elsewhen}`),
       ]);
     });
 
