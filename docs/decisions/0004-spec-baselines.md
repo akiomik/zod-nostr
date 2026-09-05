@@ -123,11 +123,8 @@ the single source of truth for provenance.
 - *Exporting the baseline at runtime* (`export const SPEC_BASELINE`) — adds
   public surface and bundle weight for something with documentation value only.
   Nothing prevents adding it later if a consumer asks.
-- *Checking upstream in the same script* — a network call makes the check
-  non-deterministic, and turns an unrelated upstream edit into a red build on
-  an innocent pull request. Whether upstream has moved is a question whose
-  answer changes over time; what a schema was written against does not, and
-  that is what this file records.
+- *Checking upstream in the same script* — weighed and left out, for the
+  reason the decision above gives.
 
 ## Consequences
 
@@ -142,14 +139,15 @@ requirement this record carries, not one the check can demand, for the reason
 below. Re-reading a spec is a reviewable change with a diff, rather than an
 undocumented act of diligence. The baseline is a claim about the text a schema
 targets, not a guarantee that upstream has not moved since. Whether it has is a
-question for whoever is closing the gap, and `spec-baseline.json` is where they
-get the revision to ask it from.
+question for whoever is closing the distance between the two, and
+`spec-baseline.json` is where they get the revision to ask it from.
 
 Two gaps stay open whatever is checked. The first is that nothing here reads
-the upstream document, so no entry's `sha256` or `date` can be held to its
-`commit`: those are facts about a repository this one does not vendor. Hashing
-the document as it is read is what makes an entry true, and that is care taken
-when the entry is written rather than anything the build can demand.
+the upstream document, so no entry can be held to it: whether its `sha256` is
+the hash of that document, and whether its `date` is when that commit landed,
+are facts about a repository this one does not vendor. Hashing the document as
+it is read is what makes an entry true, and that is care taken when the entry
+is written rather than anything the build can demand.
 
 The second follows from provenance being read from filenames: a specification
 implemented **inside an existing module** rather than in its own file is
