@@ -154,6 +154,26 @@ describe("specBaselineProblems", () => {
       ]);
     });
 
+    // Two entries wrong in two ways are two edits. Folding them into one
+    // report would cost a second build to learn about the second.
+    it("reports each date a commit is given, not only the first wrong one", () => {
+      const input = repository();
+      for (const [id, date] of [
+        ["05", "2026-09-01"],
+        ["10", "2026-09-02"],
+      ])
+        input.baseline.documents.nips[id] = {
+          commit: COMMIT,
+          date,
+          sha256: HASH.replace(/^6/, id === "05" ? "7" : "8"),
+        };
+      input.files.push("nip05.ts", "nip10.ts");
+      expect(specBaselineProblems(input)).toEqual([
+        expect.stringContaining("`nips.05` dates c3fd9af to 2026-09-01"),
+        expect.stringContaining("`nips.10` dates c3fd9af to 2026-09-02"),
+      ]);
+    });
+
     it("accepts two entries agreeing about one commit", () => {
       const input = withEntry("luds", 16, {
         commit: COMMIT,

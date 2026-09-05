@@ -16,17 +16,22 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 // Read here rather than inside the rules, and reported rather than thrown on:
 // a `spec-baseline.json` that was renamed or deleted is itself the "edited one
 // file and not the other" mistake this check exists to catch, and it deserves
-// the same report as everything else it catches.
-let problems;
+// the same report as everything else it catches. Only the reads are caught: a
+// rule that throws is a bug in the rules, and reporting it as a file that could
+// not be read would send the reader to check paths and permissions.
+let input = null;
+let unread = null;
 try {
-  const baseline = JSON.parse(readFileSync(join(root, BASELINE), "utf8"));
-  const files = readdirSync(join(root, SOURCE), { recursive: true });
-  problems = specBaselineProblems({ baseline, files });
-  if (problems.length === 0) console.log(specBaselineSummary({ baseline }));
+  input = {
+    baseline: JSON.parse(readFileSync(join(root, BASELINE), "utf8")),
+    files: readdirSync(join(root, SOURCE), { recursive: true }),
+  };
 } catch (cause) {
-  // Named here, since a parse error alone does not say which file it read.
-  problems = [`could not read ${BASELINE} and ${SOURCE}/: ${cause.message}`];
+  // Not `cause.message`: what a `throw` carries is not always an Error.
+  unread = `could not read ${BASELINE} and ${SOURCE}/: ${cause?.message ?? cause}`;
 }
+
+const problems = unread ? [unread] : specBaselineProblems(input);
 
 if (problems.length > 0) {
   console.error(
@@ -40,4 +45,6 @@ if (problems.length > 0) {
   // are asynchronous, and exiting does not wait for them. A gate that exits
   // having printed nothing is the one outcome this must not produce.
   process.exitCode = 1;
+} else {
+  console.log(specBaselineSummary(input));
 }

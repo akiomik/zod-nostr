@@ -73,10 +73,11 @@ the single source of truth for provenance.
   upstream filename's stem, so it is written as that file is: `7D`, not `7d`.
   Both are two characters, which is what a document id is in these series and
   what the check looks for on either side; a module whose stem is another width
-  is not one of these. Nor is a directory or another extension: a spec module is
-  a `.ts` file named for its document, wherever under `src/` it sits, and two
-  files naming one document is reported as that rather than silently sharing an
-  entry.
+  is not one of these, and neither is another extension. The check reads names
+  and not the directory entries behind them, so it would take a directory named
+  `src/nip99.ts` for a module; nothing is done about that, since the mistake it
+  would miss is not one anybody makes. Two files naming one document is
+  reported as that rather than silently sharing an entry.
   The kind:0 `lud06` field carries an LNURL, but the encoding is LUD-01's and
   LUD-06 defines only what the decoded URL answers with, so the module is
   `lud01.ts` and the field keeps its ecosystem name at `metadataFields.lud06()`

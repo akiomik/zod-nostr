@@ -220,11 +220,17 @@ export function specBaselineProblems({ baseline, files }) {
       if (committed && !undated) {
         const first = dated.get(entry.commit);
         if (first === undefined)
-          dated.set(entry.commit, { date: entry.date, at: `${family}.${id}` });
-        else if (first.date !== entry.date && !first.reported) {
-          // One disagreement about one commit is one problem, however many
-          // entries share it.
-          first.reported = true;
+          dated.set(entry.commit, {
+            date: entry.date,
+            at: `${family}.${id}`,
+            // The dates already reported against this one. Entries agreeing on
+            // a wrong date are one edit and say so once; two entries wrong in
+            // two ways are two edits, and reporting only the first would cost
+            // the maintainer a second build to learn about the second.
+            reported: new Set(),
+          });
+        else if (first.date !== entry.date && !first.reported.has(entry.date)) {
+          first.reported.add(entry.date);
           problems.push(
             `${where} dates ${entry.commit.slice(0, 7)} to ${entry.date}, which \`${first.at}\` dates to ${first.date}`,
           );
