@@ -230,7 +230,11 @@ if (errors.length > 0) {
   console.error(
     "\nEvery public path must carry a JSDoc comment, identical in classic and mini.",
   );
-  process.exit(1);
+  // Set, not `process.exit(1)`: writes to a pipe — which stderr is under CI —
+  // are asynchronous, and exiting does not wait for them. A report this size
+  // fits a pipe's buffer, so nothing is lost today; against a reader that does
+  // not drain at once, `process.exit(1)` delivers a fraction of what it wrote.
+  process.exitCode = 1;
 }
 
 console.log(
