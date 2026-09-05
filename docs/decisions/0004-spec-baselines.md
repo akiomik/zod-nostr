@@ -146,16 +146,18 @@ question for whoever is closing the gap, and `spec-baseline.json` is where they
 get the revision to ask it from.
 
 Two gaps stay open whatever is checked. The first is that nothing here reads
-the upstream document, so no entry can be held to its own `commit`: a bump that
-updates `commit` and keeps the old hash passes, an entry's hash being its own
-and disagreeing with nothing, and a wrong day passes as long as it is a day
-that exists and has come and no other entry dates that commit differently.
-Hashing the document as it is read is what makes an entry true, and that is
-care taken when the entry is written rather than anything the build can demand.
-Of the three fields an entry records, what the check sees without the upstream
-text is each on its own — a commit or a hash of the wrong shape, a date that is
-no day or a day still ahead — and entries that disagree with each other, one
-carrying another's hash or two dating one commit differently.
+the upstream document, so no entry can be held to its own `commit`: the hash it
+carries is never questioned, an entry's hash being its own and disagreeing with
+nothing, so a bump that keeps the old one goes unremarked; and a wrong day
+passes as long as it is a day that exists and is no more than a day ahead — the
+slack the check leaves for a maintainer reading a date east of UTC — and no
+other entry dates that commit differently. Hashing the document as it is read
+is what makes an entry true, and that is care taken when the entry is written
+rather than anything the build can demand. Of the three fields an entry
+records, what the check sees without the upstream text is each on its own — a
+commit or a hash of the wrong shape, a date that is no day, or one more than a
+day ahead — and entries that disagree with each other, one carrying another's
+hash or two dating one commit differently.
 
 The second follows from provenance being read from filenames: a specification
 implemented **inside an existing module** rather than in its own file is
