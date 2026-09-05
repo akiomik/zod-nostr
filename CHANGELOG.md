@@ -59,13 +59,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   lowercase hex values" — and only the first two enforced it: every
   `"#<letter>"` tag filter went through one catchall, which cannot tell one tag
   letter from another, so a malformed event id or pubkey in `"#e"`/`"#p"`
-  parsed. Applies to `zostr.filter()` and `zostr.nip50.filter()`, and to the
-  `REQ`/`COUNT` messages that carry them. A malformed value is reported the way
-  `ids`/`authors` report theirs — one issue per offending element, under that
-  element's path (`["#e", 0]`) — so a consumer reading `issue.path` locates it
-  without matching on message text. Every other `"#<letter>"` filter still
-  carries arbitrary strings, including `"#E"`/`"#P"` — NIP-01 names the
-  lowercase pair, and an uppercase tag is a different tag.
+  parsed. They are declared fields now, carrying `eventId()`/`pubkey()` as
+  `ids`/`authors` do, so a malformed value is reported the same way theirs is:
+  one issue per offending element, under that element's path (`["#e", 0]`), and
+  alongside any other field's rather than instead of it. The inferred type gains
+  `"#e"?: string[]` and `"#p"?: string[]`, which the catchall's index signature
+  previously typed as `string[]`. Applies to `zostr.filter()` and
+  `zostr.nip50.filter()`, and to the `REQ`/`COUNT` messages that carry them.
+  Every other `"#<letter>"` filter still carries arbitrary strings, including
+  `"#E"`/`"#P"` — NIP-01 names the lowercase pair, and an uppercase tag is a
+  different tag.
 
   ```ts
   // before → after

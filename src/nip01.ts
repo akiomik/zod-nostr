@@ -1,5 +1,5 @@
 import { verifyEvent } from "nostr-tools/pure";
-import * as core from "zod/v4/core";
+import type * as core from "zod/v4/core";
 import {
   signatureCheck as coreSignatureCheck,
   makeCheck,
@@ -232,32 +232,13 @@ const FILTER_KNOWN_KEYS = new Set([
 const FILTER_TAG_KEY = /^#[a-zA-Z]$/;
 
 /**
- * The `"#<letter>"` tag filters whose **values** NIP-01 constrains: "the `ids`,
- * `authors`, `#e` and `#p` filter lists MUST contain exact 64-character
- * lowercase hex values". Every other tag filter carries whatever its tag
- * carries, so only these two are listed — `"#E"`/`"#P"` are not, since NIP-01
- * names the lowercase keys and an uppercase tag is a different tag.
- */
-const FILTER_HEX_TAG_KEYS = ["#e", "#p"] as const;
-
-/**
- * The value form those two lists must take. This is the schema `ids` and
- * `authors` already carry, not a second statement of the same rule: the four
- * lists are one sentence in NIP-01, so they are held to one schema, and a
- * `"#e"` value fails exactly as an `ids` value does — same issue code, format,
- * and message, without this module wording any of them. One shared instance,
- * since it is only ever parsed against, never composed into another schema.
- */
-const FILTER_HEX_VALUE = hexStringSchema(64);
-
-/**
  * Rejects filter keys that are neither a known NIP-01 field nor a `"#<letter>"`
  * tag filter. `extraKeys` additionally allows spec-extension fields defined by
  * other NIPs (e.g. NIP-50's `"search"`), so the NIP-01 known-key set stays
  * NIP-01 while a variant can widen it without duplicating this logic. The
  * allowed set is materialized once at construction, not per parsed value.
  */
-function filterTagKeysCheck(
+export function filterTagKeysCheck(
   extraKeys: Iterable<string> = [],
 ): core.$ZodCheck<Record<string, unknown>> {
   const knownKeys = new Set([...FILTER_KNOWN_KEYS, ...extraKeys]);
@@ -275,75 +256,23 @@ function filterTagKeysCheck(
 }
 
 /**
- * Rejects a `"#e"`/`"#p"` filter value that is not the 64-character lowercase
- * hex string NIP-01 requires of those two lists (see
- * {@link FILTER_HEX_TAG_KEYS}). Each value is parsed by
- * {@link FILTER_HEX_VALUE}, so an offending one is reported per element and
- * under its own path — `["#e", 0]` — exactly as `ids`/`authors` report theirs.
- * The same rule surfacing in two shapes would leave a consumer reading paths
- * for two of the four lists and messages for the other two.
- *
- * Whether a key holds a non-empty array at all is the catchall's job, and an
- * object's checks do not run once its catchall has reported — so in practice
- * this only ever sees an array of strings. A non-array key is skipped rather
- * than trusted, and a non-string element needs no guard here: it fails on the
- * schema's own type check, with nothing coerced.
- *
- * Split from {@link filterTagKeysCheck} rather than folded into it: that check
- * answers which keys may appear, this one what two of them may hold, and
- * {@link filterChecks} is what keeps a filter carrying both.
- */
-function filterTagValuesCheck(): core.$ZodCheck<Record<string, unknown>> {
-  return makeCheck<Record<string, unknown>>((payload) => {
-    for (const key of FILTER_HEX_TAG_KEYS) {
-      const values = payload.value[key];
-      if (!Array.isArray(values)) continue;
-      values.forEach((value, index) => {
-        const result = core.safeParse(FILTER_HEX_VALUE, value);
-        if (result.success) return;
-        for (const issue of result.error.issues) {
-          // Prefixed, not replaced: the schema reports at its own root, and
-          // the parser prefixes the filter's path onto whatever this check
-          // pushes. `input` is restated because a finalized issue carries it
-          // optionally and a raw one requires it — the offending element,
-          // which is what the schema itself reports.
-          payload.issues.push({
-            ...issue,
-            input: value,
-            path: [key, index, ...issue.path],
-          });
-        }
-      });
-    }
-  });
-}
-
-/**
- * The object-level checks a NIP-01-shaped filter carries: the key check and the
- * `"#e"`/`"#p"` value check. Returned together because a filter needs both and
- * they are composed in several places — `filter()`, NIP-50's `search`-extended
- * variant, and each flavor's re-wrap — so a filter built with one and not the
- * other can't be assembled by accident. `extraKeys` is passed through to
- * {@link filterTagKeysCheck}.
- */
-export function filterChecks(
-  extraKeys: Iterable<string> = [],
-): core.$ZodCheck<Record<string, unknown>>[] {
-  return [filterTagKeysCheck(extraKeys), filterTagValuesCheck()];
-}
-
-/**
  * REQ/COUNT filter object (structure only; does not enforce `since <= until`).
  *
  * `ids`/`authors`/`kinds` and every `"#<letter>"` tag filter are non-empty when
  * present — an empty array matches nothing, which NIP-01 expresses by omitting
  * the field, not by sending `[]`. The empty filter object `{}` (match anything)
  * stays valid because every field is optional. Unknown keys are rejected by
- * `filterChecks()` (only known fields and `"#<letter>"` tag filters are
- * allowed), so nothing is silently stripped, and the same checks hold `"#e"` and
- * `"#p"` to the 64-character lowercase hex values NIP-01 requires of them —
- * every other tag filter carries arbitrary strings, which is all NIP-01 says of
- * them.
+ * `filterTagKeysCheck()` (only known fields and `"#<letter>"` tag filters are
+ * allowed), so nothing is silently stripped.
+ *
+ * `"#e"` and `"#p"` are declared fields rather than catchall keys, because
+ * NIP-01 says what they hold: "the `ids`, `authors`, `#e` and `#p` filter lists
+ * MUST contain exact 64-character lowercase hex values". Naming them puts them
+ * under `eventId()`/`pubkey()` — one sentence of the spec, one pair of schemas,
+ * and a malformed value reported where and when a malformed `ids` value is.
+ * The catchall keeps serving every other `"#<letter>"` filter, which carries
+ * arbitrary strings; that includes `"#E"`/`"#P"`, since NIP-01 names the
+ * lowercase pair and an uppercase tag is a different tag.
  */
 export function filter() {
   return zodObject(
@@ -351,13 +280,19 @@ export function filter() {
       ids: zodOptional(zodArray(eventId(), [nonEmptyArrayCheck("ids")])),
       authors: zodOptional(zodArray(pubkey(), [nonEmptyArrayCheck("authors")])),
       kinds: zodOptional(zodArray(kind(), [nonEmptyArrayCheck("kinds")])),
+      // Labelled "tag filter" like the catchall they are lifted out of, so a
+      // `"#e"` and a `"#t"` still report an empty array identically.
+      "#e": zodOptional(
+        zodArray(eventId(), [nonEmptyArrayCheck("tag filter")]),
+      ),
+      "#p": zodOptional(zodArray(pubkey(), [nonEmptyArrayCheck("tag filter")])),
       since: zodOptional(timestamp()),
       until: zodOptional(timestamp()),
       limit: zodOptional(limit()),
     },
     {
       catchall: zodArray(zodString(), [nonEmptyArrayCheck("tag filter")]),
-      checks: filterChecks(),
+      checks: [filterTagKeysCheck()],
     },
   );
 }

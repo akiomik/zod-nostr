@@ -188,7 +188,7 @@ const nip01Namespace = {
       // `catchall` as `$ZodType | undefined` regardless, so this is never
       // actually undefined at runtime.
       .catchall(nip01.filter()._zod.def.catchall as core.SomeType)
-      .check(...nip01.filterChecks()),
+      .check(nip01.filterTagKeysCheck()),
 
   /**
    * Tuple schemas for NIP-01 relay-to-client messages. Each validates
@@ -704,7 +704,7 @@ export const zostr = {
       return z
         .object(f._zod.def.shape)
         .catchall(f._zod.def.catchall as core.SomeType)
-        .check(...nip01.filterChecks(["search"]));
+        .check(nip01.filterTagKeysCheck(["search"]));
     },
 
     /** The client-to-relay half of NIP-50. */

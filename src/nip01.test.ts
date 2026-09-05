@@ -244,6 +244,25 @@ describe.each(FLAVORS)("zostr NIP-01 filter() ($name)", ({ zostr, z }) => {
     ]);
   });
 
+  it("reports a malformed #e alongside another field's, as ids does", () => {
+    const result = z.safeParse(zostr.filter(), {
+      ids: ["nope"],
+      "#e": ["nope"],
+    });
+
+    expect(result.success).toBe(false);
+    // Neither hides the other, because both are fields. Were the hex rule an
+    // object-level check instead, only `ids` would be reported: a property
+    // issue stops an object's checks from running at all.
+    expect(result.error?.issues).toHaveLength(2);
+    expect(result.error?.issues.map((issue) => issue.path)).toEqual(
+      expect.arrayContaining([
+        ["ids", 0],
+        ["#e", 0],
+      ]),
+    );
+  });
+
   it.each(["#a", "#t", "#E", "#P"])(
     "leaves %s values unconstrained, since NIP-01 names only #e and #p",
     (key) => {
