@@ -246,6 +246,11 @@ no drop-in replacement: **omit** the field to place no constraint on that
 dimension (this widens the match), or drop the filter / don't send the request
 to select nothing.
 
+`ids`, `authors`, `#e`, and `#p` must hold **64-character lowercase hex**
+values, which NIP-01 requires of those four lists. Every other `#<letter>`
+filter carries arbitrary strings, since NIP-01 says nothing about what any other
+tag holds — including `#E`/`#P`, which are different tags from `#e`/`#p`.
+
 ```ts
 zostr.filter().parse({
   kinds: [1],

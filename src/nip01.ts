@@ -7,7 +7,7 @@ import {
   nonEmptyArrayCheck,
   nonNegativeIntegerCheck,
 } from "./core/checks.js";
-import { hexStringSchema } from "./core/hex.js";
+import { hexPattern, hexStringSchema } from "./core/hex.js";
 import {
   zodArray,
   zodBoolean,
@@ -232,13 +232,25 @@ const FILTER_KNOWN_KEYS = new Set([
 const FILTER_TAG_KEY = /^#[a-zA-Z]$/;
 
 /**
+ * The `"#<letter>"` tag filters whose **values** NIP-01 constrains: "the `ids`,
+ * `authors`, `#e` and `#p` filter lists MUST contain exact 64-character
+ * lowercase hex values". Every other tag filter carries whatever its tag
+ * carries, so only these two are listed — `"#E"`/`"#P"` are not, since NIP-01
+ * names the lowercase keys and an uppercase tag is a different tag.
+ */
+const FILTER_HEX_TAG_KEYS = ["#e", "#p"] as const;
+
+/** The value form those two lists must take (same as `eventId()`/`pubkey()`). */
+const FILTER_HEX_VALUE = hexPattern(64);
+
+/**
  * Rejects filter keys that are neither a known NIP-01 field nor a `"#<letter>"`
  * tag filter. `extraKeys` additionally allows spec-extension fields defined by
  * other NIPs (e.g. NIP-50's `"search"`), so the NIP-01 known-key set stays
  * NIP-01 while a variant can widen it without duplicating this logic. The
  * allowed set is materialized once at construction, not per parsed value.
  */
-export function filterTagKeysCheck(
+function filterTagKeysCheck(
   extraKeys: Iterable<string> = [],
 ): core.$ZodCheck<Record<string, unknown>> {
   const knownKeys = new Set([...FILTER_KNOWN_KEYS, ...extraKeys]);
@@ -256,14 +268,69 @@ export function filterTagKeysCheck(
 }
 
 /**
+ * Rejects a `"#e"`/`"#p"` filter value that is not a 64-character lowercase hex
+ * string, the form NIP-01 requires of those two lists (see
+ * {@link FILTER_HEX_TAG_KEYS}). One issue per offending key: the outcome is a
+ * single pass/fail per list, so the scan stops at that key's first bad value
+ * rather than reporting each of them.
+ *
+ * Whether a key holds a non-empty array of strings at all is the catchall's
+ * job, and an object's checks do not run once its catchall has reported — so in
+ * practice this only ever sees a `string[]`. It guards both shapes rather than
+ * trust that: a non-array key is skipped, and a non-string element fails
+ * without reaching `RegExp.test`, which would coerce it (and throw on a
+ * symbol). Composing this onto any filter-shaped object is then never a way to
+ * make a parse throw.
+ *
+ * Split from {@link filterTagKeysCheck} rather than folded into it: that check
+ * answers which keys may appear, this one what two of them may hold, and
+ * {@link filterChecks} is what keeps a filter carrying both.
+ */
+function filterTagValuesCheck(): core.$ZodCheck<Record<string, unknown>> {
+  return makeCheck<Record<string, unknown>>((payload) => {
+    for (const key of FILTER_HEX_TAG_KEYS) {
+      const values = payload.value[key];
+      if (!Array.isArray(values)) continue;
+      const invalid = values.some(
+        (value) => typeof value !== "string" || !FILTER_HEX_VALUE.test(value),
+      );
+      if (invalid) {
+        payload.issues.push({
+          code: "custom",
+          input: payload.value,
+          message: `Invalid "${key}" filter value (expected a 64-character lowercase hex string)`,
+        });
+      }
+    }
+  });
+}
+
+/**
+ * The object-level checks a NIP-01-shaped filter carries: the key check and the
+ * `"#e"`/`"#p"` value check. Returned together because a filter needs both and
+ * they are composed in several places — `filter()`, NIP-50's `search`-extended
+ * variant, and each flavor's re-wrap — so a filter built with one and not the
+ * other can't be assembled by accident. `extraKeys` is passed through to
+ * {@link filterTagKeysCheck}.
+ */
+export function filterChecks(
+  extraKeys: Iterable<string> = [],
+): core.$ZodCheck<Record<string, unknown>>[] {
+  return [filterTagKeysCheck(extraKeys), filterTagValuesCheck()];
+}
+
+/**
  * REQ/COUNT filter object (structure only; does not enforce `since <= until`).
  *
  * `ids`/`authors`/`kinds` and every `"#<letter>"` tag filter are non-empty when
  * present — an empty array matches nothing, which NIP-01 expresses by omitting
  * the field, not by sending `[]`. The empty filter object `{}` (match anything)
  * stays valid because every field is optional. Unknown keys are rejected by
- * `filterTagKeysCheck()` (only known fields and `"#<letter>"` tag filters are
- * allowed), so nothing is silently stripped.
+ * `filterChecks()` (only known fields and `"#<letter>"` tag filters are
+ * allowed), so nothing is silently stripped, and the same checks hold `"#e"` and
+ * `"#p"` to the 64-character lowercase hex values NIP-01 requires of them —
+ * every other tag filter carries arbitrary strings, which is all NIP-01 says of
+ * them.
  */
 export function filter() {
   return zodObject(
@@ -277,7 +344,7 @@ export function filter() {
     },
     {
       catchall: zodArray(zodString(), [nonEmptyArrayCheck("tag filter")]),
-      checks: [filterTagKeysCheck()],
+      checks: filterChecks(),
     },
   );
 }

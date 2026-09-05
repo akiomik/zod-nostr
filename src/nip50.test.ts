@@ -23,7 +23,7 @@ describe.each(FLAVORS)("zostr.nip50.filter() ($name)", ({ zostr, z }) => {
       z.parse(zostr.nip50.filter(), {
         kinds: [1],
         search: "purple",
-        "#e": ["a"],
+        "#e": ["a".repeat(64)],
       }),
     ).toBeTruthy();
     // Empty string is spec-valid (NIP-50 places no format constraint on it).
@@ -47,6 +47,21 @@ describe.each(FLAVORS)("zostr.nip50.filter() ($name)", ({ zostr, z }) => {
     // The base NIP-01 filter() keeps rejecting `search` (unchanged).
     expect(z.safeParse(zostr.filter(), { search: "x" }).success).toBe(false);
   });
+
+  it.each(["#e", "#p"])(
+    "inherits NIP-01's 64-character lowercase hex rule for %s",
+    (key) => {
+      const hex = "a".repeat(64);
+
+      expect(
+        z.parse(zostr.nip50.filter(), { search: "purple", [key]: [hex] }),
+      ).toBeTruthy();
+      expect(
+        z.safeParse(zostr.nip50.filter(), { search: "purple", [key]: ["nope"] })
+          .success,
+      ).toBe(false);
+    },
+  );
 
   it("req() carries search filters and requires at least one filter", () => {
     expect(

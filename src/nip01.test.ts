@@ -188,12 +188,45 @@ describe.each(FLAVORS)("zostr NIP-01 filter() ($name)", ({ zostr, z }) => {
   );
 
   it("keeps {} valid and accepts present arrays with at least one value", () => {
+    const id = "c".repeat(64);
     expect(z.parse(zostr.filter(), {})).toEqual({});
-    expect(z.parse(zostr.filter(), { kinds: [1], "#e": ["id"] })).toEqual({
+    expect(z.parse(zostr.filter(), { kinds: [1], "#e": [id] })).toEqual({
       kinds: [1],
-      "#e": ["id"],
+      "#e": [id],
     });
   });
+
+  it.each(["#e", "#p"])(
+    "requires every %s value to be 64-character lowercase hex",
+    (key) => {
+      const hex = "c".repeat(64);
+
+      expect(z.parse(zostr.filter(), { [key]: [hex] })).toEqual({
+        [key]: [hex],
+      });
+      // Too short, uppercase, and non-hex all fail — the rule `ids`/`authors`
+      // already apply, which NIP-01 states for these two lists as well.
+      expect(z.safeParse(zostr.filter(), { [key]: ["id"] }).success).toBe(
+        false,
+      );
+      expect(
+        z.safeParse(zostr.filter(), { [key]: ["C".repeat(64)] }).success,
+      ).toBe(false);
+      // A single bad value fails the list even when the rest are well-formed.
+      expect(
+        z.safeParse(zostr.filter(), { [key]: [hex, "nope"] }).success,
+      ).toBe(false);
+    },
+  );
+
+  it.each(["#a", "#t", "#E", "#P"])(
+    "leaves %s values unconstrained, since NIP-01 names only #e and #p",
+    (key) => {
+      expect(z.parse(zostr.filter(), { [key]: ["anything"] })).toEqual({
+        [key]: ["anything"],
+      });
+    },
+  );
 });
 
 describe.each(FLAVORS)(
@@ -257,6 +290,16 @@ describe.each(FLAVORS)(
       // At least one filter is required (matching NIP-01's REQ grammar).
       expect(
         z.safeParse(zostr.nip01.clientMessage.req(), ["REQ", "sub1"]).success,
+      ).toBe(false);
+      // REQ carries filter(), so the filter's own rules travel with it — a
+      // rest filter is held to them too, not just the required first one.
+      expect(
+        z.safeParse(zostr.nip01.clientMessage.req(), [
+          "REQ",
+          "sub1",
+          {},
+          { "#e": ["not-hex"] },
+        ]).success,
       ).toBe(false);
       expect(
         z.parse(zostr.nip01.clientMessage.close(), ["CLOSE", "sub1"]),

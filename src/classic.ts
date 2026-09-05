@@ -177,6 +177,8 @@ const nip01Namespace = {
    * `limit`, plus any number of `#<a-zA-Z>` tag-value filters. Unknown keys
    * outside that set are rejected, and an array field, when present, must be
    * non-empty — omit it instead to place no constraint on that dimension.
+   * `ids`, `authors`, `#e`, and `#p` hold 64-character lowercase hex values;
+   * every other tag filter holds arbitrary strings.
    */
   filter: () =>
     z
@@ -186,7 +188,7 @@ const nip01Namespace = {
       // `catchall` as `$ZodType | undefined` regardless, so this is never
       // actually undefined at runtime.
       .catchall(nip01.filter()._zod.def.catchall as core.SomeType)
-      .check(nip01.filterTagKeysCheck()),
+      .check(...nip01.filterChecks()),
 
   /**
    * Tuple schemas for NIP-01 relay-to-client messages. Each validates
@@ -702,7 +704,7 @@ export const zostr = {
       return z
         .object(f._zod.def.shape)
         .catchall(f._zod.def.catchall as core.SomeType)
-        .check(nip01.filterTagKeysCheck(["search"]));
+        .check(...nip01.filterChecks(["search"]));
     },
 
     /** The client-to-relay half of NIP-50. */

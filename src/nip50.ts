@@ -6,7 +6,7 @@ import {
   zodString,
   zodTuple,
 } from "./core/primitives.js";
-import { filter, filterTagKeysCheck, subscriptionId } from "./nip01.js";
+import { filter, filterChecks, subscriptionId } from "./nip01.js";
 
 /**
  * NIP-50 search filter: the NIP-01 `REQ`/`COUNT` filter object extended with an
@@ -39,7 +39,7 @@ function searchFilter() {
     },
     {
       catchall: base._zod.def.catchall as core.SomeType,
-      checks: [filterTagKeysCheck(["search"])],
+      checks: filterChecks(["search"]),
     },
   );
 }
