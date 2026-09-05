@@ -34,9 +34,13 @@ const unlike = (nth) => {
   return `${MARKS[nth]}${HASH.slice(1)}`;
 };
 
-// Instants, as `landed` holds them: RFC 3339 in UTC, to the second.
-const LANDED = "2026-09-04T04:19:51Z";
-const OTHER_LANDED = "2026-07-16T14:52:59Z";
+// Instants as `landed` holds them, invented for the same reason the commit and
+// the hashes above are: these were `nips.01`'s and `luds.16`'s real values, put
+// back on the very entries they came from, which is the copy this file's header
+// says not to make. Every assertion is on shape or on entries agreeing with
+// each other, so no case needs the real ones.
+const LANDED = "2020-01-02T03:04:05Z";
+const OTHER_LANDED = "2021-06-07T08:09:10Z";
 
 const NIPS = "https://github.com/nostr-protocol/nips";
 const LUDS = "https://github.com/lnurl/luds";
