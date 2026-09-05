@@ -1,5 +1,7 @@
-// Asserts that `spec-baseline.json` records every specification `src/`
-// implements, and nothing it does not.
+// Asserts that `spec-baseline.json` and the spec modules under `src/` agree,
+// family by family, about what is baselined. Which families there are is what
+// `spec-baseline.json` says: this checks what it declares, not what `src/`
+// might imply.
 //
 // Two places name the same set of specs: the modules and the baseline. A spec
 // module added without an entry ships with no recorded provenance, and an entry
@@ -21,10 +23,18 @@
 //   maintainer. Guarding each way a hand-corrupted file could be malformed
 //   costs more code than the case is worth: the build fails either way, and
 //   `biome check` already rejects invalid JSON.
-// - The modules it reads are those of a family `sources` registers. A module of
-//   a family nobody registered is invisible: no filename rule separates a
-//   `bolt11.ts` worth baselining from a `bech32.ts` that is an ordinary helper,
-//   so 0004 leaves registering a family to the person adding it.
+// - `sources` says which families exist, and this checks what it says: within a
+//   family it declares, the modules and the entries must match each other. A
+//   family it does not name is not checked, because no filename rule separates
+//   a `bolt11.ts` worth baselining from a `bech32.ts` that is an ordinary
+//   helper. Naming a family on one side of the file only is reported, since
+//   that is a half-finished edit rather than a declaration.
+//
+// One rule holds over all of it: where this stops short of a check, either the
+// same run already carries the message that the reader acts on, or what was
+// skipped cannot be known — a family whose label is missing, malformed, or
+// shared has no modules that can be told apart from another's. Stopping for any
+// other reason would cost a second run to learn the rest.
 //
 // It takes its two inputs as data and returns what it found, so every rule
 // below is pinned by `spec-baseline.test.mjs` without a fixture repository.
@@ -34,6 +44,9 @@ import { basename } from "node:path";
 export const BASELINE = "spec-baseline.json";
 export const SOURCE = "src";
 
+// Lowercase hex, as git and `sha256sum` write them, and as every entry here
+// does: accepting either case would let one hash be written two ways, and the
+// paste check compares them as text.
 const COMMIT = /^[0-9a-f]{40}$/;
 const SHA256 = /^[0-9a-f]{64}$/;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -46,19 +59,24 @@ const DOCUMENT = /^[0-9A-Z]{2}$/;
 const LABEL = /^[A-Za-z]+$/;
 
 /**
- * Whether `date` is a day that has happened, not merely digit-shaped. A
- * transposed month (`2026-90-04`) or year (`2062-06-13`) is otherwise a real
- * string that nothing else here would notice. The day of slack is for a
- * maintainer reading a date east of UTC, for whom today has already begun.
+ * What is wrong with `date`, or null. Digit-shaped is not enough: a transposed
+ * month (`2026-90-04`) or year (`2062-06-13`) is otherwise a real string that
+ * nothing else here would notice, and each is named for what it is rather than
+ * folded into one message. The day of slack is for a maintainer reading a date
+ * east of UTC, for whom today has already begun.
  */
-function isCalendarDate(date) {
-  if (typeof date !== "string" || !DATE.test(date)) return false;
+function dateProblem(date) {
+  if (typeof date !== "string" || !DATE.test(date))
+    return "has no YYYY-MM-DD date";
   const parsed = new Date(`${date}T00:00:00Z`);
-  return (
-    !Number.isNaN(parsed.getTime()) &&
-    parsed.toISOString().slice(0, 10) === date &&
-    date <= new Date(Date.now() + 86_400_000).toISOString().slice(0, 10)
-  );
+  if (
+    Number.isNaN(parsed.getTime()) ||
+    parsed.toISOString().slice(0, 10) !== date
+  )
+    return `dates a day that does not exist, ${date}`;
+  if (date > new Date(Date.now() + 86_400_000).toISOString().slice(0, 10))
+    return `dates a day that has not come, ${date}`;
+  return null;
 }
 
 /** Whether `value` is something to read keys off, rather than to throw on. */
@@ -69,14 +87,23 @@ function holds(value) {
 /**
  * The documents a family implements, as id → path, from `<label><id>.ts`
  * anywhere under `src/`. Matched case-insensitively, since neither the
- * lowercase filename nor the flat layout is enforced by anything.
+ * lowercase filename nor the flat layout is enforced by anything, and on two
+ * id characters, which is what a document id is — `DOCUMENT` says the same of
+ * the baseline's keys. A module of another width is not one of these.
  */
 function moduleIds(label, files) {
   const module = new RegExp(`^${label}([0-9a-z]{2})\\.ts$`, "i");
   const found = new Map();
   for (const file of files) {
     const id = basename(file).match(module)?.[1];
-    if (id) found.set(id.toUpperCase(), file);
+    // Every file that claims an id, not the last one seen: two modules for one
+    // document is a problem of its own, and keeping only one would make which
+    // file a diagnostic names depend on the order the directory was read in.
+    if (id)
+      found.set(id.toUpperCase(), [
+        ...(found.get(id.toUpperCase()) ?? []),
+        file,
+      ]);
   }
   return found;
 }
@@ -88,11 +115,22 @@ function moduleIds(label, files) {
 export function specBaselineProblems({ baseline, files }) {
   // Checked for being objects, not merely present: the loops below reach them
   // with `Object.entries`, which throws on anything else.
-  if (!holds(baseline.sources) || !holds(baseline.documents))
-    return [`${BASELINE}: has no \`sources\` and \`documents\` to compare`];
+  if (!holds(baseline)) return [`${BASELINE}: holds no object to compare`];
+  const missing = ["sources", "documents"].filter(
+    (key) => !holds(baseline[key]),
+  );
+  if (missing.length > 0)
+    return [
+      `${BASELINE}: has no ${missing.map((key) => `\`${key}\``).join(" and no ")} to compare`,
+    ];
 
   const problems = [];
+  // Two documents sharing a hash means one was pasted from the other, and two
+  // entries at one commit disagreeing about its date means one was mistyped —
+  // the likeliest corruptions of the fields the baseline rests on, and the ones
+  // judgeable without the upstream text.
   const hashes = new Map();
+  const dated = new Map();
 
   // `sources` says what a family is and `documents` holds its entries, so a
   // family in one and not the other is the same "updated one file and not the
@@ -108,64 +146,129 @@ export function specBaselineProblems({ baseline, files }) {
         `${BASELINE}: \`sources.${family}\` has no \`documents\` entry`,
       );
 
-  for (const [family, source] of Object.entries(baseline.sources)) {
-    if (!Object.hasOwn(baseline.documents, family)) continue; // reported above
-    if (!holds(source)) {
+  // Which families answer to each label, before any of them is judged by it.
+  // Tested for being a string first: a regex coerces what it tests, so `true`
+  // would read as `"true"` and `LUD(` would reach `RegExp` as syntax.
+  // One label naming two families cannot be settled by taking the first: the
+  // accidental copy is as likely to be written above the original as below,
+  // and whichever came first would claim the modules while the other was told
+  // its own were missing. Neither is judged by them, and the collision is what
+  // the report names. Keyed lowercase, as `moduleIds` matches.
+  // What counts as a label is decided here and read below, not decided twice: a
+  // second copy of the test is a second thing to keep in step, and the loop
+  // that reads `byLabel` would throw on the family the two stopped agreeing
+  // about, losing the report the file promises to deliver instead.
+  const labelOf = new Map();
+  const byLabel = new Map();
+  for (const family of Object.keys(baseline.sources)) {
+    const label = holds(baseline.sources[family])
+      ? baseline.sources[family].label
+      : undefined;
+    if (typeof label !== "string" || !LABEL.test(label)) continue;
+    labelOf.set(family, label);
+    const key = label.toLowerCase();
+    byLabel.set(key, [...(byLabel.get(key) ?? []), family]);
+  }
+  for (const [, sharing] of byLabel)
+    if (sharing.length > 1)
+      // Each with the label it wrote: two families collide when their labels
+      // differ by case, and naming one spelling for both would misquote one.
+      problems.push(
+        `${BASELINE}: ${sharing
+          .map(
+            (family) =>
+              `\`sources.${family}\` (\`${baseline.sources[family].label}\`)`,
+          )
+          .join(" and ")} share one label`,
+      );
+
+  // Both sides, not only `documents`: an entry says what it says wherever it is
+  // written, and a family declared in `sources` alone still has a label, which
+  // is all it takes to find its modules and say which of them are unbaselined.
+  // Holding either back until the other side catches up would report the same
+  // file over two runs.
+  const families = new Set([
+    ...Object.keys(baseline.documents),
+    ...Object.keys(baseline.sources),
+  ]);
+
+  for (const family of families) {
+    const source = baseline.sources[family];
+    // Declared means named *and* describing a family: a `sources` value that is
+    // not an object says nothing about a label or a repository, but its
+    // entries still say what they say, so they are judged all the same.
+    const named = Object.hasOwn(baseline.sources, family);
+    const declared = named && holds(source);
+    if (named && !declared)
       problems.push(`${BASELINE}: \`sources.${family}\` describes no family`);
-      continue;
-    }
-    const documents = baseline.documents[family];
-    if (!holds(documents)) {
+    // A family with no `documents` is reported above and one whose `documents`
+    // are not entries is reported here. Either way it is read as the no entries
+    // it has rather than skipped, so that its modules are still spoken for: a
+    // label is all it takes to find them, and stopping would leave the file to
+    // baseline for the run after this one is fixed.
+    const held = Object.hasOwn(baseline.documents, family)
+      ? baseline.documents[family]
+      : {};
+    const unusable = !holds(held);
+    if (unusable)
       problems.push(`${BASELINE}: \`documents.${family}\` holds no entries`);
-      continue;
-    }
+    const documents = unusable ? {} : held;
 
     // Reported rather than thrown on: a family added without its label is the
     // same half-finished edit as one added without its entries, and crashing
-    // would take the rest of the report with it. A regex coerces what it tests,
-    // so `true` would read as `"true"` without the type check.
-    const { label, repository } = source;
-    const named = typeof label === "string" && LABEL.test(label);
-    if (!named)
+    // would take the rest of the report with it.
+    const { repository } = declared ? source : {};
+    const label = labelOf.get(family);
+    if (declared && label === undefined)
       problems.push(
         `${BASELINE}: \`sources.${family}\` has no label naming a document series`,
       );
-    if (typeof repository !== "string" || repository.trim() === "")
+    if (
+      declared &&
+      (typeof repository !== "string" || repository.trim() === "")
+    )
       problems.push(`${BASELINE}: \`sources.${family}\` has no repository`);
-    const modules = named ? moduleIds(label, files) : new Map();
+    // Usable, not merely a name: a label two families answer to finds modules
+    // that cannot be told apart, and the collision is reported above.
+    const usable =
+      label !== undefined && byLabel.get(label.toLowerCase()).length === 1;
+    const modules = usable ? moduleIds(label, files) : new Map();
     // Ids already reported at their entry, in the spelling the modules use: the
     // module that matches one is there, so calling it an orphan of a missing
     // entry would be false.
     const excused = new Set();
 
-    for (const [id, entry] of Object.entries(documents)) {
+    // Sorted, because JavaScript reaches integer-like keys first: unsorted,
+    // `nips.11` is read before `nips.01`, so the entry a report cites as the
+    // one the others agree with depends on which ids happen to look like array
+    // indices, and a run ends with the entries the file starts with. Sorted is
+    // not the order they are written — nothing can recover that — but it is one
+    // order, and it is the order a baseline written in order is already in.
+    for (const id of Object.keys(documents).sort()) {
+      const entry = documents[id];
       const where = `${BASELINE}: \`${family}.${id}\``;
       if (!holds(entry)) {
         problems.push(`${where} records no revision`);
         excused.add(id.toUpperCase());
         continue;
       }
-      if (!DOCUMENT.test(id)) {
-        // Cross-checking a misspelled id against the modules would bury this
-        // under a message naming the module that does exist.
-        problems.push(`${where} is not a two-character document id`);
-        excused.add(id.toUpperCase());
-        continue;
-      }
-      // Tested for being strings first, for the reason the label is: a regex
-      // coerces what it tests, and an array of one hash would key the map
-      // below by the array, quietly excusing itself from the paste check.
-      if (typeof entry.commit !== "string" || !COMMIT.test(entry.commit))
-        problems.push(`${where} has no 40-character commit`);
-      if (!isCalendarDate(entry.date))
-        problems.push(`${where} has no YYYY-MM-DD calendar date`);
+
+      // The fields are judged before the key is, so an entry that is both
+      // mis-keyed and carries a pasted hash says so in one run rather than
+      // over two. Tested for being strings first, for the reason the label is:
+      // a regex coerces what it tests, and an array of one hash would key the
+      // maps below by the array, quietly excusing itself from both checks.
+      const committed =
+        typeof entry.commit === "string" && COMMIT.test(entry.commit);
+      if (!committed)
+        problems.push(`${where} has no 40-character lowercase-hex commit`);
+      const undated = dateProblem(entry.date);
+      if (undated) problems.push(`${where} ${undated}`);
       const hashed =
         typeof entry.sha256 === "string" && SHA256.test(entry.sha256);
-      if (!hashed) problems.push(`${where} has no 64-character sha256`);
+      if (!hashed)
+        problems.push(`${where} has no 64-character lowercase-hex sha256`);
 
-      // Two documents sharing a hash means one was pasted from the other — the
-      // likeliest corruption of the field the baseline rests on, and one of the
-      // few things about it judgeable without the text.
       if (hashed) {
         const pasted = hashes.get(entry.sha256);
         if (pasted)
@@ -173,19 +276,58 @@ export function specBaselineProblems({ baseline, files }) {
         else hashes.set(entry.sha256, `${family}.${id}`);
       }
 
-      if (!named) continue; // the check below needs a usable label
+      // One commit has one committer date, so two entries recording it must
+      // agree about when it landed.
+      if (committed && !undated) {
+        const first = dated.get(entry.commit);
+        if (first === undefined)
+          dated.set(entry.commit, {
+            date: entry.date,
+            at: `${family}.${id}`,
+            // The dates already reported against this one. Entries agreeing on
+            // a wrong date are one edit and say so once; two entries wrong in
+            // two ways are two edits, and reporting only the first would cost
+            // the maintainer a second build to learn about the second.
+            reported: new Set(),
+          });
+        else if (first.date !== entry.date && !first.reported.has(entry.date)) {
+          first.reported.add(entry.date);
+          problems.push(
+            `${where} dates ${entry.commit.slice(0, 7)} to ${entry.date}, which \`${first.at}\` dates to ${first.date}`,
+          );
+        }
+      }
+
+      if (!DOCUMENT.test(id)) {
+        // Cross-checking a misspelled id against the modules would bury this
+        // under a message naming the module that does exist.
+        problems.push(
+          `${where} is not a document id: two characters, digits or uppercase, as the upstream filename is`,
+        );
+        excused.add(id.toUpperCase());
+        continue;
+      }
+
+      if (!usable) continue; // the check below needs a label of this family's
       if (!modules.has(id))
         problems.push(
           `${where} has no \`${SOURCE}/${label.toLowerCase()}${id.toLowerCase()}.ts\``,
         );
     }
 
-    // `src/` is the authority: a spec module with no entry has no provenance.
-    for (const [id, file] of modules)
-      if (!Object.hasOwn(documents, id) && !excused.has(id))
+    // Within a declared family, `src/` decides: a module with no entry has no
+    // provenance recorded for it.
+    for (const [id, paths] of modules) {
+      if (paths.length > 1)
         problems.push(
-          `${BASELINE}: \`${SOURCE}/${file}\` has no \`${family}.${id}\` entry`,
+          `${SOURCE}/: \`${family}.${id}\` is claimed by ${paths.map((path) => `\`${SOURCE}/${path}\``).join(" and ")}`,
         );
+      if (!Object.hasOwn(documents, id) && !excused.has(id))
+        for (const path of paths)
+          problems.push(
+            `${BASELINE}: \`${SOURCE}/${path}\` has no \`${family}.${id}\` entry`,
+          );
+    }
   }
 
   return problems;
@@ -193,10 +335,16 @@ export function specBaselineProblems({ baseline, files }) {
 
 /** The line the CLI prints when nothing disagrees. */
 export function specBaselineSummary({ baseline }) {
-  const counts = Object.keys(baseline.documents)
+  const families = Object.keys(baseline.documents);
+  if (families.length === 0)
+    return `Spec baseline check passed — ${BASELINE} declares no families, so nothing in ${SOURCE}/ was checked.`;
+  const counts = families
     .map(
       (family) => `${Object.keys(baseline.documents[family]).length} ${family}`,
     )
     .join(", ");
-  return `Spec baseline check passed — ${counts} baselined from ${SOURCE}/.`;
+  return (
+    `Spec baseline check passed — ${counts} baselined, ` +
+    `for the families ${BASELINE} declares.`
+  );
 }

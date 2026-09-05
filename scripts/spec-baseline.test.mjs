@@ -11,11 +11,29 @@ import { specBaselineProblems, specBaselineSummary } from "./spec-baseline.mjs";
 // than a fixture repository. Whether *this* repository agrees with itself is
 // `npm run test:spec-baseline`'s question, not this file's.
 
-const COMMIT = "c3fd9af17939316bf6d0d83a5759100f8b0a1bdb";
-const OTHER_COMMIT = "bd93433261872bf69bbe75e29376504b848d5353";
-const HASH = "6cd76682e7ec2d635f1f46b3660f621cdad1193d9174d316674b91f8d683af26";
-const OTHER_HASH =
-  "e4e5b4f130a0f902cd295f8917f907a3bd53f0c37ad2117508716798464194ad";
+// Shaped like the real thing and readable as not being it. Copying an entry's
+// actual commit and hash in here would put the revision this repository records
+// in a second place, which is the one thing `spec-baseline.json` exists to
+// prevent — and would invite the next reader to keep the copy up to date.
+const COMMIT = "0123456789abcdef0123456789abcdef01234567";
+const OTHER_COMMIT = "89abcdef0123456789abcdef0123456789abcdef";
+const HASH = `${COMMIT}${COMMIT.slice(0, 24)}`;
+const OTHER_HASH = `${OTHER_COMMIT}${OTHER_COMMIT.slice(0, 24)}`;
+// Marks that `HASH` does not start with, so `unlike` cannot return `HASH`
+// however `HASH` is spelled. Reached by index, so two calls differ as well.
+const MARKS = [..."abcdef"].filter((mark) => mark !== HASH[0]);
+
+/**
+ * The nth hash unlike `HASH` and unlike every other `unlike`, for `nth` below
+ * `MARKS.length` — six, or five when `HASH` starts with a hex letter. Past that
+ * the mark is `undefined`, which would make a hash that is not one and change
+ * which diagnostic a case asserts rather than failing as the misuse it is.
+ */
+const unlike = (nth) => {
+  if (nth >= MARKS.length) throw new RangeError(`no mark ${nth} to build with`);
+  return `${MARKS[nth]}${HASH.slice(1)}`;
+};
+
 const NIPS = "https://github.com/nostr-protocol/nips";
 const LUDS = "https://github.com/lnurl/luds";
 
@@ -53,13 +71,13 @@ describe("specBaselineProblems", () => {
 
   describe("the entries it can judge without the spec text", () => {
     it.each([
-      [{ commit: "c3fd9af" }, "has no 40-character commit"],
-      [{ commit: undefined }, "has no 40-character commit"],
-      [{ sha256: "abc" }, "has no 64-character sha256"],
-      [{ date: "yesterday" }, "has no YYYY-MM-DD calendar date"],
-      [{ date: "2026-90-04" }, "has no YYYY-MM-DD calendar date"],
-      [{ date: "2026-02-30" }, "has no YYYY-MM-DD calendar date"],
-      [{ date: "2999-01-01" }, "has no YYYY-MM-DD calendar date"],
+      [{ commit: "0123456" }, "has no 40-character lowercase-hex commit"],
+      [{ commit: undefined }, "has no 40-character lowercase-hex commit"],
+      [{ sha256: "abc" }, "has no 64-character lowercase-hex sha256"],
+      [{ date: "yesterday" }, "has no YYYY-MM-DD date"],
+      [{ date: "2026-90-04" }, "dates a day that does not exist, 2026-90-04"],
+      [{ date: "2026-02-30" }, "dates a day that does not exist, 2026-02-30"],
+      [{ date: "2999-01-01" }, "dates a day that has not come, 2999-01-01"],
     ])("rejects %o", (patch, message) => {
       expect(specBaselineProblems(withEntry("nips", "01", patch))).toEqual([
         `spec-baseline.json: \`nips.01\` ${message}`,
@@ -83,6 +101,120 @@ describe("specBaselineProblems", () => {
         );
     });
 
+    // One commit has one committer date, so two entries recording it must
+    // agree — a transposed day is otherwise a real date at a real commit.
+    it("rejects two entries dating one commit differently", () => {
+      const input = withEntry("luds", 16, {
+        commit: COMMIT,
+        date: "2026-09-05",
+      });
+      expect(specBaselineProblems(input)).toEqual([
+        expect.stringContaining("dates 0123456 to 2026-09-05"),
+      ]);
+    });
+
+    // Judged on a commit that is one, as the paste check is on a hash that is:
+    // two placeholders disagreeing about a date they do not have is noise.
+    it("does not date entries by a commit that is not one", () => {
+      const input = repository();
+      for (const [id, date] of [
+        ["01", "2026-01-01"],
+        ["05", "2026-02-02"],
+      ])
+        input.baseline.documents.nips[id] = {
+          commit: "TODO",
+          date,
+          sha256: unlike(id === "01" ? 0 : 1),
+        };
+      input.files.push("nip05.ts");
+      expect(specBaselineProblems(input)).toEqual([
+        expect.stringContaining(
+          "`nips.01` has no 40-character lowercase-hex commit",
+        ),
+        expect.stringContaining(
+          "`nips.05` has no 40-character lowercase-hex commit",
+        ),
+      ]);
+    });
+
+    it("reports one disagreement per commit, not per entry", () => {
+      const input = repository();
+      for (const id of ["05", "10"])
+        input.baseline.documents.nips[id] = {
+          commit: COMMIT,
+          date: "2026-09-05",
+          sha256: unlike(id === "05" ? 0 : 1),
+        };
+      input.files.push("nip05.ts", "nip10.ts");
+      expect(
+        specBaselineProblems(input).filter((problem) =>
+          problem.includes("dates 0123456"),
+        ),
+      ).toHaveLength(1);
+    });
+
+    // JavaScript reaches integer-like keys first, so an unsorted pass reads
+    // `10` before `01` and names the entry the others agree with as the one
+    // that disagrees. Entries are read in sorted order instead, which for a
+    // baseline written in order is the order it is written in.
+    it("names the entry later in sorted order as the one that disagrees", () => {
+      const input = repository();
+      input.baseline.documents.nips = {
+        10: {
+          commit: COMMIT,
+          date: "2026-09-05",
+          sha256: unlike(0),
+        },
+        "01": { commit: COMMIT, date: "2026-09-04", sha256: HASH },
+      };
+      input.files = ["nip01.ts", "nip10.ts", "lud16.ts"];
+      expect(specBaselineProblems(input)).toEqual([
+        "spec-baseline.json: `nips.10` dates 0123456 to 2026-09-05, which `nips.01` dates to 2026-09-04",
+      ]);
+    });
+
+    // Two entries wrong in two ways are two edits. Folding them into one
+    // report would cost a second build to learn about the second.
+    it("reports each date a commit is given, not only the first wrong one", () => {
+      const input = repository();
+      for (const [id, date] of [
+        ["05", "2026-09-01"],
+        ["10", "2026-09-02"],
+      ])
+        input.baseline.documents.nips[id] = {
+          commit: COMMIT,
+          date,
+          sha256: unlike(id === "05" ? 0 : 1),
+        };
+      input.files.push("nip05.ts", "nip10.ts");
+      expect(specBaselineProblems(input)).toEqual([
+        expect.stringContaining("`nips.05` dates 0123456 to 2026-09-01"),
+        expect.stringContaining("`nips.10` dates 0123456 to 2026-09-02"),
+      ]);
+    });
+
+    it("accepts two entries agreeing about one commit", () => {
+      const input = withEntry("luds", 16, {
+        commit: COMMIT,
+        date: "2026-09-04",
+      });
+      expect(specBaselineProblems(input)).toEqual([]);
+    });
+
+    it("counts a mis-keyed entry in the paste check", () => {
+      const input = repository();
+      input.baseline.documents.nips["7d"] = {
+        commit: OTHER_COMMIT,
+        date: "2026-07-16",
+        sha256: HASH,
+      };
+      input.files.push("nip7d.ts");
+      expect(specBaselineProblems(input)).toEqual([
+        expect.stringContaining("`nips.7d` and `nips.01` record the same"),
+        expect.stringContaining("`nips.7d` is not a document id"),
+      ]);
+    });
+
     it("rejects two documents recording the same sha256", () => {
       expect(
         specBaselineProblems(withEntry("luds", "16", { sha256: HASH })),
@@ -104,8 +236,8 @@ describe("specBaselineProblems", () => {
     // A regex coerces what it tests, so an array of one hash would pass and
     // then key the paste check by the array rather than by the hash.
     it.each([
-      [{ commit: [COMMIT] }, "has no 40-character commit"],
-      [{ sha256: [HASH] }, "has no 64-character sha256"],
+      [{ commit: [COMMIT] }, "has no 40-character lowercase-hex commit"],
+      [{ sha256: [HASH] }, "has no 64-character lowercase-hex sha256"],
     ])("rejects %o", (patch, message) => {
       expect(specBaselineProblems(withEntry("nips", "01", patch))).toEqual([
         `spec-baseline.json: \`nips.01\` ${message}`,
@@ -125,6 +257,19 @@ describe("specBaselineProblems", () => {
 
     // Only a case difference names the id it should have had, and the module
     // that matches it is not an orphan of a missing entry.
+    // Two characters, but not the ones the upstream filename has, so the
+    // message says what a document id is rather than counting characters.
+    it("reports a lowercase id as not being one", () => {
+      const input = repository();
+      input.baseline.documents.nips = {
+        "7d": { commit: COMMIT, date: "2026-09-04", sha256: HASH },
+      };
+      input.files = ["nip7d.ts", "lud16.ts"];
+      expect(specBaselineProblems(input)).toEqual([
+        "spec-baseline.json: `nips.7d` is not a document id: two characters, digits or uppercase, as the upstream filename is",
+      ]);
+    });
+
     it("reports a misspelled id without blaming the module it names", () => {
       const input = repository();
       input.baseline.documents.nips = { "7d": null };
@@ -141,7 +286,7 @@ describe("specBaselineProblems", () => {
       };
       // `1` names no id, so the module it does not match is reported too.
       expect(specBaselineProblems(input)).toEqual([
-        "spec-baseline.json: `nips.1` is not a two-character document id",
+        expect.stringContaining("`nips.1` is not a document id"),
         expect.stringContaining("`src/nip01.ts` has no `nips.01` entry"),
       ]);
     });
@@ -177,6 +322,27 @@ describe("specBaselineProblems", () => {
       ]);
     });
 
+    // Keeping only the last file seen would let the second satisfy the entry
+    // the first claims, and make the diagnostic depend on directory order.
+    it("reports two modules claiming one document", () => {
+      const input = repository();
+      input.files.push("legacy/nip01.ts");
+      expect(specBaselineProblems(input)).toEqual([
+        "src/: `nips.01` is claimed by `src/nip01.ts` and `src/legacy/nip01.ts`",
+      ]);
+    });
+
+    it("names both when neither is baselined", () => {
+      const input = repository();
+      input.baseline.documents.nips = {};
+      input.files.push("legacy/nip01.ts");
+      expect(specBaselineProblems(input)).toEqual([
+        expect.stringContaining("is claimed by"),
+        expect.stringContaining("`src/nip01.ts` has no `nips.01` entry"),
+        expect.stringContaining("`src/legacy/nip01.ts` has no `nips.01` entry"),
+      ]);
+    });
+
     it("finds a module in a subdirectory", () => {
       const input = repository();
       input.files = ["nips/nip01.ts", "lud16.ts"];
@@ -200,13 +366,14 @@ describe("specBaselineProblems", () => {
   });
 
   describe("sources and documents must name the same families", () => {
+    // Named one at a time: reporting both would point at a key that is there.
     it.each([["sources"], ["documents"]])(
       "reports a baseline with no `%s` at all",
       (key) => {
         const input = repository();
         delete input.baseline[key];
         expect(specBaselineProblems(input)).toEqual([
-          "spec-baseline.json: has no `sources` and `documents` to compare",
+          `spec-baseline.json: has no \`${key}\` to compare`,
         ]);
       },
     );
@@ -217,18 +384,58 @@ describe("specBaselineProblems", () => {
         const input = repository();
         input.baseline[key] = "todo";
         expect(specBaselineProblems(input)).toEqual([
-          "spec-baseline.json: has no `sources` and `documents` to compare",
+          `spec-baseline.json: has no \`${key}\` to compare`,
         ]);
       },
     );
 
+    // Valid JSON that `biome check` passes, so the guard the header leans on
+    // does not catch it.
+    it.each([
+      ["null", null],
+      ["an array", []],
+    ])("reports a baseline that is %s", (_description, baseline) => {
+      expect(specBaselineProblems({ baseline, files: [] })).toEqual([
+        "spec-baseline.json: holds no object to compare",
+      ]);
+    });
+
+    it("names both when neither is there", () => {
+      expect(specBaselineProblems({ baseline: {}, files: [] })).toEqual([
+        "spec-baseline.json: has no `sources` and no `documents` to compare",
+      ]);
+    });
+
     it("reports a family that only `documents` knows about", () => {
       const input = repository();
       input.baseline.documents.buds = {
-        "01": { commit: COMMIT, date: "2026-09-04", sha256: HASH },
+        "01": {
+          commit: COMMIT,
+          date: "2026-09-04",
+          sha256: unlike(0),
+        },
       };
       expect(specBaselineProblems(input)).toEqual([
         "spec-baseline.json: `documents.buds` has no `sources` entry",
+      ]);
+    });
+
+    // An entry says what it says wherever it is written, so a family that only
+    // `documents` knows about still has its entries judged.
+    it("judges the entries of a family `sources` does not declare", () => {
+      const input = repository();
+      input.baseline.documents.buds = {
+        "01": { commit: "x", date: "nope", sha256: "no" },
+      };
+      expect(specBaselineProblems(input)).toEqual([
+        "spec-baseline.json: `documents.buds` has no `sources` entry",
+        expect.stringContaining(
+          "`buds.01` has no 40-character lowercase-hex commit",
+        ),
+        expect.stringContaining("`buds.01` has no YYYY-MM-DD date"),
+        expect.stringContaining(
+          "`buds.01` has no 64-character lowercase-hex sha256",
+        ),
       ]);
     });
 
@@ -240,6 +447,61 @@ describe("specBaselineProblems", () => {
       ]);
     });
 
+    // Copying a `sources` block and editing only its key. Without this the
+    // second family is judged against modules that are not its own, and the
+    // collision that caused it is never named.
+    it("reports two families sharing one label", () => {
+      const input = repository();
+      input.baseline.sources.nips2 = { label: "NIP", repository: NIPS };
+      input.baseline.documents.nips2 = {};
+      expect(specBaselineProblems(input)).toEqual([
+        "spec-baseline.json: `sources.nips` (`NIP`) and `sources.nips2` (`NIP`) share one label",
+      ]);
+    });
+
+    // The copy is as likely to be written above the original as below. Taking
+    // the first family to claim the label would hand the modules to the copy
+    // and tell the original that its own were missing.
+    it("judges neither family by the other's modules, in either order", () => {
+      const input = repository();
+      input.baseline.sources = {
+        nips2: { label: "NIP", repository: NIPS },
+        ...input.baseline.sources,
+      };
+      input.baseline.documents = {
+        nips2: {},
+        ...input.baseline.documents,
+      };
+      expect(specBaselineProblems(input)).toEqual([
+        "spec-baseline.json: `sources.nips2` (`NIP`) and `sources.nips` (`NIP`) share one label",
+      ]);
+    });
+
+    // Matched the way the modules are, so one spelling cannot slip past.
+    it("reports a shared label whose spelling differs by case", () => {
+      const input = repository();
+      input.baseline.sources.nips2 = { label: "nip", repository: NIPS };
+      input.baseline.documents.nips2 = {};
+      expect(specBaselineProblems(input)).toEqual([
+        "spec-baseline.json: `sources.nips` (`NIP`) and `sources.nips2` (`nip`) share one label",
+      ]);
+    });
+
+    // The mirror of the case above: a label is all it takes to find a family's
+    // modules, so one declared in `sources` alone still has them spoken for.
+    // Reporting only the missing `documents` would name the file to fix in a
+    // second run, after the first was fixed.
+    it("reports the modules of a family `documents` does not hold", () => {
+      const input = repository();
+      input.baseline.sources.buds = { label: "BUD", repository: LUDS };
+      input.files.push("bud01.ts", "bud02.ts");
+      expect(specBaselineProblems(input)).toEqual([
+        "spec-baseline.json: `sources.buds` has no `documents` entry",
+        "spec-baseline.json: `src/bud01.ts` has no `buds.01` entry",
+        "spec-baseline.json: `src/bud02.ts` has no `buds.02` entry",
+      ]);
+    });
+
     // `in` would find these on `Object.prototype` and skip the family in
     // silence, leaving its entries and modules unexamined.
     it.each([["toString"], ["constructor"]])(
@@ -247,7 +509,11 @@ describe("specBaselineProblems", () => {
       (family) => {
         const input = repository();
         input.baseline.documents[family] = {
-          "01": { commit: COMMIT, date: "2026-09-04", sha256: HASH },
+          "01": {
+            commit: COMMIT,
+            date: "2026-09-04",
+            sha256: unlike(0),
+          },
         };
         expect(specBaselineProblems(input)).toEqual([
           `spec-baseline.json: \`documents.${family}\` has no \`sources\` entry`,
@@ -263,12 +529,34 @@ describe("specBaselineProblems", () => {
       ]);
     });
 
-    it("reports a family whose entries are not an object", () => {
+    // Symmetric with the undeclared case: what a `sources` value cannot say is
+    // its label and repository, not what its entries say.
+    it("judges the entries of a family whose source is not an object", () => {
+      const input = repository();
+      input.baseline.sources.luds = null;
+      input.baseline.documents.luds[16] = {
+        commit: "x",
+        date: "nope",
+        sha256: "no",
+      };
+      expect(specBaselineProblems(input)).toEqual([
+        "spec-baseline.json: `sources.luds` describes no family",
+        expect.stringContaining("`luds.16` has no 40-character lowercase-hex"),
+        expect.stringContaining("`luds.16` has no YYYY-MM-DD date"),
+        expect.stringContaining("`luds.16` has no 64-character lowercase-hex"),
+      ]);
+    });
+
+    // Read as the no entries it has, not skipped: the label is there, so the
+    // modules wanting an entry are named in the same run as the family.
+    it("reports a family whose entries are not an object, and its modules", () => {
       const input = repository();
       input.baseline.documents.luds = null;
       input.files.push("lud99.ts");
       expect(specBaselineProblems(input)).toEqual([
         "spec-baseline.json: `documents.luds` holds no entries",
+        "spec-baseline.json: `src/lud16.ts` has no `luds.16` entry",
+        "spec-baseline.json: `src/lud99.ts` has no `luds.99` entry",
       ]);
     });
   });
@@ -304,9 +592,17 @@ describe("specBaselineProblems", () => {
 });
 
 describe("specBaselineSummary", () => {
+  it("says nothing was checked when no family is declared", () => {
+    expect(specBaselineSummary({ baseline: { documents: {} } })).toBe(
+      "Spec baseline check passed — spec-baseline.json declares no families, " +
+        "so nothing in src/ was checked.",
+    );
+  });
+
   it("counts each family", () => {
     expect(specBaselineSummary(repository())).toBe(
-      "Spec baseline check passed — 1 nips, 1 luds baselined from src/.",
+      "Spec baseline check passed — 1 nips, 1 luds baselined, " +
+        "for the families spec-baseline.json declares.",
     );
   });
 });

@@ -69,17 +69,29 @@ the single source of truth for provenance.
   every one of them is — `src/nip67.ts` for NIP-67, `src/lud01.ts` for LUD-01,
   though the check matches without regard for case or for how deep under `src/`
   it sits — and it must name the document whose rules the module encodes, not
-  the field that happens to carry the value. The kind:0 `lud06` field carries
-  an LNURL, but the encoding is LUD-01's and LUD-06 defines only what the
-  decoded URL answers with, so the module is `lud01.ts` and the field keeps its
-  ecosystem name at `metadataFields.lud06()` — the same split as
-  `metadataFields.nip05()` referencing `nip05.identifier()`.
-- **`src/` is the authority on what must be baselined, family by family.** Two
-  places name the same set of specs — the modules and the baseline — and the
-  modules of a registered family decide: `src/nip67.ts` calls for a `nips.67`
-  entry, and an entry with no module is dead weight. Registering the family
-  stays a judgement, for the reason under Consequences. The two are kept in
-  step by `scripts/spec-baseline-check.mjs`, in both directions, in CI and
+  the field that happens to carry the value. The baseline's own key is the
+  upstream filename's stem, so it is written as that file is: `7D`, not `7d`.
+  Both are two characters, which is what a document id is in these series and
+  what the check looks for on either side; a module whose stem is another width
+  is not one of these, and neither is another extension. The check reads names
+  and not the directory entries behind them, so it would take a directory named
+  `src/nip99.ts` for a module; nothing is done about that, since the mistake it
+  would miss is not one anybody makes. Two files naming one document is
+  reported as that rather than silently sharing an entry.
+  The kind:0 `lud06` field carries an LNURL, but the encoding is LUD-01's and
+  LUD-06 defines only what the decoded URL answers with, so the module is
+  `lud01.ts` and the field keeps its ecosystem name at `metadataFields.lud06()`
+  — the same split as `metadataFields.nip05()` referencing
+  `nip05.identifier()`.
+- **`sources` declares which families are checked; `src/` decides what each of
+  them must baseline.** Two places name the same set of specs — the modules and
+  the baseline — and within a family `sources` declares, the modules decide:
+  `src/nip67.ts` calls for a `nips.67` entry, and an entry with no module is
+  dead weight. Which families exist is what `sources` says, so a family it does
+  not name is not checked — and naming one on only one side of the file, in
+  `sources` or in `documents`, is reported, since that is a half-finished edit
+  rather than a declaration. The two are kept in step by
+  `scripts/spec-baseline-check.mjs`, in both directions, in CI and
   `prepublishOnly`.
 
   The check compares the repository against itself and nothing else. It does not
@@ -132,7 +144,7 @@ undocumented act of diligence. The baseline is a claim about the text a schema
 targets, not a guarantee that upstream has not moved since — until the
 scheduled comparison exists, an entry going stale is still noticed by hand.
 
-Three gaps stay open whatever is checked. The first is that nothing offline can
+Two gaps stay open whatever is checked. The first is that nothing offline can
 tie an entry's `sha256` or `date` to its `commit`: both are facts about a
 repository this one does not vendor, so a bump that updates `commit` but
 carries the old hash — or a plausible wrong day that is still a real date — is
@@ -140,12 +152,16 @@ not detectable here. It is the field the design rests on, so the scheduled
 comparison should hash the recorded commit too rather than only the current
 head — otherwise a stale hash reads as an upstream change that never happened.
 
-The other two follow from provenance being read from filenames and nothing
-more. A specification implemented **inside an existing module** rather
-than in its own file is invisible to it: NIP-24 is caught only because
-`src/nip24.ts` exists, and folding those fields into `src/nip01.ts` instead
-would have shipped them unbaselined. So is a module of a **family `sources`
-never declares** — no filename rule separates a `bolt11.ts` worth baselining
-from a `bech32.ts` that is an ordinary helper, and a guess in either direction
-cannot be told apart by name. Both are judgements made when the spec is added,
-and this record is where the requirement lives.
+The second follows from provenance being read from filenames: a specification
+implemented **inside an existing module** rather than in its own file is
+invisible to the check. NIP-24 is caught only because `src/nip24.ts` exists,
+and folding those fields into `src/nip01.ts` instead would have shipped them
+unbaselined. That is a judgement made when the spec is added, and this record
+is where the requirement lives.
+
+Registering a family is such a judgement too, and deliberately so rather than
+by omission: no filename rule separates a `bolt11.ts` worth baselining from a
+`bech32.ts` that is an ordinary helper, so `sources` says which families exist
+and the check reads it. Adding or removing one is an edit to `spec-baseline.json`
+that a reader sees in the diff — unlike adding a module, which leaves the
+baseline untouched, which is why the check watches that direction.

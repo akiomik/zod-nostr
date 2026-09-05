@@ -143,29 +143,29 @@ aliased at the root (`zostr.event`, `zostr.npub`, …).
 
 | NIP | Coverage | Key canonical paths |
 | --- | --- | --- |
-| **NIP-01** | Event structure and templates, opt-in signature verification, kind:0 profile metadata (content codec and field-level atoms), the `REQ`/`COUNT` filter object, and relay/client protocol messages | `nip01.event`, `nip01.unsignedEvent`, `nip01.eventTemplate`, `nip01.signatureCheck`, `nip01.metadata`, `nip01.filter`, `nip01.relayMessage.*`, `nip01.clientMessage.*` |
-| **NIP-05** | Identifier and `.well-known/nostr.json` document validation | `nip05.identifier`, `nip05.nostrJsonDocument` |
-| **NIP-10** | kind:1 text notes and threads, marked reply/citation tags, and opt-in reply/thread checks | `nip10.textNote` |
-| **NIP-11** | Relay information document | `nip11.relayInformationDocument` |
-| **NIP-13** | Proof of work: the `nonce` tag schema and opt-in checks for achieved difficulty and the committed target | `nip13.nonceTag`, `nip13.powCheck`, `nip13.commitmentCheck` |
-| **NIP-19** | bech32 entities | `nip19.npub`, `nip19.nsec`, `nip19.note`, `nip19.nprofile`, `nip19.nevent`, `nip19.naddr` |
-| **NIP-21** | `nostr:` URIs over the supported NIP-19 entities (`nsec` excluded): validation-only, per-entity codecs, and decoding to a `{ type, data }` discriminated union | `nip21.any` |
-| **NIP-24** | Extra kind:0 profile metadata fields (`display_name`, `website`, `banner`, `bot`, `birthday`), exposed as field-level atoms alongside NIP-01's | `nip01.metadataFields.displayName`, `nip01.metadataFields.birthday` |
-| **NIP-40** | Expiration timestamps: the `expiration` tag schema and an opt-in not-expired check | `nip40.expirationTag`, `nip40.expirationCheck` |
-| **NIP-42** | Authentication (`AUTH`): the `kind: 22242` auth event, the relay/client `AUTH` messages, and opt-in verification checks | `nip42.authEvent` |
-| **NIP-45** | Event counts (`COUNT`): request/response messages and the response body object | `nip45.count` |
-| **NIP-50** | Search: the filter extended with a `search` string and the `REQ` that carries it, an intentional superset of NIP-01's | `nip50.filter` |
-| **NIP-67** | EOSE completeness hint: `EOSE` extended with an optional hints array, a strict superset of NIP-01's | `nip67.relayMessage.eose` |
-| **NIP-70** | Protected events: the `["-"]` marker tag schema and an opt-in check that a protected event's author is an authenticated pubkey | `nip70.protectedTag`, `nip70.protectedCheck` |
+| [**NIP-01**](https://github.com/nostr-protocol/nips/blob/master/01.md) | Event structure and templates, opt-in signature verification, kind:0 profile metadata (content codec and field-level atoms), the `REQ`/`COUNT` filter object, and relay/client protocol messages | `nip01.event`, `nip01.unsignedEvent`, `nip01.eventTemplate`, `nip01.signatureCheck`, `nip01.metadata`, `nip01.filter`, `nip01.relayMessage.*`, `nip01.clientMessage.*` |
+| [**NIP-05**](https://github.com/nostr-protocol/nips/blob/master/05.md) | Identifier and `.well-known/nostr.json` document validation | `nip05.identifier`, `nip05.nostrJsonDocument` |
+| [**NIP-10**](https://github.com/nostr-protocol/nips/blob/master/10.md) | kind:1 text notes and threads, marked reply/citation tags, and opt-in reply/thread checks | `nip10.textNote` |
+| [**NIP-11**](https://github.com/nostr-protocol/nips/blob/master/11.md) | Relay information document | `nip11.relayInformationDocument` |
+| [**NIP-13**](https://github.com/nostr-protocol/nips/blob/master/13.md) | Proof of work: the `nonce` tag schema and opt-in checks for achieved difficulty and the committed target | `nip13.nonceTag`, `nip13.powCheck`, `nip13.commitmentCheck` |
+| [**NIP-19**](https://github.com/nostr-protocol/nips/blob/master/19.md) | bech32 entities | `nip19.npub`, `nip19.nsec`, `nip19.note`, `nip19.nprofile`, `nip19.nevent`, `nip19.naddr` |
+| [**NIP-21**](https://github.com/nostr-protocol/nips/blob/master/21.md) | `nostr:` URIs over the supported NIP-19 entities (`nsec` excluded): validation-only, per-entity codecs, and decoding to a `{ type, data }` discriminated union | `nip21.any` |
+| [**NIP-24**](https://github.com/nostr-protocol/nips/blob/master/24.md) | Extra kind:0 profile metadata fields (`display_name`, `website`, `banner`, `bot`, `birthday`), exposed as field-level atoms alongside NIP-01's | `nip01.metadataFields.displayName`, `nip01.metadataFields.birthday` |
+| [**NIP-40**](https://github.com/nostr-protocol/nips/blob/master/40.md) | Expiration timestamps: the `expiration` tag schema and an opt-in not-expired check | `nip40.expirationTag`, `nip40.expirationCheck` |
+| [**NIP-42**](https://github.com/nostr-protocol/nips/blob/master/42.md) | Authentication (`AUTH`): the `kind: 22242` auth event, the relay/client `AUTH` messages, and opt-in verification checks | `nip42.authEvent` |
+| [**NIP-45**](https://github.com/nostr-protocol/nips/blob/master/45.md) | Event counts (`COUNT`): request/response messages and the response body object | `nip45.count` |
+| [**NIP-50**](https://github.com/nostr-protocol/nips/blob/master/50.md) | Search: the filter extended with a `search` string and the `REQ` that carries it, an intentional superset of NIP-01's | `nip50.filter` |
+| [**NIP-67**](https://github.com/nostr-protocol/nips/blob/master/67.md) | EOSE completeness hint: `EOSE` extended with an optional hints array, a strict superset of NIP-01's | `nip67.relayMessage.eose` |
+| [**NIP-70**](https://github.com/nostr-protocol/nips/blob/master/70.md) | Protected events: the `["-"]` marker tag schema and an opt-in check that a protected event's author is an authenticated pubkey | `nip70.protectedTag`, `nip70.protectedCheck` |
 
-Which revision of each specification these schemas are written against is
-recorded in [spec-baseline.json](spec-baseline.json) — the commit, the date it
-landed upstream, and the SHA-256 of the document's text, so that upstream
-changes can be detected mechanically. It covers the NIPs above and the two
-specs behind `nip01.metadataFields.lud06()` and
-`nip01.metadataFields.lud16()`, which are not NIPs:
-[LUD-01 and LUD-16](https://github.com/lnurl/luds). An entry moves only when
-the spec is re-read and the schemas are confirmed against it.
+Each NIP above links to its current text; which revision these schemas are
+written against is recorded in [spec-baseline.json](spec-baseline.json) — the
+commit, the date it landed upstream, and the SHA-256 of the document's text, so
+that upstream changes can be detected mechanically. It covers the NIPs above
+and the two specs behind `nip01.metadataFields.lud06()` and
+`nip01.metadataFields.lud16()`, which are not NIPs: [LUD-01 and
+LUD-16](https://github.com/lnurl/luds). An entry moves only when the spec is
+re-read and the schemas are confirmed against it.
 
 See [docs/API.md](docs/API.md) for the full API reference, and
 [docs/guides.md](docs/guides.md) for task-oriented how-to guides (building a

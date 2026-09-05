@@ -2,6 +2,10 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
+    // No `include`: vitest's default already collects both the library's tests
+    // beside the source and the ones the build's checks carry under `scripts/`.
+    // Any list written here would be narrower than that default, and would drop
+    // whatever it forgot to name without saying so.
     coverage: {
       provider: "v8",
       include: ["src/**/*.ts"],

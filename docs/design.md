@@ -278,9 +278,10 @@ A public API addition ships with:
 - passing the release gates below;
 - updated `API.md` and `CHANGELOG.md`;
 - for a new spec module (`src/nipXX.ts`, `src/ludXX.ts`), its entry in
-  `spec-baseline.json`, which `npm run test:spec-baseline` fails the build
-  without — see [decision 0004](./decisions/0004-spec-baselines.md) for why
-  provenance is recorded per document;
+  `spec-baseline.json`. Within a family the file's `sources` declares,
+  `npm run test:spec-baseline` fails the build without it; a module of a new
+  family needs that `sources` entry first, which nothing checks — see
+  [decision 0004](./decisions/0004-spec-baselines.md) for why;
 - for a new NIP, a row in `README.md`'s `Supported NIPs` table and a mention in
   the `Covers NIP-…` sentence above it. Nothing checks these — they say what
   the library covers, not which revision it targets — but a NIP missing from
