@@ -24,7 +24,10 @@ if (problems.length > 0) {
   console.error(
     `\nEvery spec module under ${SOURCE}/ must be baselined in ${BASELINE}, and every entry must name a module.`,
   );
-  process.exit(1);
+  // Set, not `process.exit(1)`: writes to a pipe — which stderr is under CI —
+  // are asynchronous, and exiting does not wait for them. A gate that exits
+  // having printed nothing is the one outcome this must not produce.
+  process.exitCode = 1;
+} else {
+  console.log(specBaselineSummary({ baseline }));
 }
-
-console.log(specBaselineSummary({ baseline }));
