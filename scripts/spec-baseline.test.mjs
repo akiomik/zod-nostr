@@ -11,11 +11,17 @@ import { specBaselineProblems, specBaselineSummary } from "./spec-baseline.mjs";
 // than a fixture repository. Whether *this* repository agrees with itself is
 // `npm run test:spec-baseline`'s question, not this file's.
 
-const COMMIT = "c3fd9af17939316bf6d0d83a5759100f8b0a1bdb";
-const OTHER_COMMIT = "bd93433261872bf69bbe75e29376504b848d5353";
-const HASH = "6cd76682e7ec2d635f1f46b3660f621cdad1193d9174d316674b91f8d683af26";
-const OTHER_HASH =
-  "e4e5b4f130a0f902cd295f8917f907a3bd53f0c37ad2117508716798464194ad";
+// Shaped like the real thing and readable as not being it. Copying an entry's
+// actual commit and hash in here would put the revision this repository records
+// in a second place, which is the one thing `spec-baseline.json` exists to
+// prevent — and would invite the next reader to keep the copy up to date.
+const COMMIT = "0123456789abcdef0123456789abcdef01234567";
+const OTHER_COMMIT = "89abcdef0123456789abcdef0123456789abcdef";
+const HASH = `${COMMIT}${COMMIT.slice(0, 24)}`;
+const OTHER_HASH = `${OTHER_COMMIT}${OTHER_COMMIT.slice(0, 24)}`;
+/** A hash unlike `HASH`, for a case that needs two entries to differ. */
+const unlike = (mark) => `${mark}${HASH.slice(1)}`;
+
 const NIPS = "https://github.com/nostr-protocol/nips";
 const LUDS = "https://github.com/lnurl/luds";
 
@@ -53,7 +59,7 @@ describe("specBaselineProblems", () => {
 
   describe("the entries it can judge without the spec text", () => {
     it.each([
-      [{ commit: "c3fd9af" }, "has no 40-character lowercase-hex commit"],
+      [{ commit: "0123456" }, "has no 40-character lowercase-hex commit"],
       [{ commit: undefined }, "has no 40-character lowercase-hex commit"],
       [{ sha256: "abc" }, "has no 64-character lowercase-hex sha256"],
       [{ date: "yesterday" }, "has no YYYY-MM-DD date"],
@@ -91,7 +97,7 @@ describe("specBaselineProblems", () => {
         date: "2026-09-05",
       });
       expect(specBaselineProblems(input)).toEqual([
-        expect.stringContaining("dates c3fd9af to 2026-09-05"),
+        expect.stringContaining("dates 0123456 to 2026-09-05"),
       ]);
     });
 
@@ -106,7 +112,7 @@ describe("specBaselineProblems", () => {
         input.baseline.documents.nips[id] = {
           commit: "TODO",
           date,
-          sha256: HASH.replace(/^6/, id === "01" ? "7" : "8"),
+          sha256: unlike(id === "01" ? "a" : "b"),
         };
       input.files.push("nip05.ts");
       expect(specBaselineProblems(input)).toEqual([
@@ -125,12 +131,12 @@ describe("specBaselineProblems", () => {
         input.baseline.documents.nips[id] = {
           commit: COMMIT,
           date: "2026-09-05",
-          sha256: HASH.replace(/^6/, id === "05" ? "7" : "8"),
+          sha256: unlike(id === "05" ? "a" : "b"),
         };
       input.files.push("nip05.ts", "nip10.ts");
       expect(
         specBaselineProblems(input).filter((problem) =>
-          problem.includes("dates c3fd9af"),
+          problem.includes("dates 0123456"),
         ),
       ).toHaveLength(1);
     });
@@ -145,13 +151,13 @@ describe("specBaselineProblems", () => {
         10: {
           commit: COMMIT,
           date: "2026-09-05",
-          sha256: HASH.replace(/^6/, "7"),
+          sha256: unlike("a"),
         },
         "01": { commit: COMMIT, date: "2026-09-04", sha256: HASH },
       };
       input.files = ["nip01.ts", "nip10.ts", "lud16.ts"];
       expect(specBaselineProblems(input)).toEqual([
-        "spec-baseline.json: `nips.10` dates c3fd9af to 2026-09-05, which `nips.01` dates to 2026-09-04",
+        "spec-baseline.json: `nips.10` dates 0123456 to 2026-09-05, which `nips.01` dates to 2026-09-04",
       ]);
     });
 
@@ -166,12 +172,12 @@ describe("specBaselineProblems", () => {
         input.baseline.documents.nips[id] = {
           commit: COMMIT,
           date,
-          sha256: HASH.replace(/^6/, id === "05" ? "7" : "8"),
+          sha256: unlike(id === "05" ? "a" : "b"),
         };
       input.files.push("nip05.ts", "nip10.ts");
       expect(specBaselineProblems(input)).toEqual([
-        expect.stringContaining("`nips.05` dates c3fd9af to 2026-09-01"),
-        expect.stringContaining("`nips.10` dates c3fd9af to 2026-09-02"),
+        expect.stringContaining("`nips.05` dates 0123456 to 2026-09-01"),
+        expect.stringContaining("`nips.10` dates 0123456 to 2026-09-02"),
       ]);
     });
 
@@ -394,7 +400,7 @@ describe("specBaselineProblems", () => {
         "01": {
           commit: COMMIT,
           date: "2026-09-04",
-          sha256: HASH.replace(/^6/, "7"),
+          sha256: unlike("a"),
         },
       };
       expect(specBaselineProblems(input)).toEqual([
@@ -454,7 +460,7 @@ describe("specBaselineProblems", () => {
           "01": {
             commit: COMMIT,
             date: "2026-09-04",
-            sha256: HASH.replace(/^6/, "7"),
+            sha256: unlike("a"),
           },
         };
         expect(specBaselineProblems(input)).toEqual([
