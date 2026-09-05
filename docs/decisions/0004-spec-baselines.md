@@ -147,10 +147,10 @@ Two gaps stay open. The first is that all three of an entry's fields are
 assertions about a repository this one does not vendor — that the revision
 exists, that it landed then, that its text hashed to this — and nothing here
 fetches it, so none of them is confirmed. Entries are held to each other, but
-agreement is not confirmation: entries that share a commit can agree on a day
-it did not land on. An entry is true because whoever wrote it hashed the
-document as they read it — care taken at the keyboard, not something the build
-can demand.
+agreement is not confirmation: entries that share a commit can agree on an
+instant it did not land at. An entry is true because whoever wrote it hashed
+the document as they read it — care taken at the keyboard, not something the
+build can demand.
 
 The second follows from provenance being read from filenames: a specification
 implemented **inside an existing module** rather than in its own file is

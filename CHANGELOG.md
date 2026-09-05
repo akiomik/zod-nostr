@@ -30,10 +30,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   module is dead weight) — both directions, so a spec added to one and
   forgotten in the other fails the build instead of shipping with no recorded
   provenance. It also rejects what an entry can be judged for without the spec
-  text: an instant that is no instant or has not come, a malformed commit or
-  hash, a hash shared by two documents, two entries landing one commit
-  differently, and a family named in `sources` but not in `documents` or the
-  reverse. It runs in CI and before publish, and compares the repository
+  text: an instant that is no instant or is ahead of the clock, a malformed
+  commit or hash, a hash shared by two documents, two entries landing one
+  commit differently, and a family named in `sources` but not in `documents` or
+  the reverse. It runs in CI and before publish, and compares the repository
   against itself only: whether upstream has moved since a baseline was recorded
   is a separate question, answered by reading the spec rather than by a build.
 

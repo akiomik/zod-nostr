@@ -66,7 +66,7 @@ const LABEL = /^[A-Za-z]+$/;
  * it is not enough need different checks: `2026-90-04T00:00:00Z` parses to
  * nothing at all, while `2026-02-30T00:00:00Z` parses to March 2nd — a real
  * instant, but not the one written, which only re-serialising notices. Both
- * are an instant that does not exist and say so; one still ahead of now is a
+ * are an instant that does not exist and say so; one ahead of this clock is a
  * different thing and says that. An instant carries its own zone, so there is
  * nothing to leave slack for.
  */
@@ -79,8 +79,13 @@ function landedProblem(landed) {
     `${parsed.toISOString().slice(0, 19)}Z` !== landed
   )
     return `lands at an instant that does not exist, ${landed}`;
+  // Named for the comparison rather than for a verdict on the value: with no
+  // slack left, a clock running behind the one that stamped the commit reports
+  // an entry that is right. Slack is not the answer to that — it was there for
+  // a day with no zone, and a machine with the wrong time is a different
+  // problem — but the message should not blame the entry for it.
   if (parsed.getTime() > Date.now())
-    return `lands at an instant that has not come, ${landed}`;
+    return `lands at an instant this clock has not reached, ${landed}`;
   return null;
 }
 

@@ -106,7 +106,7 @@ describe("specBaselineProblems", () => {
       ],
       [
         { landed: "2999-01-01T00:00:00Z" },
-        "lands at an instant that has not come, 2999-01-01T00:00:00Z",
+        "lands at an instant this clock has not reached, 2999-01-01T00:00:00Z",
       ],
     ])("rejects %o", (patch, message) => {
       expect(specBaselineProblems(withEntry("nips", "01", patch))).toEqual([
@@ -134,7 +134,9 @@ describe("specBaselineProblems", () => {
       expect(
         specBaselineProblems(withEntry("nips", "01", { landed: at(60_000) })),
       ).toEqual([
-        expect.stringContaining("lands at an instant that has not come"),
+        expect.stringContaining(
+          "lands at an instant this clock has not reached",
+        ),
       ]);
     });
 
