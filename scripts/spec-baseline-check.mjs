@@ -48,8 +48,13 @@ if (problems.length > 0) {
     `Spec baseline check failed (${problems.length} problem(s)):\n`,
   );
   for (const problem of problems) console.error(`  - ${problem}`);
+  // Two closings, because on the unread path no comparison ran: describing one
+  // that did not happen is the same overstatement in the report that this line
+  // was widened to remove from it.
   console.error(
-    `\n${BASELINE} and the spec modules under ${SOURCE}/ must agree about what is baselined, family by family, for the families ${BASELINE} declares.`,
+    unread.length > 0
+      ? `\nWithout ${BASELINE} and ${SOURCE}/ both readable, there is nothing to compare.`
+      : `\n${BASELINE} and the spec modules under ${SOURCE}/ must agree about what is baselined, family by family, for the families ${BASELINE} declares.`,
   );
   // Set, not `process.exit(1)`: writes to a pipe — which stderr is under CI —
   // are asynchronous, and exiting does not wait for them. A gate that exits

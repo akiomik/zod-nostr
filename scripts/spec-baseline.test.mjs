@@ -19,8 +19,20 @@ const COMMIT = "0123456789abcdef0123456789abcdef01234567";
 const OTHER_COMMIT = "89abcdef0123456789abcdef0123456789abcdef";
 const HASH = `${COMMIT}${COMMIT.slice(0, 24)}`;
 const OTHER_HASH = `${OTHER_COMMIT}${OTHER_COMMIT.slice(0, 24)}`;
-/** A hash unlike `HASH`, for a case that needs two entries to differ. */
-const unlike = (mark) => `${mark}${HASH.slice(1)}`;
+// Marks that `HASH` does not start with, so `unlike` cannot return `HASH`
+// however `HASH` is spelled. Reached by index, so two calls differ as well.
+const MARKS = [..."abcdef"].filter((mark) => mark !== HASH[0]);
+
+/**
+ * The nth hash unlike `HASH` and unlike every other `unlike`, for `nth` below
+ * `MARKS.length` — six, or five when `HASH` starts with a hex letter. Past that
+ * the mark is `undefined`, which would make a hash that is not one and change
+ * which diagnostic a case asserts rather than failing as the misuse it is.
+ */
+const unlike = (nth) => {
+  if (nth >= MARKS.length) throw new RangeError(`no mark ${nth} to build with`);
+  return `${MARKS[nth]}${HASH.slice(1)}`;
+};
 
 const NIPS = "https://github.com/nostr-protocol/nips";
 const LUDS = "https://github.com/lnurl/luds";
@@ -112,7 +124,7 @@ describe("specBaselineProblems", () => {
         input.baseline.documents.nips[id] = {
           commit: "TODO",
           date,
-          sha256: unlike(id === "01" ? "a" : "b"),
+          sha256: unlike(id === "01" ? 0 : 1),
         };
       input.files.push("nip05.ts");
       expect(specBaselineProblems(input)).toEqual([
@@ -131,7 +143,7 @@ describe("specBaselineProblems", () => {
         input.baseline.documents.nips[id] = {
           commit: COMMIT,
           date: "2026-09-05",
-          sha256: unlike(id === "05" ? "a" : "b"),
+          sha256: unlike(id === "05" ? 0 : 1),
         };
       input.files.push("nip05.ts", "nip10.ts");
       expect(
@@ -151,7 +163,7 @@ describe("specBaselineProblems", () => {
         10: {
           commit: COMMIT,
           date: "2026-09-05",
-          sha256: unlike("a"),
+          sha256: unlike(0),
         },
         "01": { commit: COMMIT, date: "2026-09-04", sha256: HASH },
       };
@@ -172,7 +184,7 @@ describe("specBaselineProblems", () => {
         input.baseline.documents.nips[id] = {
           commit: COMMIT,
           date,
-          sha256: unlike(id === "05" ? "a" : "b"),
+          sha256: unlike(id === "05" ? 0 : 1),
         };
       input.files.push("nip05.ts", "nip10.ts");
       expect(specBaselineProblems(input)).toEqual([
@@ -400,7 +412,7 @@ describe("specBaselineProblems", () => {
         "01": {
           commit: COMMIT,
           date: "2026-09-04",
-          sha256: unlike("a"),
+          sha256: unlike(0),
         },
       };
       expect(specBaselineProblems(input)).toEqual([
@@ -443,7 +455,25 @@ describe("specBaselineProblems", () => {
       input.baseline.sources.nips2 = { label: "NIP", repository: NIPS };
       input.baseline.documents.nips2 = {};
       expect(specBaselineProblems(input)).toEqual([
-        "spec-baseline.json: `sources.nips2` and `sources.nips` share the label `NIP`",
+        "spec-baseline.json: `sources.nips` (`NIP`) and `sources.nips2` (`NIP`) share one label",
+      ]);
+    });
+
+    // The copy is as likely to be written above the original as below. Taking
+    // the first family to claim the label would hand the modules to the copy
+    // and tell the original that its own were missing.
+    it("judges neither family by the other's modules, in either order", () => {
+      const input = repository();
+      input.baseline.sources = {
+        nips2: { label: "NIP", repository: NIPS },
+        ...input.baseline.sources,
+      };
+      input.baseline.documents = {
+        nips2: {},
+        ...input.baseline.documents,
+      };
+      expect(specBaselineProblems(input)).toEqual([
+        "spec-baseline.json: `sources.nips2` (`NIP`) and `sources.nips` (`NIP`) share one label",
       ]);
     });
 
@@ -453,7 +483,7 @@ describe("specBaselineProblems", () => {
       input.baseline.sources.nips2 = { label: "nip", repository: NIPS };
       input.baseline.documents.nips2 = {};
       expect(specBaselineProblems(input)).toEqual([
-        "spec-baseline.json: `sources.nips2` and `sources.nips` share the label `nip`",
+        "spec-baseline.json: `sources.nips` (`NIP`) and `sources.nips2` (`nip`) share one label",
       ]);
     });
 
@@ -482,7 +512,7 @@ describe("specBaselineProblems", () => {
           "01": {
             commit: COMMIT,
             date: "2026-09-04",
-            sha256: unlike("a"),
+            sha256: unlike(0),
           },
         };
         expect(specBaselineProblems(input)).toEqual([
