@@ -122,12 +122,11 @@ the single source of truth for provenance.
 - *Exporting the baseline at runtime* (`export const SPEC_BASELINE`) — adds
   public surface and bundle weight for something with documentation value only.
   Nothing prevents adding it later if a consumer asks.
-- *Checking upstream in the same script* — worth doing, but not here: a network
-  call makes the check non-deterministic and turns an unrelated upstream edit
-  into a red build on an innocent pull request. A scheduled job that reports the
-  diff is the right shape for that, and the `sha256` field is what it will read
-  — against the text at the recorded commit as well as at the current head, so
-  that it also answers whether the entry is internally consistent.
+- *Checking upstream in the same script* — a network call makes the check
+  non-deterministic, and turns an unrelated upstream edit into a red build on
+  an innocent pull request. Whether upstream has moved is a question whose
+  answer changes over time; what a schema was written against does not, and
+  that is what this file records.
 
 ## Consequences
 
@@ -141,16 +140,18 @@ requirement. A document from a new family needs a `sources` entry as well — a
 requirement this record carries, not one the check can demand, for the reason
 below. Re-reading a spec is a reviewable change with a diff, rather than an
 undocumented act of diligence. The baseline is a claim about the text a schema
-targets, not a guarantee that upstream has not moved since — until the
-scheduled comparison exists, an entry going stale is still noticed by hand.
+targets, not a guarantee that upstream has not moved since. Whether it has is a
+question for whoever is closing the gap, and `spec-baseline.json` is where they
+get the revision to ask it from.
 
 Two gaps stay open whatever is checked. The first is that nothing offline can
 tie an entry's `sha256` or `date` to its `commit`: both are facts about a
 repository this one does not vendor, so a bump that updates `commit` but
 carries the old hash — or a plausible wrong day that is still a real date — is
-not detectable here. It is the field the design rests on, so the scheduled
-comparison should hash the recorded commit too rather than only the current
-head — otherwise a stale hash reads as an upstream change that never happened.
+not detectable here. Hashing the document as it is read is what makes an entry
+true, and that is care taken when the entry is written rather than anything the
+build can demand — though the likeliest slip, an entry carrying another entry's
+hash, is caught.
 
 The second follows from provenance being read from filenames: a specification
 implemented **inside an existing module** rather than in its own file is
