@@ -235,8 +235,11 @@ if (errors.length > 0) {
   // fits a pipe's buffer, so nothing is lost today; against a reader that does
   // not drain at once, `process.exit(1)` delivers a fraction of what it wrote.
   process.exitCode = 1;
+} else {
+  // In the `else`, because setting the status does not stop the script the way
+  // `process.exit(1)` did: printed unconditionally, a failing run reported its
+  // problems on stderr and called itself passed on stdout in the same breath.
+  console.log(
+    `Public JSDoc check passed — ${total} public paths documented in ${FLAVORS.join(" and ")}.`,
+  );
 }
-
-console.log(
-  `Public JSDoc check passed — ${total} public paths documented in ${FLAVORS.join(" and ")}.`,
-);
