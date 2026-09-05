@@ -41,14 +41,16 @@ the single source of truth for provenance.
   document family — its label and its repository — and `documents` holds that
   family's entries under the same key, so the file says what its own keys mean
   and a reader never has to know which top-level keys are data.
-- **Content: `commit`, `date`, `sha256`.** The commit identifies the revision;
-  `date` is when it landed upstream (the committer date, which is not always the
-  author date a commit page shows); `sha256` is the
-  hash of the document's Markdown at that commit. The hash is the load-bearing
-  field: a commit id can be copied out of a log, while a hash cannot be had
-  without the document, so it is the part of an entry its author could not have
-  written without the text in front of them. Being a data file rather than
-  prose is what lets a check read it.
+- **Content: `commit`, `landed`, `sha256`.** The commit identifies the
+  revision; `landed` is when that commit landed upstream, as an instant in UTC
+  — its committer date, which is not always the author date a commit page
+  shows; `sha256` is the hash of the document's Markdown at that commit. An
+  instant rather than a day, because a day leaves the zone unsaid and this file
+  is read from every one of them. The hash is the load-bearing field: a commit
+  id can be copied out of a log, while a hash cannot be had without the
+  document, so it is the part of an entry its author could not have written
+  without the text in front of them. Being a data file rather than prose is
+  what lets a check read it.
 - **No review date.** An entry says which revision the schemas target; it does
   not say when someone last looked. Recording that would mean stamping every
   document as reviewed whenever one of them is, and the honest alternative —
@@ -145,10 +147,10 @@ Two gaps stay open. The first is that all three of an entry's fields are
 assertions about a repository this one does not vendor — that the revision
 exists, that it landed then, that its text hashed to this — and nothing here
 fetches it, so none of them is confirmed. Entries are held to each other, but
-agreement is not confirmation: entries that share a commit can agree on a day
-it did not land on. An entry is true because whoever wrote it hashed the
-document as they read it — care taken at the keyboard, not something the build
-can demand.
+agreement is not confirmation: entries that share a commit can agree on an
+instant it did not land at. An entry is true because whoever wrote it hashed
+the document as they read it — care taken at the keyboard, not something the
+build can demand.
 
 The second follows from provenance being read from filenames: a specification
 implemented **inside an existing module** rather than in its own file is

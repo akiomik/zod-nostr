@@ -49,7 +49,10 @@ export const SOURCE = "src";
 // paste check compares them as text.
 const COMMIT = /^[0-9a-f]{40}$/;
 const SHA256 = /^[0-9a-f]{64}$/;
-const DATE = /^\d{4}-\d{2}-\d{2}$/;
+// An instant, spelled one way: RFC 3339 in UTC, to the second. An offset or a
+// fraction would let one moment be written several ways, and the entries at one
+// commit are compared as text — the same reason the hashes above are lowercase.
+const INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
 // A document id is the stem of its upstream filename, so it is spelled the way
 // the file is: two characters, digits or uppercase (`01`, `7D`).
 const DOCUMENT = /^[0-9A-Z]{2}$/;
@@ -59,23 +62,30 @@ const DOCUMENT = /^[0-9A-Z]{2}$/;
 const LABEL = /^[A-Za-z]+$/;
 
 /**
- * What is wrong with `date`, or null. Digit-shaped is not enough: a transposed
- * month (`2026-90-04`) or year (`2062-06-13`) is otherwise a real string that
- * nothing else here would notice, and each is named for what it is rather than
- * folded into one message. The day of slack is for a maintainer reading a date
- * east of UTC, for whom today has already begun.
+ * What is wrong with `landed`, or null. Shape is not enough, and the two ways
+ * it is not enough need different checks: `2026-90-04T00:00:00Z` parses to
+ * nothing at all, while `2026-02-30T00:00:00Z` parses to March 2nd — a real
+ * instant, but not the one written, which only re-serialising notices. Both
+ * are an instant that does not exist and say so; one ahead of this clock is a
+ * different thing and says that. An instant carries its own zone, so there is
+ * nothing to leave slack for.
  */
-function dateProblem(date) {
-  if (typeof date !== "string" || !DATE.test(date))
-    return "has no YYYY-MM-DD date";
-  const parsed = new Date(`${date}T00:00:00Z`);
+function landedProblem(landed) {
+  if (typeof landed !== "string" || !INSTANT.test(landed))
+    return "has no YYYY-MM-DDTHH:MM:SSZ instant";
+  const parsed = new Date(landed);
   if (
     Number.isNaN(parsed.getTime()) ||
-    parsed.toISOString().slice(0, 10) !== date
+    `${parsed.toISOString().slice(0, 19)}Z` !== landed
   )
-    return `dates a day that does not exist, ${date}`;
-  if (date > new Date(Date.now() + 86_400_000).toISOString().slice(0, 10))
-    return `dates a day that has not come, ${date}`;
+    return `lands at an instant that does not exist, ${landed}`;
+  // Named for the comparison rather than for a verdict on the value: with no
+  // slack left, a clock running behind the one that stamped the commit reports
+  // an entry that is right. Slack is not the answer to that — it was there for
+  // a day with no zone, and a machine with the wrong time is a different
+  // problem — but the message should not blame the entry for it.
+  if (parsed.getTime() > Date.now())
+    return `lands at an instant this clock has not reached, ${landed}`;
   return null;
 }
 
@@ -126,11 +136,11 @@ export function specBaselineProblems({ baseline, files }) {
 
   const problems = [];
   // Two documents sharing a hash means one was pasted from the other, and two
-  // entries at one commit disagreeing about its date means one was mistyped —
-  // the likeliest corruptions of the fields the baseline rests on, and the ones
-  // judgeable without the upstream text.
+  // entries at one commit disagreeing about when it landed means one was
+  // mistyped — the likeliest corruptions of the fields the baseline rests on,
+  // and the ones judgeable without the upstream text.
   const hashes = new Map();
-  const dated = new Map();
+  const landings = new Map();
 
   // `sources` says what a family is and `documents` holds its entries, so a
   // family in one and not the other is the same "updated one file and not the
@@ -259,8 +269,8 @@ export function specBaselineProblems({ baseline, files }) {
         typeof entry.commit === "string" && COMMIT.test(entry.commit);
       if (!committed)
         problems.push(`${where} has no 40-character lowercase-hex commit`);
-      const undated = dateProblem(entry.date);
-      if (undated) problems.push(`${where} ${undated}`);
+      const unlanded = landedProblem(entry.landed);
+      if (unlanded) problems.push(`${where} ${unlanded}`);
       const hashed =
         typeof entry.sha256 === "string" && SHA256.test(entry.sha256);
       if (!hashed)
@@ -273,24 +283,27 @@ export function specBaselineProblems({ baseline, files }) {
         else hashes.set(entry.sha256, `${family}.${id}`);
       }
 
-      // One commit has one committer date, so two entries recording it must
-      // agree about when it landed.
-      if (committed && !undated) {
-        const first = dated.get(entry.commit);
+      // One commit landed once, so two entries recording it must agree about
+      // when.
+      if (committed && !unlanded) {
+        const first = landings.get(entry.commit);
         if (first === undefined)
-          dated.set(entry.commit, {
-            date: entry.date,
+          landings.set(entry.commit, {
+            landed: entry.landed,
             at: `${family}.${id}`,
-            // The dates already reported against this one. Entries agreeing on
-            // a wrong date are one edit and say so once; two entries wrong in
-            // two ways are two edits, and reporting only the first would cost
-            // the maintainer a second build to learn about the second.
+            // The instants already reported against this one. Entries agreeing
+            // on a wrong instant are one edit and say so once; two entries
+            // wrong in two ways are two edits, and reporting only the first
+            // would cost the maintainer a second build to learn the second.
             reported: new Set(),
           });
-        else if (first.date !== entry.date && !first.reported.has(entry.date)) {
-          first.reported.add(entry.date);
+        else if (
+          first.landed !== entry.landed &&
+          !first.reported.has(entry.landed)
+        ) {
+          first.reported.add(entry.landed);
           problems.push(
-            `${where} dates ${entry.commit.slice(0, 7)} to ${entry.date}, which \`${first.at}\` dates to ${first.date}`,
+            `${where} lands ${entry.commit.slice(0, 7)} at ${entry.landed}, which \`${first.at}\` lands at ${first.landed}`,
           );
         }
       }

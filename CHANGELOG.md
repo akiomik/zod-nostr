@@ -11,17 +11,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Spec baselines for every specification the schemas are built on.**
   `spec-baseline.json` records, per document, the exact revision these schemas
-  are written against: the commit in its source repository, that commit's date,
-  and the SHA-256 of the document's Markdown at that commit. It covers the 14
-  NIPs and, because the kind:0 profile fields are not all defined by NIPs,
-  LUD-01 and LUD-16 from `lnurl/luds`. `sources` names each family and its
-  repository; `documents` holds that family's entries under the same key. The
-  `Supported NIPs` table in `README.md` points at it rather than repeating what
-  it records, so which revision a schema targets is written down once. The
-  SHA-256 names the document by its text, so an entry can be confirmed against
-  the document rather than taken on trust. An entry moves only when the
-  document is re-read and the schemas are confirmed against it; git history and
-  this file record when that happened.
+  are written against: the commit in its source repository, the instant that
+  commit landed there, and the SHA-256 of the document's Markdown at that
+  commit. It covers the 14 NIPs and, because the kind:0 profile fields are not
+  all defined by NIPs, LUD-01 and LUD-16 from `lnurl/luds`. `sources` names
+  each family and its repository; `documents` holds that family's entries under
+  the same key. The `Supported NIPs` table in `README.md` points at it rather
+  than repeating what it records, so which revision a schema targets is written
+  down once. The SHA-256 names the document by its text, so an entry can be
+  confirmed against the document rather than taken on trust. An entry moves
+  only when the document is re-read and the schemas are confirmed against it;
+  git history and this file record when that happened.
 
 - **`npm run test:spec-baseline`**, which keeps the two places that name the
   same set of specs in step: the spec modules under `src/` and
@@ -30,12 +30,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   module is dead weight) — both directions, so a spec added to one and
   forgotten in the other fails the build instead of shipping with no recorded
   provenance. It also rejects what an entry can be judged for without the spec
-  text: a date that is not a real day, a malformed commit or hash, a hash
-  shared by two documents, two entries dating one commit differently, and a
-  family named in `sources` but not in `documents` or the reverse. It runs in
-  CI and before publish, and compares the repository against itself only:
-  whether upstream has moved since a baseline was recorded is a separate
-  question, answered by reading the spec rather than by a build.
+  text: an instant that is no instant or is ahead of the clock, a malformed
+  commit or hash, a hash shared by two documents, two entries landing one
+  commit differently, and a family named in `sources` but not in `documents` or
+  the reverse. It runs in CI and before publish, and compares the repository
+  against itself only: whether upstream has moved since a baseline was recorded
+  is a separate question, answered by reading the spec rather than by a build.
 
   `scripts/spec-baseline.mjs` keeps its decisions in one exported function of
   its two inputs, with reading files and exiting left to the CLI beside it, and
