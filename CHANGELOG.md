@@ -57,8 +57,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `npm run test:consumer` ran from `test/`, beside the fixture one of them
   compiles, which read as tests of test code once one of these checks grew
   tests of its own. They move to `scripts/public-jsdoc-check.mjs` and
-  `scripts/consumer-check.mjs`; `test/` keeps the consumer fixture and the
-  vitest suites. No behaviour changes.
+  `scripts/consumer-check.mjs`, leaving `test/` to the consumer fixture alone;
+  the vitest suites sit beside the source they cover. No behaviour changes.
 
 ### Fixed
 
