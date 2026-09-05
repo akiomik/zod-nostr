@@ -28,6 +28,9 @@ jobs:
       - name: Lint & format check
         run: npm run check
 
+      - name: Spec baseline check (src vs. spec-baseline.json)
+        run: npm run test:spec-baseline
+
       - name: Test
         run: npm run test:coverage
 
