@@ -62,11 +62,13 @@ const DOCUMENT = /^[0-9A-Z]{2}$/;
 const LABEL = /^[A-Za-z]+$/;
 
 /**
- * What is wrong with `landed`, or null. Shape is not enough: a transposed month
- * (`2026-90-04T…`) or a day no month has rolls over silently when parsed, and
- * an instant still ahead of now is one nobody could have read a document at.
- * Each is named for what it is rather than folded into one message. An instant
- * carries its own zone, so there is nothing to leave slack for.
+ * What is wrong with `landed`, or null. Shape is not enough, and the two ways
+ * it is not enough need different checks: `2026-90-04T00:00:00Z` parses to
+ * nothing at all, while `2026-02-30T00:00:00Z` parses to March 2nd — a real
+ * instant, but not the one written, which only re-serialising notices. Both
+ * are an instant that does not exist and say so; one still ahead of now is a
+ * different thing and says that. An instant carries its own zone, so there is
+ * nothing to leave slack for.
  */
 function landedProblem(landed) {
   if (typeof landed !== "string" || !INSTANT.test(landed))
@@ -129,9 +131,9 @@ export function specBaselineProblems({ baseline, files }) {
 
   const problems = [];
   // Two documents sharing a hash means one was pasted from the other, and two
-  // entries at one commit disagreeing about its date means one was mistyped —
-  // the likeliest corruptions of the fields the baseline rests on, and the ones
-  // judgeable without the upstream text.
+  // entries at one commit disagreeing about when it landed means one was
+  // mistyped — the likeliest corruptions of the fields the baseline rests on,
+  // and the ones judgeable without the upstream text.
   const hashes = new Map();
   const landings = new Map();
 
