@@ -12,9 +12,21 @@ import {
 } from "./spec-baseline.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const baseline = JSON.parse(readFileSync(join(root, BASELINE), "utf8"));
-const files = readdirSync(join(root, SOURCE), { recursive: true });
-const problems = specBaselineProblems({ baseline, files });
+
+// Read here rather than inside the rules, and reported rather than thrown on:
+// a `spec-baseline.json` that was renamed or deleted is itself the "edited one
+// file and not the other" mistake this check exists to catch, and it deserves
+// the same report as everything else it catches.
+let problems;
+try {
+  const baseline = JSON.parse(readFileSync(join(root, BASELINE), "utf8"));
+  const files = readdirSync(join(root, SOURCE), { recursive: true });
+  problems = specBaselineProblems({ baseline, files });
+  if (problems.length === 0) console.log(specBaselineSummary({ baseline }));
+} catch (cause) {
+  // Named here, since a parse error alone does not say which file it read.
+  problems = [`could not read ${BASELINE} and ${SOURCE}/: ${cause.message}`];
+}
 
 if (problems.length > 0) {
   console.error(
@@ -28,6 +40,4 @@ if (problems.length > 0) {
   // are asynchronous, and exiting does not wait for them. A gate that exits
   // having printed nothing is the one outcome this must not produce.
   process.exitCode = 1;
-} else {
-  console.log(specBaselineSummary({ baseline }));
 }

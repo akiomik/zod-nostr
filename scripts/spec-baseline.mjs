@@ -179,7 +179,12 @@ export function specBaselineProblems({ baseline, files }) {
     // entry would be false.
     const excused = new Set();
 
-    for (const [id, entry] of Object.entries(documents)) {
+    // Sorted, because JavaScript reaches integer-like keys first: unsorted,
+    // `nips.11` is read before `nips.01`, so a mistyped date is cited as the
+    // one the others disagree with, and the report ends with the entries the
+    // file starts with.
+    for (const id of Object.keys(documents).sort()) {
+      const entry = documents[id];
       const where = `${BASELINE}: \`${family}.${id}\``;
       if (!holds(entry)) {
         problems.push(`${where} records no revision`);

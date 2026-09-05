@@ -135,6 +135,25 @@ describe("specBaselineProblems", () => {
       ).toHaveLength(1);
     });
 
+    // JavaScript reaches integer-like keys first, so an unsorted pass reads
+    // `10` before `01` and names the entry the others agree with as the one
+    // that disagrees. Entries are read in the order they are written instead.
+    it("names the entry written later as the one that disagrees", () => {
+      const input = repository();
+      input.baseline.documents.nips = {
+        10: {
+          commit: COMMIT,
+          date: "2026-09-05",
+          sha256: HASH.replace(/^6/, "7"),
+        },
+        "01": { commit: COMMIT, date: "2026-09-04", sha256: HASH },
+      };
+      input.files = ["nip01.ts", "nip10.ts", "lud16.ts"];
+      expect(specBaselineProblems(input)).toEqual([
+        "spec-baseline.json: `nips.10` dates c3fd9af to 2026-09-05, which `nips.01` dates to 2026-09-04",
+      ]);
+    });
+
     it("accepts two entries agreeing about one commit", () => {
       const input = withEntry("luds", 16, {
         commit: COMMIT,
