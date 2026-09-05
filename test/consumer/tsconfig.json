@@ -2,8 +2,9 @@
   "comment": [
     "Compiles the fixture the way an external consumer would: it imports the",
     "package by its published specifiers ('zod-nostr' / 'zod-nostr/mini'),",
-    "resolved through node_modules — NOT via a paths mapping. `check.mjs` copies",
-    "this fixture into an OS temp dir (outside the package, so package",
+    "resolved through node_modules — NOT via a paths mapping.",
+    "`scripts/consumer-check.mjs` copies this fixture into an OS temp dir",
+    "(outside the package, so package",
     "self-reference can't bypass the tarball), extracts the `npm pack` tarball",
     "into <temp>/node_modules/zod-nostr, and compiles there — so resolution goes",
     "through the real package.json#exports and the tarball's `files`, catching a",

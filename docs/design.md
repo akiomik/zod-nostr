@@ -289,7 +289,8 @@ A public API addition ships with:
 
 Two release-surface gates run in CI:
 
-- **External consumer compile** (`npm run test:consumer`, `test/consumer/`) —
+- **External consumer compile** (`npm run test:consumer`,
+  `scripts/consumer-check.mjs` over the fixture in `test/consumer/`) —
   compiles a fixture that imports the package by its published specifiers
   (`zod-nostr` / `zod-nostr/mini`), resolved to the built declarations in
   `dist/`, so it exercises the emitted `.d.ts` a consumer actually sees rather

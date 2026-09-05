@@ -51,10 +51,10 @@ whole public surface.
   `docs/design.md`, as the one entry point into the prose docs. Per-leaf `@see`
   anchors were deliberately left out — they would multiply by 122 and rot on the
   next heading rename.
-- **Enforcement.** `test/public-jsdoc/check.mjs` walks `dist/classic.d.ts` and
-  `dist/mini.d.ts` and fails on any undocumented path, any path present in one
-  flavor only, and any path whose two comments differ. It runs in CI after the
-  build and in `prepublishOnly`.
+- **Enforcement.** `scripts/public-jsdoc-check.mjs` walks `dist/classic.d.ts`
+  and `dist/mini.d.ts` and fails on any undocumented path, any path present in
+  one flavor only, and any path whose two comments differ. It runs in CI after
+  the build and in `prepublishOnly`.
 
 Checking the built declarations rather than the sources is the load-bearing
 part: they are what an editor actually shows, and they are the one place where

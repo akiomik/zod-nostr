@@ -51,6 +51,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   one machine-readable file rather than in per-module comments, why an entry
   carries no review date, and why the check stays offline.
 
+### Changed
+
+- **`scripts/` for the checks that gate the build.** `npm run test:jsdoc` and
+  `npm run test:consumer` ran from `test/`, beside the fixture one of them
+  compiles, which read as tests of test code once one of these checks grew
+  tests of its own. They move to `scripts/public-jsdoc-check.mjs` and
+  `scripts/consumer-check.mjs`, leaving `test/` to the consumer fixture alone;
+  the vitest suites sit beside the source they cover. No behaviour changes.
+
 ### Fixed
 
 - **NIP-67 documentation listed only two of the three defined hints.** NIP-67
