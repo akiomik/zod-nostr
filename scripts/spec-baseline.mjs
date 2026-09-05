@@ -85,7 +85,14 @@ function moduleIds(label, files) {
   const found = new Map();
   for (const file of files) {
     const id = basename(file).match(module)?.[1];
-    if (id) found.set(id.toUpperCase(), file);
+    // Every file that claims an id, not the last one seen: two modules for one
+    // document is a problem of its own, and keeping only one would make which
+    // file a diagnostic names depend on the order the directory was read in.
+    if (id)
+      found.set(id.toUpperCase(), [
+        ...(found.get(id.toUpperCase()) ?? []),
+        file,
+      ]);
   }
   return found;
 }
@@ -223,11 +230,17 @@ export function specBaselineProblems({ baseline, files }) {
 
     // Within a declared family, `src/` decides: a module with no entry has no
     // provenance recorded for it.
-    for (const [id, file] of modules)
-      if (!Object.hasOwn(documents, id) && !excused.has(id))
+    for (const [id, paths] of modules) {
+      if (paths.length > 1)
         problems.push(
-          `${BASELINE}: \`${SOURCE}/${file}\` has no \`${family}.${id}\` entry`,
+          `${BASELINE}: \`${family}.${id}\` is claimed by ${paths.map((path) => `\`${SOURCE}/${path}\``).join(" and ")}`,
         );
+      if (!Object.hasOwn(documents, id) && !excused.has(id))
+        for (const path of paths)
+          problems.push(
+            `${BASELINE}: \`${SOURCE}/${path}\` has no \`${family}.${id}\` entry`,
+          );
+    }
   }
 
   return problems;

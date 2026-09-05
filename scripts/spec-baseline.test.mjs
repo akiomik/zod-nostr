@@ -264,6 +264,27 @@ describe("specBaselineProblems", () => {
       ]);
     });
 
+    // Keeping only the last file seen would let the second satisfy the entry
+    // the first claims, and make the diagnostic depend on directory order.
+    it("reports two modules claiming one document", () => {
+      const input = repository();
+      input.files.push("legacy/nip01.ts");
+      expect(specBaselineProblems(input)).toEqual([
+        "spec-baseline.json: `nips.01` is claimed by `src/nip01.ts` and `src/legacy/nip01.ts`",
+      ]);
+    });
+
+    it("names both when neither is baselined", () => {
+      const input = repository();
+      input.baseline.documents.nips = {};
+      input.files.push("legacy/nip01.ts");
+      expect(specBaselineProblems(input)).toEqual([
+        expect.stringContaining("is claimed by"),
+        expect.stringContaining("`src/nip01.ts` has no `nips.01` entry"),
+        expect.stringContaining("`src/legacy/nip01.ts` has no `nips.01` entry"),
+      ]);
+    });
+
     it("finds a module in a subdirectory", () => {
       const input = repository();
       input.files = ["nips/nip01.ts", "lud16.ts"];
