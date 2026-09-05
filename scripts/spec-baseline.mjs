@@ -53,19 +53,24 @@ const DOCUMENT = /^[0-9A-Z]{2}$/;
 const LABEL = /^[A-Za-z]+$/;
 
 /**
- * Whether `date` is a day that has happened, not merely digit-shaped. A
- * transposed month (`2026-90-04`) or year (`2062-06-13`) is otherwise a real
- * string that nothing else here would notice. The day of slack is for a
- * maintainer reading a date east of UTC, for whom today has already begun.
+ * What is wrong with `date`, or null. Digit-shaped is not enough: a transposed
+ * month (`2026-90-04`) or year (`2062-06-13`) is otherwise a real string that
+ * nothing else here would notice, and each is named for what it is rather than
+ * folded into one message. The day of slack is for a maintainer reading a date
+ * east of UTC, for whom today has already begun.
  */
-function isCalendarDate(date) {
-  if (typeof date !== "string" || !DATE.test(date)) return false;
+function dateProblem(date) {
+  if (typeof date !== "string" || !DATE.test(date))
+    return "has no YYYY-MM-DD date";
   const parsed = new Date(`${date}T00:00:00Z`);
-  return (
-    !Number.isNaN(parsed.getTime()) &&
-    parsed.toISOString().slice(0, 10) === date &&
-    date <= new Date(Date.now() + 86_400_000).toISOString().slice(0, 10)
-  );
+  if (
+    Number.isNaN(parsed.getTime()) ||
+    parsed.toISOString().slice(0, 10) !== date
+  )
+    return `dates a day that does not exist, ${date}`;
+  if (date > new Date(Date.now() + 86_400_000).toISOString().slice(0, 10))
+    return `dates a day that has not come, ${date}`;
+  return null;
 }
 
 /** Whether `value` is something to read keys off, rather than to throw on. */
@@ -104,6 +109,7 @@ function moduleIds(label, files) {
 export function specBaselineProblems({ baseline, files }) {
   // Checked for being objects, not merely present: the loops below reach them
   // with `Object.entries`, which throws on anything else.
+  if (!holds(baseline)) return [`${BASELINE}: holds no object to compare`];
   const missing = ["sources", "documents"].filter(
     (key) => !holds(baseline[key]),
   );
@@ -134,9 +140,13 @@ export function specBaselineProblems({ baseline, files }) {
         `${BASELINE}: \`sources.${family}\` has no \`documents\` entry`,
       );
 
-  for (const [family, source] of Object.entries(baseline.sources)) {
-    if (!Object.hasOwn(baseline.documents, family)) continue; // reported above
-    if (!holds(source)) {
+  // Every family with entries, not only the declared ones: an entry says what
+  // it says wherever it is written, and holding it back until its family is
+  // declared would report the same file over two runs.
+  for (const family of Object.keys(baseline.documents)) {
+    const source = baseline.sources[family];
+    const declared = Object.hasOwn(baseline.sources, family);
+    if (declared && !holds(source)) {
       problems.push(`${BASELINE}: \`sources.${family}\` describes no family`);
       continue;
     }
@@ -150,13 +160,16 @@ export function specBaselineProblems({ baseline, files }) {
     // same half-finished edit as one added without its entries, and crashing
     // would take the rest of the report with it. A regex coerces what it tests,
     // so `true` would read as `"true"` without the type check.
-    const { label, repository } = source;
+    const { label, repository } = declared ? source : {};
     const named = typeof label === "string" && LABEL.test(label);
-    if (!named)
+    if (declared && !named)
       problems.push(
         `${BASELINE}: \`sources.${family}\` has no label naming a document series`,
       );
-    if (typeof repository !== "string" || repository.trim() === "")
+    if (
+      declared &&
+      (typeof repository !== "string" || repository.trim() === "")
+    )
       problems.push(`${BASELINE}: \`sources.${family}\` has no repository`);
     const modules = named ? moduleIds(label, files) : new Map();
     // Ids already reported at their entry, in the spelling the modules use: the
@@ -181,8 +194,8 @@ export function specBaselineProblems({ baseline, files }) {
         typeof entry.commit === "string" && COMMIT.test(entry.commit);
       if (!committed)
         problems.push(`${where} has no 40-character lowercase-hex commit`);
-      if (!isCalendarDate(entry.date))
-        problems.push(`${where} has no YYYY-MM-DD calendar date`);
+      const undated = dateProblem(entry.date);
+      if (undated) problems.push(`${where} ${undated}`);
       const hashed =
         typeof entry.sha256 === "string" && SHA256.test(entry.sha256);
       if (!hashed)
@@ -197,7 +210,7 @@ export function specBaselineProblems({ baseline, files }) {
 
       // One commit has one committer date, so two entries recording it must
       // agree about when it landed.
-      if (committed && isCalendarDate(entry.date)) {
+      if (committed && !undated) {
         const first = dated.get(entry.commit);
         if (first === undefined)
           dated.set(entry.commit, { date: entry.date, at: `${family}.${id}` });
@@ -233,7 +246,7 @@ export function specBaselineProblems({ baseline, files }) {
     for (const [id, paths] of modules) {
       if (paths.length > 1)
         problems.push(
-          `${BASELINE}: \`${family}.${id}\` is claimed by ${paths.map((path) => `\`${SOURCE}/${path}\``).join(" and ")}`,
+          `${SOURCE}/: \`${family}.${id}\` is claimed by ${paths.map((path) => `\`${SOURCE}/${path}\``).join(" and ")}`,
         );
       if (!Object.hasOwn(documents, id) && !excused.has(id))
         for (const path of paths)

@@ -56,10 +56,10 @@ describe("specBaselineProblems", () => {
       [{ commit: "c3fd9af" }, "has no 40-character lowercase-hex commit"],
       [{ commit: undefined }, "has no 40-character lowercase-hex commit"],
       [{ sha256: "abc" }, "has no 64-character lowercase-hex sha256"],
-      [{ date: "yesterday" }, "has no YYYY-MM-DD calendar date"],
-      [{ date: "2026-90-04" }, "has no YYYY-MM-DD calendar date"],
-      [{ date: "2026-02-30" }, "has no YYYY-MM-DD calendar date"],
-      [{ date: "2999-01-01" }, "has no YYYY-MM-DD calendar date"],
+      [{ date: "yesterday" }, "has no YYYY-MM-DD date"],
+      [{ date: "2026-90-04" }, "dates a day that does not exist, 2026-90-04"],
+      [{ date: "2026-02-30" }, "dates a day that does not exist, 2026-02-30"],
+      [{ date: "2999-01-01" }, "dates a day that has not come, 2999-01-01"],
     ])("rejects %o", (patch, message) => {
       expect(specBaselineProblems(withEntry("nips", "01", patch))).toEqual([
         `spec-baseline.json: \`nips.01\` ${message}`,
@@ -270,7 +270,7 @@ describe("specBaselineProblems", () => {
       const input = repository();
       input.files.push("legacy/nip01.ts");
       expect(specBaselineProblems(input)).toEqual([
-        "spec-baseline.json: `nips.01` is claimed by `src/nip01.ts` and `src/legacy/nip01.ts`",
+        "src/: `nips.01` is claimed by `src/nip01.ts` and `src/legacy/nip01.ts`",
       ]);
     });
 
@@ -331,6 +331,17 @@ describe("specBaselineProblems", () => {
       },
     );
 
+    // Valid JSON that `biome check` passes, so the guard the header leans on
+    // does not catch it.
+    it.each([
+      ["null", null],
+      ["an array", []],
+    ])("reports a baseline that is %s", (_description, baseline) => {
+      expect(specBaselineProblems({ baseline, files: [] })).toEqual([
+        "spec-baseline.json: holds no object to compare",
+      ]);
+    });
+
     it("names both when neither is there", () => {
       expect(specBaselineProblems({ baseline: {}, files: [] })).toEqual([
         "spec-baseline.json: has no `sources` and no `documents` to compare",
@@ -340,10 +351,33 @@ describe("specBaselineProblems", () => {
     it("reports a family that only `documents` knows about", () => {
       const input = repository();
       input.baseline.documents.buds = {
-        "01": { commit: COMMIT, date: "2026-09-04", sha256: HASH },
+        "01": {
+          commit: COMMIT,
+          date: "2026-09-04",
+          sha256: HASH.replace(/^6/, "7"),
+        },
       };
       expect(specBaselineProblems(input)).toEqual([
         "spec-baseline.json: `documents.buds` has no `sources` entry",
+      ]);
+    });
+
+    // An entry says what it says wherever it is written, so a family that only
+    // `documents` knows about still has its entries judged.
+    it("judges the entries of a family `sources` does not declare", () => {
+      const input = repository();
+      input.baseline.documents.buds = {
+        "01": { commit: "x", date: "nope", sha256: "no" },
+      };
+      expect(specBaselineProblems(input)).toEqual([
+        "spec-baseline.json: `documents.buds` has no `sources` entry",
+        expect.stringContaining(
+          "`buds.01` has no 40-character lowercase-hex commit",
+        ),
+        expect.stringContaining("`buds.01` has no YYYY-MM-DD date"),
+        expect.stringContaining(
+          "`buds.01` has no 64-character lowercase-hex sha256",
+        ),
       ]);
     });
 
@@ -362,7 +396,11 @@ describe("specBaselineProblems", () => {
       (family) => {
         const input = repository();
         input.baseline.documents[family] = {
-          "01": { commit: COMMIT, date: "2026-09-04", sha256: HASH },
+          "01": {
+            commit: COMMIT,
+            date: "2026-09-04",
+            sha256: HASH.replace(/^6/, "7"),
+          },
         };
         expect(specBaselineProblems(input)).toEqual([
           `spec-baseline.json: \`documents.${family}\` has no \`sources\` entry`,
@@ -419,6 +457,13 @@ describe("specBaselineProblems", () => {
 });
 
 describe("specBaselineSummary", () => {
+  it("says nothing was checked when no family is declared", () => {
+    expect(specBaselineSummary({ baseline: { documents: {} } })).toBe(
+      "Spec baseline check passed — spec-baseline.json declares no families, " +
+        "so nothing in src/ was checked.",
+    );
+  });
+
   it("counts each family", () => {
     expect(specBaselineSummary(repository())).toBe(
       "Spec baseline check passed — 1 nips, 1 luds baselined, " +
