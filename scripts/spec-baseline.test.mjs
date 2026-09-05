@@ -137,8 +137,9 @@ describe("specBaselineProblems", () => {
 
     // JavaScript reaches integer-like keys first, so an unsorted pass reads
     // `10` before `01` and names the entry the others agree with as the one
-    // that disagrees. Entries are read in the order they are written instead.
-    it("names the entry written later as the one that disagrees", () => {
+    // that disagrees. Entries are read in sorted order instead, which for a
+    // baseline written in order is the order it is written in.
+    it("names the entry later in sorted order as the one that disagrees", () => {
       const input = repository();
       input.baseline.documents.nips = {
         10: {
@@ -425,6 +426,21 @@ describe("specBaselineProblems", () => {
       input.baseline.sources.buds = { label: "BUD", repository: LUDS };
       expect(specBaselineProblems(input)).toEqual([
         "spec-baseline.json: `sources.buds` has no `documents` entry",
+      ]);
+    });
+
+    // The mirror of the case above: a label is all it takes to find a family's
+    // modules, so one declared in `sources` alone still has them spoken for.
+    // Reporting only the missing `documents` would name the file to fix in a
+    // second run, after the first was fixed.
+    it("reports the modules of a family `documents` does not hold", () => {
+      const input = repository();
+      input.baseline.sources.buds = { label: "BUD", repository: LUDS };
+      input.files.push("bud01.ts", "bud02.ts");
+      expect(specBaselineProblems(input)).toEqual([
+        "spec-baseline.json: `sources.buds` has no `documents` entry",
+        "spec-baseline.json: `src/bud01.ts` has no `buds.01` entry",
+        "spec-baseline.json: `src/bud02.ts` has no `buds.02` entry",
       ]);
     });
 

@@ -140,10 +140,17 @@ export function specBaselineProblems({ baseline, files }) {
         `${BASELINE}: \`sources.${family}\` has no \`documents\` entry`,
       );
 
-  // Every family with entries, not only the declared ones: an entry says what
-  // it says wherever it is written, and holding it back until its family is
-  // declared would report the same file over two runs.
-  for (const family of Object.keys(baseline.documents)) {
+  // Both sides, not only `documents`: an entry says what it says wherever it is
+  // written, and a family declared in `sources` alone still has a label, which
+  // is all it takes to find its modules and say which of them are unbaselined.
+  // Holding either back until the other side catches up would report the same
+  // file over two runs.
+  const families = new Set([
+    ...Object.keys(baseline.documents),
+    ...Object.keys(baseline.sources),
+  ]);
+
+  for (const family of families) {
     const source = baseline.sources[family];
     // Declared means named *and* describing a family: a `sources` value that is
     // not an object says nothing about a label or a repository, but its
@@ -152,7 +159,11 @@ export function specBaselineProblems({ baseline, files }) {
     const declared = named && holds(source);
     if (named && !declared)
       problems.push(`${BASELINE}: \`sources.${family}\` describes no family`);
-    const documents = baseline.documents[family];
+    // A family with no `documents` at all is reported above; here it is read as
+    // the no entries it has, so that its modules are still spoken for.
+    const documents = Object.hasOwn(baseline.documents, family)
+      ? baseline.documents[family]
+      : {};
     if (!holds(documents)) {
       problems.push(`${BASELINE}: \`documents.${family}\` holds no entries`);
       continue;
@@ -180,9 +191,11 @@ export function specBaselineProblems({ baseline, files }) {
     const excused = new Set();
 
     // Sorted, because JavaScript reaches integer-like keys first: unsorted,
-    // `nips.11` is read before `nips.01`, so a mistyped date is cited as the
-    // one the others disagree with, and the report ends with the entries the
-    // file starts with.
+    // `nips.11` is read before `nips.01`, so the entry a report cites as the
+    // one the others agree with depends on which ids happen to look like array
+    // indices, and a run ends with the entries the file starts with. Sorted is
+    // not the order they are written — nothing can recover that — but it is one
+    // order, and it is the order a baseline written in order is already in.
     for (const id of Object.keys(documents).sort()) {
       const entry = documents[id];
       const where = `${BASELINE}: \`${family}.${id}\``;
