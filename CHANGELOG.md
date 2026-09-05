@@ -18,11 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   repository; `documents` holds that family's entries under the same key. The
   `Supported NIPs` table in `README.md` points at it rather than repeating what
   it records, so which revision a schema targets is written down once. The
-  SHA-256 is what makes the file more than documentation: it is the text
-  itself, so a maintainer can tell an upstream edit from a misremembered
-  revision by hashing the document again. An entry moves only when the document
-  is re-read and the schemas are confirmed against it; git history and this
-  file record when that happened.
+  SHA-256 is what makes the file more than documentation: it names the document
+  by its text, so a maintainer can tell an upstream edit from a misremembered
+  revision by hashing it again. An entry moves only when the document is
+  re-read and the schemas are confirmed against it; git history and this file
+  record when that happened.
 
 - **`npm run test:spec-baseline`**, which keeps the two places that name the
   same set of specs in step: the spec modules under `src/` and

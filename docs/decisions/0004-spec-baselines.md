@@ -42,11 +42,12 @@ the single source of truth for provenance.
   family's entries under the same key, so the file says what its own keys mean
   and a reader never has to know which top-level keys are data.
 - **Content: `commit`, `date`, `sha256`.** The commit identifies the revision;
-  `date` is when it landed upstream (the committer date, which is not always the
-  author date a commit page shows); `sha256` is the
-  hash of the document's Markdown at that commit. The hash is the load-bearing
-  field — it is what turns a record into something a checker can act on, and the
-  reason this is a data file rather than prose.
+  `date` is when it landed upstream (the committer date, which is not always
+  the author date a commit page shows); `sha256` is the hash of the document's
+  Markdown at that commit. The hash is the load-bearing field: the commit says
+  which revision and the hash says which text, so an entry can be confirmed
+  against the document instead of taken on trust. That this is a data file
+  rather than prose is what lets a check read the rest of it.
 - **No review date.** An entry says which revision the schemas target; it does
   not say when someone last looked. Recording that would mean stamping every
   document as reviewed whenever one of them is, and the honest alternative —
@@ -144,15 +145,16 @@ targets, not a guarantee that upstream has not moved since. Whether it has is a
 question for whoever is closing the gap, and `spec-baseline.json` is where they
 get the revision to ask it from.
 
-Two gaps stay open whatever is checked. The first is that no entry can be held
-to its own `commit`: the document at that revision is a fact about a repository
-this one does not vendor, so a bump that updates `commit` and keeps the old
-hash — or a plausible wrong day that is still a real date — passes. Hashing the
-document as it is read is what makes an entry true, and that is care taken when
-the entry is written rather than anything the build can demand. What is caught
-is narrower and is a different thing: entries disagreeing with each other,
-which is all this can see without the upstream text — one entry carrying
-another's hash, and two entries dating one commit differently.
+Two gaps stay open whatever is checked. The first is that nothing here reads
+the upstream document, so no entry can be held to its own `commit`: a bump that
+updates `commit` and keeps the old hash passes, an entry's hash being its own
+and disagreeing with nothing, and a plausible wrong day passes whenever no
+other entry records that commit. Hashing the document as it is read is what
+makes an entry true, and that is care taken when the entry is written rather
+than anything the build can demand. What is caught is narrower and is a
+different thing: entries disagreeing with each other, which is all this can see
+without the upstream text — one entry carrying another's hash, and two entries
+dating one commit differently.
 
 The second follows from provenance being read from filenames: a specification
 implemented **inside an existing module** rather than in its own file is
