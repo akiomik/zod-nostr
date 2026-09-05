@@ -49,7 +49,7 @@ if (problems.length > 0) {
   );
   for (const problem of problems) console.error(`  - ${problem}`);
   console.error(
-    `\n${BASELINE} and the spec modules under ${SOURCE}/ must agree about what is baselined.`,
+    `\n${BASELINE} and the spec modules under ${SOURCE}/ must agree about what is baselined, family by family, for the families ${BASELINE} declares.`,
   );
   // Set, not `process.exit(1)`: writes to a pipe — which stderr is under CI —
   // are asynchronous, and exiting does not wait for them. A gate that exits
