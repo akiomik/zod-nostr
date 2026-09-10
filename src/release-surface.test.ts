@@ -4,16 +4,16 @@ import { zostr as miniZostr } from "./mini.js";
 
 /**
  * Release-surface comparison gate. Compares the current public runtime surface
- * against the last published release (v0.5.0) and requires every removed/renamed
+ * against the last published release (v0.6.0) and requires every removed/renamed
  * path to be an explicitly-declared intentional breaking change. Additive paths
- * (new canonical namespaces, aliases, or members — e.g. the NIP-10 reply/quote
- * tag schemas added after v0.5.0) are always allowed; an *unclassified* removal
- * fails the build, so a future release can't drop a published path by accident.
+ * (new canonical namespaces, aliases, or members) are always allowed; an
+ * *unclassified* removal fails the build, so a future release can't drop a
+ * published path by accident.
  *
  * This is intentionally independent of `api-surface.test.ts`. That test asserts
  * the *current* implementation matches a hand-maintained `EXPECTED_SURFACE`, so a
  * PR that removes a public path AND edits the expectation in the same change
- * passes it. The baseline below is a frozen record of what v0.5.0 actually
+ * passes it. The baseline below is a frozen record of what v0.6.0 actually
  * shipped — it is not edited to track the implementation — so the same PR fails
  * here unless the removal is also declared in `INTENTIONAL_REMOVALS`. The two
  * gates catch different mistakes: api-surface catches "the surface changed
@@ -26,11 +26,11 @@ import { zostr as miniZostr } from "./mini.js";
  * (`test/consumer/`), which imports the tarball the way a real consumer does.
  */
 
-// The full public path set as published in the last release, v0.5.0 (namespace
+// The full public path set as published in the last release, v0.6.0 (namespace
 // nodes and leaf factories, dotted). This is release history — it does not
 // change. Bump it to the newly-published surface at each release (and reset
 // INTENTIONAL_REMOVALS), not before.
-const V0_5_0_PATHS: string[] = [
+const V0_6_0_PATHS: string[] = [
   // root aliases
   "bech32",
   "event",
@@ -99,12 +99,21 @@ const V0_5_0_PATHS: string[] = [
   "nip05.formatIdentifier",
   "nip05.identifier",
   "nip05.nostrJsonDocument",
-  // nip10 (v0.5.0 shipped only textNote; the reply/quote tag schemas are additive after it)
+  // nip10
   "nip10",
+  "nip10.eTag",
+  "nip10.participantsCheck",
+  "nip10.qTag",
   "nip10.textNote",
+  "nip10.threadCheck",
   // nip11
   "nip11",
   "nip11.relayInformationDocument",
+  // nip13
+  "nip13",
+  "nip13.commitmentCheck",
+  "nip13.nonceTag",
+  "nip13.powCheck",
   // nip19
   "nip19",
   "nip19.bech32",
@@ -114,6 +123,19 @@ const V0_5_0_PATHS: string[] = [
   "nip19.nprofile",
   "nip19.npub",
   "nip19.nsec",
+  // nip21
+  "nip21",
+  "nip21.any",
+  "nip21.naddr",
+  "nip21.nevent",
+  "nip21.note",
+  "nip21.nprofile",
+  "nip21.npub",
+  "nip21.uri",
+  // nip40
+  "nip40",
+  "nip40.expirationCheck",
+  "nip40.expirationTag",
   // nip42
   "nip42",
   "nip42.authEvent",
@@ -140,9 +162,13 @@ const V0_5_0_PATHS: string[] = [
   "nip67",
   "nip67.relayMessage",
   "nip67.relayMessage.eose",
+  // nip70
+  "nip70",
+  "nip70.protectedCheck",
+  "nip70.protectedTag",
 ];
 
-// Paths from v0.5.0 that a later release intentionally removes or renames. Every
+// Paths from v0.6.0 that a later release intentionally removes or renames. Every
 // entry must actually be gone (asserted below); anything removed but not listed
 // here is unexpected drift and fails. Empty until the next breaking change.
 const INTENTIONAL_REMOVALS: string[] = [];
@@ -165,11 +191,11 @@ function currentPaths(zostr: object): Set<string> {
 describe.each([
   ["classic", classicZostr],
   ["mini", miniZostr],
-])("%s release surface vs v0.5.0", (_flavor, zostr) => {
+])("%s release surface vs v0.6.0", (_flavor, zostr) => {
   const current = currentPaths(zostr);
 
-  it("every path removed since v0.5.0 is an intentional breaking change", () => {
-    const removed = V0_5_0_PATHS.filter((p) => !current.has(p)).sort();
+  it("every path removed since v0.6.0 is an intentional breaking change", () => {
+    const removed = V0_6_0_PATHS.filter((p) => !current.has(p)).sort();
     expect(removed).toEqual([...INTENTIONAL_REMOVALS].sort());
   });
 
@@ -178,9 +204,9 @@ describe.each([
     expect(stillPresent).toEqual([]);
   });
 
-  it("retained v0.5.0 paths still resolve", () => {
+  it("retained v0.6.0 paths still resolve", () => {
     const intentional = new Set(INTENTIONAL_REMOVALS);
-    const retained = V0_5_0_PATHS.filter((p) => !intentional.has(p));
+    const retained = V0_6_0_PATHS.filter((p) => !intentional.has(p));
     const missing = retained.filter((p) => !current.has(p));
     expect(missing).toEqual([]);
   });
