@@ -126,10 +126,10 @@ describe("metadataFields composition", () => {
     expect(zm.parse(schema, { name: "alice" }).name).toBe("alice");
   });
 
-  // Recipe from API.md: tolerate an empty-string URL field losslessly (some
-  // clients write "" to clear a field instead of removing the key). Preserving
-  // "" adds no one-way transform, so the schema still round-trips through
-  // jsonCodec — see docs/API.md "Recipe: empty-string fields".
+  // The walkthrough in docs/guides.md, "Accepting cleared (empty-string)
+  // fields": tolerate an empty-string URL field losslessly (some clients write
+  // "" to clear a field instead of removing the key). Preserving "" adds no
+  // one-way transform, so the schema still round-trips through jsonCodec.
   it("classic: empty-string field is accepted, preserved, and codec-safe", () => {
     const f = classicZostr.nip01.metadataFields;
     const schema = classicZostr.nip01
