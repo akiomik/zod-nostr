@@ -184,6 +184,10 @@ npm run build        # emit dist/ (classic.js + mini.js)
 CI (`.github/workflows/ci.yml`) runs all of the above on every push and pull
 request to `main`.
 
+The conventions those commands cannot check — commit marking, changelog format,
+which document a change belongs in, what a new schema owes its specification —
+are in [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Release process
 
 Versioning follows
@@ -191,15 +195,7 @@ Versioning follows
 backward-incompatible public API changes bump the minor version, and
 backward-compatible additions and fixes bump the patch version.
 
-1. Bump `version` in `package.json` and add a dated section to
-   `CHANGELOG.md` (move the relevant `[Unreleased]` entries under it).
-2. Merge that to `main`.
-3. Create a GitHub Release with tag `vX.Y.Z` (matching `package.json`'s
-   version) targeting `main`.
-
-Publishing a release triggers `.github/workflows/publish.yml`, which
-type-checks, lints, tests, builds, verifies the tag matches
-`package.json`'s version, and runs `npm publish --access public`.
+The steps are in [RELEASING.md](RELEASING.md).
 
 ## License
 
