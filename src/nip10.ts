@@ -291,6 +291,12 @@ function threadCheck(): core.$ZodCheck<NostrEventLike> {
   });
 }
 
+/** Narrowing form of the element scan {@link participantsCheck} runs. */
+const isStringArray = (
+  values: readonly unknown[],
+): values is readonly string[] =>
+  values.every((value) => typeof value === "string");
+
 /**
  * Opt-in check: the event's `p` tags include every expected participant pubkey.
  * NIP-10 says a reply to event E should carry all of E's `p` tags plus E's
@@ -302,12 +308,32 @@ function threadCheck(): core.$ZodCheck<NostrEventLike> {
  * Only presence is checked (`p` tags ⊇ `expected`), not order or the absence
  * of extra participants: NIP-10 states the reply's `p` tags may be "in no
  * particular order" and lists the required members as a minimum. Compose on
- * `textNote()`: `textNote().check(participantsCheck([author, ...eTagPubkeys]))`.
+ * `textNote()`: `textNote().check(participantsCheck([author, ...eTagPubkeys]))`,
+ * with `eTagPubkeys` filtered to the values actually there — `["e", id]`
+ * carries none, and a spread of it puts `undefined` in the list.
+ *
+ * `expected` fails **closed**: at composition time it must be an array, read
+ * once, whose every value is a string — the bar `nip42.challengeTagCheck` sets
+ * on its own argument. Without it an absent array requires nothing and the
+ * check accepts every note, and a non-string element can make `safeParse`
+ * throw from the failure message. An empty array is not a bad argument: it
+ * requires no participant.
  */
 function participantsCheck(
   expected: readonly string[],
 ): core.$ZodCheck<NostrEventLike> {
-  const required = new Set(expected);
+  // Annotated rather than inferred: `Array.isArray` widens a `readonly
+  // string[]` to `any[]`, which would leave `required` a `Set<any>` and stop
+  // the compiler catching a later edit that puts a non-string in it.
+  const pubkeys: readonly unknown[] | null = Array.isArray(expected)
+    ? Array.from(expected)
+    : null;
+  if (pubkeys === null || !isStringArray(pubkeys)) {
+    throw new TypeError(
+      "participantsCheck: `expected` must be an array of strings",
+    );
+  }
+  const required = new Set(pubkeys);
   return makeCheck<NostrEventLike>((payload) => {
     // A non-array `tags` is a malformed event, not one with no participants.
     const tags = guardEventTags(payload);
