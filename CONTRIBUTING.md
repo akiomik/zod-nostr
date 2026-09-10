@@ -36,9 +36,25 @@ issue and pull request numbers, and plain description all travel.
 versioned with [Semantic Versioning][semver]. Which digit a change moves is
 decided in [docs/design.md](docs/design.md#compatibility-and-versioning).
 
-- Write the entry under `## [Unreleased]` in the same pull request as the
-  change. Releases do not write entries; they only move that section under a
-  version heading.
+- Not every change needs an entry. Keep a Changelog calls the file a curated
+  list of *notable* changes written for humans rather than a commit log, and
+  leaves *notable* to the project. Here it means the reader is someone deciding
+  whether and how to upgrade, so an entry goes in when the change reaches the
+  published package — its API, its runtime behavior, its inferred types, the
+  documentation that ships inside the declarations — or when it moves which
+  revision of a specification the schemas are written against
+  ([decision 0004](docs/decisions/0004-spec-baselines.md) asks for a line even
+  when no code changed). Everything else is repository work and gets none:
+  contributor documents and conventions, guides, decision records, tests,
+  tooling, refactoring, dependency bumps, and `README.md` — which documents the
+  library rather than changing it, so a `Supported NIPs` row belongs to the
+  release that added the support, not to the one that wrote the row.
+- Released sections are history. They record where the line fell when they were
+  written, which is not always where it falls now; the rule above decides a new
+  entry, not the entries above it.
+- Where one is needed, write it under `## [Unreleased]` in the same pull
+  request as the change. Releases do not write entries; they only move that
+  section under a version heading.
 - Use only the standard type headings: `Added`, `Changed`, `Deprecated`,
   `Removed`, `Fixed`, `Security`. No suffixes on them, no invented types, and
   one block per type per version.

@@ -1,6 +1,7 @@
 <!-- What changes, and why. -->
 
-- [ ] `CHANGELOG.md` has an entry under `## [Unreleased]`, or this needs none
+- [ ] `CHANGELOG.md` has an entry under `## [Unreleased]`, or this needs none —
+      `CONTRIBUTING.md` says which changes do
 - [ ] If this breaks the public API — a name, an accepted value, an object's
       unknown-key semantics, or an inferred type — the commit is marked `type!:`
       with the break stated in its description, or carries a `BREAKING CHANGE:`
