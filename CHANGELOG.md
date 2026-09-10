@@ -7,14 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-
-- **`CONTRIBUTING.md`, `RELEASING.md`, and a pull request template**, recording
-  the conventions that were previously enforced only in review: how a breaking
-  change is marked in a commit, which changelog headings exist, which document
-  a change belongs in, what a validator owes the specification it implements,
-  and how a release is cut and its surface baseline moved.
-
 ## [0.6.0] - 2026-09-05
 
 ### Added
