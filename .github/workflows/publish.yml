@@ -45,4 +45,8 @@ jobs:
         run: npm run build
 
       - name: Publish to npm
-        run: npm publish --access public
+        # `--provenance` is what the README's provenance badge asserts. Without
+        # it, OIDC attaches an attestation when it can and publishing succeeds
+        # quietly when it cannot; with it, a publish that would ship unattested
+        # fails instead.
+        run: npm publish --access public --provenance
