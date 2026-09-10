@@ -168,6 +168,105 @@ describe.each(FLAVORS)("zostr.nip10 opt-in checks ($name)", ({ zostr, z }) => {
     ).toBeTruthy();
     expect(z.safeParse(checked, note([["p", a1]])).success).toBe(false);
   });
+
+  it("participantsCheck() reads expected once, so a changing value can't slip in", () => {
+    // An element whose getter answers with a string first and a Symbol after
+    // would pass a scan of one read and reach `missing.join()` on the other,
+    // where a Symbol makes `safeParse` throw. The copy taken at composition is
+    // what the check uses, so the first answer is the requirement.
+    const pk = "1".repeat(64);
+    let reads = 0;
+    const twoFaced = [pk];
+    Object.defineProperty(twoFaced, 0, {
+      get: () => (reads++ === 0 ? pk : (Symbol("x") as unknown as string)),
+      configurable: true,
+    });
+
+    const checked = zostr.nip10
+      .textNote()
+      .check(zostr.nip10.participantsCheck(twoFaced));
+    expect(z.safeParse(checked, note([["p", pk]])).success).toBe(true);
+    expect(z.safeParse(checked, note([])).success).toBe(false);
+  });
+
+  it("participantsCheck() takes any string, not only a hex pubkey", () => {
+    // `tags()` types tag values as plain strings, so a `p` tag can legitimately
+    // carry one that is not 64-char lowercase hex. Requiring hex here would
+    // reject a caller whose requirement the note actually satisfies.
+    const odd = "A".repeat(64);
+    const checked = zostr.nip10
+      .textNote()
+      .check(zostr.nip10.participantsCheck([odd, ""]));
+    expect(
+      z.safeParse(
+        checked,
+        note([
+          ["p", odd],
+          ["p", ""],
+        ]),
+      ).success,
+    ).toBe(true);
+    expect(z.safeParse(checked, note([["p", odd]])).success).toBe(false);
+  });
+
+  it("participantsCheck([]) requires nobody", () => {
+    // An empty array is the argument saying "no required participants", like
+    // `nip13.powCheck(0)` — not the empty set a missing argument used to make.
+    const checked = zostr.nip10
+      .textNote()
+      .check(zostr.nip10.participantsCheck([]));
+    expect(z.safeParse(checked, note([])).success).toBe(true);
+  });
+
+  it.each([
+    // `new Set(undefined)` and `new Set(null)` are empty, and `p tags ⊇ {}`
+    // holds for every event — the check would pass everything.
+    ["undefined", undefined],
+    ["null", null],
+    // `new Set(42)` threw out of the constructor, naming `Symbol.iterator`
+    // rather than the argument.
+    ["a number", 42],
+    // `new Set("abc")` is a set of characters: a requirement no real note can
+    // meet, rejecting everything for a reason the caller never asked for.
+    ["a string", "abc"],
+    // A non-string element reaches `missing.join()`, where a Symbol — or
+    // anything whose `toString` throws — would make `safeParse` throw.
+    ["an array holding a number", [42]],
+    ["an array holding a Symbol", [Symbol("x")]],
+    [
+      "an array holding a throwing toString",
+      [
+        {
+          toString() {
+            throw new Error("boom");
+          },
+        },
+      ],
+    ],
+    // A hole iterates as `undefined`, which `Array.prototype.every` would skip.
+    ["a sparse array", new Array(2)],
+    // Not a string, so it cannot be a participant. An empty string is one,
+    // and is accepted — see the non-hex case above.
+    ["an array holding undefined", [undefined]],
+    // A `String` object is not a string; `present` only ever holds primitives,
+    // so it could never be matched.
+    ["an array holding a String object", [new String("a".repeat(64))]],
+    // Iterables that are not arrays: `new Set()` took these, so they composed.
+    ["a Set", new Set(["a".repeat(64)])],
+    [
+      "a generator",
+      (function* () {
+        yield "a".repeat(64);
+      })(),
+    ],
+  ])("participantsCheck() throws on %s", (_label, expected) => {
+    // Pinned to the guard's own error, type and message: a bare `.toThrow()`
+    // also passes when `new Set` or a coercion throws something else.
+    // @ts-expect-error — the value violates the `readonly string[]` param
+    const compose = () => zostr.nip10.participantsCheck(expected);
+    expect(compose).toThrow(TypeError);
+    expect(compose).toThrow(/^participantsCheck: `expected`/);
+  });
 });
 
 // The thread/participants checks share one object across both flavors (direct

@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Breaking:** `zostr.nip10.participantsCheck()` no longer composes a check
+  that cannot work. `participantsCheck(undefined)` accepted every note, and an
+  element that is not a string could make `safeParse` throw from the failure
+  message. `expected` is now validated when the check is composed — it must be
+  an array whose every element is a string — and anything else throws a
+  `TypeError` naming the argument. Two shapes are worth knowing about: a
+  non-array iterable (a `Set` of pubkeys, a generator)
+  used to work, so pass `[...pubkeys]`; and a list derived from an event can
+  hold `undefined`, since `tags()` accepts a bare `["p"]`, which used to build
+  a check that rejected every note. Any string is still accepted, hex or not,
+  and an empty array still requires nobody.
+
 ## [0.6.0] - 2026-09-05
 
 ### Added

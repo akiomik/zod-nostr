@@ -521,7 +521,9 @@ export const zostr = {
      * participant pubkey. NIP-10 asks a reply to carry the parent's
      * participants plus the replied-to authors — context the schema can't
      * know, so it is a parameter. Only presence is checked; order and extra
-     * participants don't matter.
+     * participants don't matter. `expected` must be an array of strings;
+     * anything else throws at composition time, failing closed. An empty array
+     * requires nobody.
      */
     participantsCheck: nip10.nip10.participantsCheck,
   },

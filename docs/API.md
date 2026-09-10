@@ -452,7 +452,11 @@ composed onto `textNote()` rather than baked in:
   carry all of the parent's `p` tags plus the replied-to/quoted authors; that
   set is context the schema can't know, so it's a parameter (like
   `zostr.nip42.relayTagCheck`). Only presence is checked — order and extra
-  participants don't matter.
+  participants don't matter. `expected` must be an array of strings, checked at
+  composition time; anything else throws (fails **closed**, like
+  `zostr.nip13.powCheck()`). Any string is allowed, not only a hex pubkey,
+  since a `p` tag can legitimately carry a value that is not one. An empty
+  array requires nobody.
 
 ```ts
 const verifiedReply = zostr.nip10
@@ -461,6 +465,10 @@ const verifiedReply = zostr.nip10
   .check(zostr.nip10.threadCheck())
   .check(zostr.nip10.participantsCheck([parentAuthor, ...parentParticipants]));
 ```
+
+`parentParticipants` has to hold only the values actually present: an `["e", id]`
+tag carries no pubkey, and a `["p"]` tag no participant, so a list mapped
+straight off a parent's tags can contain `undefined`.
 
 ## NIP-11 — relay information document
 
