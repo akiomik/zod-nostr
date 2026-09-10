@@ -4,6 +4,25 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    # `vitest`, its `@vitest/*` companions and `vite` have to move together:
+    # `@vitest/coverage-v8` pins `vitest` to an exact version, and `vitest`
+    # accepts only a window of `vite` majors. Bumping one alone can fail
+    # `npm ci`, as #99 and #100 each did for vitest 5.0.0.
+    groups:
+      vitest:
+        patterns:
+          - "vitest"
+          - "@vitest/*"
+          - "vite"
+      # A security PR carries only what an advisory names, so this entry
+      # holds the set together only when one advisory reaches more than one
+      # of them.
+      vitest-security:
+        applies-to: security-updates
+        patterns:
+          - "vitest"
+          - "@vitest/*"
+          - "vite"
 
   - package-ecosystem: "github-actions"
     directory: "/"
