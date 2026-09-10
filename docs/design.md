@@ -297,7 +297,7 @@ Two release-surface gates run in CI:
   than source-relative types.
 - **Release-surface comparison** (`src/release-surface.test.ts`) — diffs the
   current public path set against a frozen record of the last published release
-  (v0.6.0) and requires every removed/renamed path to be listed in an
+  (v0.7.0) and requires every removed/renamed path to be listed in an
   intentional-breaking manifest; additive paths are always allowed, an
   unclassified removal fails. This baseline is deliberately independent of the
   API-surface test's editable expectation: a PR that deletes a public path and
